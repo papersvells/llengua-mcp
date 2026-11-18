@@ -246,6 +246,48 @@ async def test_salut_does_not_create_a_cursor(tmp_path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_salut_no_esborra_cursors_de_lusuari(tmp_path) -> None:
+    page = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    page = page.replace(
+        "Freqüència total</b>:&nbsp;&nbsp;3", "Freqüència total</b>:&nbsp;&nbsp;100"
+    )
+    store = CursorStore()
+    adapter = CtilcAdapter(FakeClient(page), _settings(tmp_path), store)
+    user = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ],
+        limit=2,
+    )
+    token = user["search_cursor"]
+    assert token and store.get(token) is not None
+
+    await adapter.salut()
+
+    # La consulta de control és la mateixa que la de l'usuari: el diagnòstic
+    # no ha de tocar el seu cursor.
+    assert store.get(token) is not None
+
+
+@pytest.mark.asyncio
+async def test_cerca_sense_persistir_cursor(tmp_path) -> None:
+    page = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    store = CursorStore()
+    adapter = CtilcAdapter(FakeClient(page), _settings(tmp_path), store)
+    result = await adapter.search(
+        elements=[PatternElement(type="forma", value="somriure")],
+        query={"mode": "test"},
+        limit=2,
+        persist_cursor=False,
+    )
+    assert result["has_more"] is True
+    assert result["search_cursor"] is None
+    assert result["next_cursor"] is None
+    assert len(store._entries) == 0
+
+
+@pytest.mark.asyncio
 async def test_continue_rejects_zero_limit(tmp_path) -> None:
     adapter = CtilcAdapter(FakeClient(""), _settings(tmp_path), CursorStore())
     with pytest.raises(InvalidQueryError):

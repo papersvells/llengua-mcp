@@ -96,6 +96,7 @@ class CtilcAdapter:
         start: int = 1,
         cursor_token: str | None = None,
         use_cache: bool = True,
+        persist_cursor: bool = True,
     ) -> dict[str, Any]:
         if start < 1:
             raise InvalidQueryError("`start` ha de ser 1 o més gran.")
@@ -149,7 +150,7 @@ class CtilcAdapter:
         search_cursor = None
         next_cursor = None
 
-        if status in {"ok", "no_matches"} and page.total is not None:
+        if persist_cursor and status in {"ok", "no_matches"} and page.total is not None:
             payload = CursorPayload(
                 query=query,
                 elements=elements,
@@ -782,6 +783,8 @@ class CtilcAdapter:
         }
 
     async def salut(self) -> dict[str, Any]:
+        """Diagnòstic del CTILC sense efectes sobre els cursors de l'usuari."""
+
         elements = [
             PatternElement(type="lema", value="somriure"),
             PatternElement(type="cg", category="adj", morphology="-"),
@@ -792,13 +795,8 @@ class CtilcAdapter:
             limit=1,
             start=1,
             use_cache=False,
+            persist_cursor=False,
         )
-        # `salut` és un diagnòstic: no deixem cap cursor de continuació.
-        for token, entry in list(self.cursors._entries.items()):
-            if entry.payload.query == patro_query(elements):
-                self.cursors._entries.pop(token, None)
-        result["next_cursor"] = None
-        result["search_cursor"] = None
         warnings = list(result.get("warnings", []))
         if result.get("total") != CONTROL_TOTAL:
             warnings.append("corpus_updated")

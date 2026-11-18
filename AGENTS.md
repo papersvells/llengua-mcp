@@ -191,7 +191,7 @@ Prioritat dins l’adaptador CTILC:
 - `collocacions(lema, radi?, freq_min?, limit?)` — coaparicions dins d'una finestra de ±radi mots (0-5), agrupades per categoria gramatical. Els resultats són a `CTILCQCol_LemesAgrup2.asp` (POST amb `cadlema`, `radiE`/`radiD`, `freqMin`); la pàgina conté totes les files. Les de puntuació de l'apartat ALTRES es descarten (`excluded_rows`) i els noms propis es retornen a part, a `altres`. Cal validar `lema_echo_verified` abans de fer servir les dades.
 - `xifres()` — mida i cobertura del corpus.
 - `etiquetes()` — categories i codis morfològics llegibles.
-- `salut()` — comprova que el lloc respon i que l’echo de control és correcte.
+- `salut()` — comprova que el lloc respon i que l’echo de control és correcte. No crea ni esborra cursors.
 
 Els filtres per autor, any, gènere o varietat encara no s’exposen: el
 formulari del CTILC els té, però cal verificar-los i provar-los amb fixtures

@@ -524,7 +524,8 @@ async def salut() -> dict[str, Any]:
     Fa una consulta coneguda (`somriure` + adjectiu) i compara el total amb el
     de referència del 18/11/2026. Una diferència de total pot ser un canvi
     legítim del corpus; un eco incorrecte o un error de transport sí que és
-    un problema de protocol. No cal invocar-ho abans de cada cerca.
+    un problema de protocol. No cal invocar-ho abans de cada cerca. No crea ni
+    esborra cursors de l'usuari.
     """
     app = await get_app()
     return await _call("https://ctilc.iec.cat/scripts/CTILCQConc_Coocur2.asp", app.ctilc.salut())

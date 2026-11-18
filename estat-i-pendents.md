@@ -13,7 +13,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els retocs de validació del 18/11/2026 ja són committats.
-- **Tests sense xarxa:** 129 passats, 7 omesos (els live).
+- **Tests sense xarxa:** 131 passats, 7 omesos (els live).
 - **Tests en directe:** 7, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **Ruff:** `ruff format` i `ruff check` nets.
 - **Eines MCP:** 21 eines, agrupades per font.
@@ -125,12 +125,12 @@ directe amb `somriure` el 18/11/2026.
   les dades crues passen a `unvalidated`, amb un `error` explicatiu. No es
   presenten com a resultats.
 
-### 2.4 `salut`
+### 2.4 `salut` (resolt el 18/11/2026)
 
-- **Esborra cursors de l'usuari.** Fa servir `self.cursors._entries` per
-  eliminar tots els cursors amb la mateixa consulta de control. Si l'usuari ha
-  fet exactament aquella cerca, perd el cursor. Cal un cursor propi de `salut`
-  o no esborrar res.
+- **Ja no esborra cursors de l'usuari.** `search()` accepta
+  `persist_cursor=False`; `salut` el fa servir i no toca el `CursorStore` ni
+  retorna cursors. Un cursor d'usuari amb la mateixa consulta de control
+  sobreviu al diagnòstic (test específic).
 
 ### 2.5 CTILC: eines ajornades
 
@@ -205,8 +205,7 @@ PY
 
 ## 4. Properes passes suggerides
 
-1. Fer que `salut` no esborri cursors de l'usuari.
-2. Fer servir les eines amb preguntes reals i corregir el que falli abans
+1. Fer servir les eines amb preguntes reals i corregir el que falli abans
    d'afegir fonts noves.
-3. Decidir si es reprèn el Corpus de consultes amb una captura real de
+2. Decidir si es reprèn el Corpus de consultes amb una captura real de
    navegador, o si es descarta definitivament.
