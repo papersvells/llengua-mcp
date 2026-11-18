@@ -13,8 +13,8 @@ verificades) i, per a l'abast, `AGENTS.md`.
 
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els retocs de validació del 18/11/2026 ja són committats.
-- **Tests sense xarxa:** 127 passats, 6 omesos (els live).
-- **Tests en directe:** 6, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **Tests sense xarxa:** 129 passats, 7 omesos (els live).
+- **Tests en directe:** 7, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **Ruff:** `ruff format` i `ruff check` nets.
 - **Eines MCP:** 21 eines, agrupades per font.
 
@@ -37,7 +37,12 @@ verificades) i, per a l'abast, `AGENTS.md`.
   explícit `0` **i** l'eco coincideix amb la consulta enviada.
 - Els IDs de resultat del CTILC es tracten com a `string` (enters de 64 bits).
 - Els cursors són locals, amb la consulta original; si el total o el patró
-  canvien, es retorna `stale_search`.
+  canvien, es retorna `stale_search`. `search_cursor` vincula eines com la
+  dispersió encara que no quedin pàgines; `next_cursor` només serveix per
+  paginar.
+- La dispersió només es presenta com a vàlida si el patró i els totals quadren.
+  Si no, `data_valid` és fals, `periods` queda buit i les dades crues van a
+  `unvalidated`.
 - Les xifres de `collocacions` són freqüències de **coaparició dins d'una
   finestra**, no d'adjacència: no es comparen amb `cerca_frase`/`cerca_patro`.
   Cal validar `lema_echo_verified` i recordar que `total` inclou les files de
@@ -60,6 +65,9 @@ Expectatives datades, no llindars eterns:
 - Gramàtiques: GIEC `8.3.3` → «La posició dels pronoms febles», amb l'enllaç
   `https://giec.iec.cat/textgramatica/codi/8.3.3`; GBU codi `28` (només títol)
   → error accionable.
+- Dispersió d'una cerca d'una sola pàgina (`somriure maliciós`, 32): hi ha
+  `search_cursor` sense `next_cursor`; la dispersió torna `ok` amb
+  `data_valid: true` i 10 trams.
 - Optimot «tenir que» → fitxa 6754/4 (05.04.2023).
 - DIEC «maliciós» → 3 accepcions.
 - ésAdir «a gust», «hidrosisme» → fitxa i AFI.
@@ -106,15 +114,16 @@ directe amb `somriure` el 18/11/2026.
 - **Nodes sense contingut en una cerca:** es retorna `partial` amb l'avís
   `no_readable_sections`, no `no_results`.
 
-### 2.3 Dispersió cronològica
+### 2.3 Dispersió cronològica (resolt el 18/11/2026)
 
-- **Requereix `next_cursor`.** `dispersio_cronologica(cursor)` només accepta el
-  `next_cursor` d'una cerca, que no existeix quan tots els resultats caben en
-  una pàgina. Cal un cursor estable independent de la paginació (o acceptar el
-  cursor inicial sempre que es desi).
-- **Dades sense validar no s'han de presentar com a bones.** Quan el patró o el
-  total no coincideixen, els camps s'inclouen igualment a la resposta. Cal
-  decidir si s'ometen o es marquen clarament com a no vàlids.
+- **Cursor estable: resolt.** `search()` retorna `search_cursor` sempre que la
+  cerca és vàlida (`ok`/`no_matches`), encara que tots els resultats càpiguen en
+  una pàgina. `next_cursor` continua existint només quan queden pàgines.
+  `dispersio_cronologica` accepta tots dos.
+- **Dades no validades: resolt.** Si el patró o els totals no coincideixen,
+  `data_valid` és fals, `periods` queda buit, `totals` i els pics són `null`, i
+  les dades crues passen a `unvalidated`, amb un `error` explicatiu. No es
+  presenten com a resultats.
 
 ### 2.4 `salut`
 
@@ -196,10 +205,8 @@ PY
 
 ## 4. Properes passes suggerides
 
-1. Tancar la dispersió cronològica: cursor estable (encara que la cerca càpiga
-   en una pàgina) i dades no validades fora de `periods` (a `unvalidated`).
-2. Fer que `salut` no esborri cursors de l'usuari.
-3. Fer servir les eines amb preguntes reals i corregir el que falli abans
+1. Fer que `salut` no esborri cursors de l'usuari.
+2. Fer servir les eines amb preguntes reals i corregir el que falli abans
    d'afegir fonts noves.
-4. Decidir si es reprèn el Corpus de consultes amb una captura real de
+3. Decidir si es reprèn el Corpus de consultes amb una captura real de
    navegador, o si es descarta definitivament.

@@ -58,11 +58,32 @@ async def test_live_dispersio_cronologica() -> None:
     finally:
         await app.aclose()
     assert disp["status"] == "ok"
+    assert disp["data_valid"] is True
+    assert disp["unvalidated"] is None
     assert disp["totals_match_search"] is True
     assert len(disp["periods"]) >= 5
     first = disp["periods"][0]
     assert first["corpus_units"] > 0
     assert first["per_million"] == round(first["hits"] / first["corpus_units"] * 1_000_000, 2)
+
+
+@pytest.mark.asyncio
+async def test_live_dispersio_duna_sola_pagina() -> None:
+    app = App(Settings.from_env())
+    try:
+        start = await app.ctilc.search_phrase("somriure maliciós", limit=50)
+        variant = start["variants"][0]
+        assert variant["total"] < 50
+        assert variant["has_more"] is False
+        assert variant["next_cursor"] is None
+        assert variant["search_cursor"]
+        disp = await app.ctilc.dispersio_cronologica(variant["search_cursor"])
+    finally:
+        await app.aclose()
+    assert disp["status"] == "ok"
+    assert disp["data_valid"] is True
+    assert disp["search_total"] == variant["total"]
+    assert disp["periods"]
 
 
 @pytest.mark.asyncio
@@ -100,6 +121,7 @@ async def test_live_collocacions() -> None:
     finally:
         await app.aclose()
     assert result["status"] == "ok"
+    assert result["lema_echo_verified"] is True
     assert result["total"] > 0
     categories = {cat["categoria"] for cat in result["categories"]}
     assert "nom" in categories

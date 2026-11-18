@@ -241,6 +241,7 @@ async def test_salut_does_not_create_a_cursor(tmp_path) -> None:
     adapter = CtilcAdapter(FakeClient(page), _settings(tmp_path), store)
     result = await adapter.salut()
     assert result.get("next_cursor") is None
+    assert result.get("search_cursor") is None
     assert len(store._entries) == 0
 
 
@@ -291,10 +292,92 @@ async def test_dispersio_cronologica_validada(tmp_path) -> None:
     )
     result = await adapter.dispersio_cronologica(start["next_cursor"])
     assert result["status"] == "ok"
+    assert result["data_valid"] is True
+    assert result["unvalidated"] is None
     assert result["search_total"] == 2136
     assert result["totals_match_search"] is True
     assert len(result["periods"]) == 10
     assert result["peak_relative"]["label"] == "2021-2022"
+
+
+DISPERSIO_UNA_PAGINA = (
+    "<html><body><center><table>"
+    "<tr><td><b>Coocurrències</b>:&nbsp;&nbsp;somriure "
+    "<span style='color: 0000FF;'>adj:-</span></td>"
+    "<td><b>Freqüència total</b>:&nbsp;&nbsp;3</td>"
+    "<td><b>Índex de dispersió</b>:&nbsp;&nbsp;0.8</td></tr></table></center><script>\n"
+    "var chartData = [['Grup cronològic','Proporció',{ role: 'tooltip' }]\n\n"
+    ",['1832-1913',0.000023,'1832-1913\\nTotal tram a la cerca: 3\\n"
+    "Total tram al corpus: 13.001.158\\n0,000023%',"
+    "llistacolorsAny['1832-1913']]\n];\n"
+    "</script></body></html>"
+)
+
+
+@pytest.mark.asyncio
+async def test_dispersio_amb_cursor_duna_sola_pagina(tmp_path) -> None:
+    search_page = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+
+    class SwitchClient:
+        async def post_text(self, url: str, body: str, **kwargs) -> HttpResult:
+            return HttpResult(text=search_page, status=200, url=url)
+
+        async def get_text(self, url: str, **kwargs) -> HttpResult:
+            return HttpResult(text=DISPERSIO_UNA_PAGINA, status=200, url=url)
+
+    adapter = CtilcAdapter(SwitchClient(), _settings(tmp_path), CursorStore())
+    start = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ],
+        limit=10,
+    )
+    # Tots els resultats caben en una pàgina: no hi ha `next_cursor`, però sí
+    # un cursor estable per demanar la dispersió.
+    assert start["has_more"] is False
+    assert start["next_cursor"] is None
+    assert start["search_cursor"]
+
+    result = await adapter.dispersio_cronologica(start["search_cursor"])
+    assert result["status"] == "ok"
+    assert result["data_valid"] is True
+    assert result["periods"][0]["hits"] == 3
+    assert result["search_total"] == 3
+
+
+@pytest.mark.asyncio
+async def test_dispersio_amb_patro_divergent(tmp_path) -> None:
+    search_page = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    dispersio_page = (FIXTURES / "dispersio_cron.html").read_text(encoding="utf-8")
+    dispersio_page = dispersio_page.replace(
+        "Coocurrències</b>:&nbsp;&nbsp;somriure <span style='color: 0000FF;'>adj:-</span>",
+        "Coocurrències</b>:&nbsp;&nbsp;somriure <span style='color: 0000FF;'>subst</span>",
+    )
+
+    class SwitchClient:
+        async def post_text(self, url: str, body: str, **kwargs) -> HttpResult:
+            return HttpResult(text=search_page, status=200, url=url)
+
+        async def get_text(self, url: str, **kwargs) -> HttpResult:
+            return HttpResult(text=dispersio_page, status=200, url=url)
+
+    adapter = CtilcAdapter(SwitchClient(), _settings(tmp_path), CursorStore())
+    start = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ],
+        limit=2,
+    )
+    result = await adapter.dispersio_cronologica(start["next_cursor"])
+    assert result["status"] == "unexpected_response"
+    assert result["data_valid"] is False
+    assert result["periods"] == []
+    assert result["totals"] is None
+    assert result["peak_absolute"] is None
+    assert len(result["unvalidated"]["periods"]) == 10
+    assert result["error"]["code"] == "pattern_echo_unexpected"
 
 
 @pytest.mark.asyncio
@@ -324,6 +407,9 @@ async def test_dispersio_amb_totals_desvats(tmp_path) -> None:
     # La pàgina de dispersió és coherent amb ella mateixa (suma = 2136), però
     # el total del cursor és un altre: és el cursor el que ha quedat desfassat.
     assert result["status"] == "partial"
+    assert result["data_valid"] is False
+    assert result["periods"] == []
+    assert len(result["unvalidated"]["periods"]) == 10
     assert "corpus_updated" in result["warnings"]
 
 

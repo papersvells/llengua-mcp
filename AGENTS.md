@@ -187,6 +187,7 @@ Prioritat dins l’adaptador CTILC:
 - `continuar_cerca(cursor, limit?)` — reprèn una pàgina amb el cursor local.
 - `cerca_patro(elements, limit?)` — patró avançat amb elements tipats.
 - `context(occurrence_id)` — context ±50 i paràgraf, amb metadades de l’obra.
+- `dispersio_cronologica(cursor)` — distribució per trams. Accepta el `search_cursor` de qualsevol cerca vàlida (o el `next_cursor`); si el patró o els totals no quadren, `data_valid` és fals, `periods` queda buit i les dades crues van a `unvalidated`.
 - `collocacions(lema, radi?, freq_min?, limit?)` — coaparicions dins d'una finestra de ±radi mots (0-5), agrupades per categoria gramatical. Els resultats són a `CTILCQCol_LemesAgrup2.asp` (POST amb `cadlema`, `radiE`/`radiD`, `freqMin`); la pàgina conté totes les files. Les de puntuació de l'apartat ALTRES es descarten (`excluded_rows`) i els noms propis es retornen a part, a `altres`. Cal validar `lema_echo_verified` abans de fer servir les dades.
 - `xifres()` — mida i cobertura del corpus.
 - `etiquetes()` — categories i codis morfològics llegibles.
@@ -198,7 +199,6 @@ abans de publicar-los.
 
 Posteriors:
 
-- `dispersions`;
 - `obres` i `obres_descarregables`;
 - `filtres_disponibles`;
 - `exportar` (només si es verifica).
@@ -214,6 +214,8 @@ Una cerca de concordances del CTILC amb recompte verificat ha de retornar:
   "total": 0,
   "returned": 0,
   "has_more": false,
+  "search_cursor": "…",
+  "next_cursor": null,
   "occurrences": [],
   "warnings": [],
   "source": "https://ctilc.iec.cat/…",

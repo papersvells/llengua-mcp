@@ -349,8 +349,9 @@ async def cerca_frase(
     tokenitza per formes. Les variants són frases completes alternatives
     (per exemple, «tenir foc al ulls» i «tenir foc als ulls»); es consulten per
     separat i els totals no se sumen. Retorna contextos, total verificat, eco
-    del patró i un cursor per continuar. Un zero només és una absència en aquest
-    corpus, no una prova que la forma no existeixi.
+    del patró, `search_cursor` (per a eines com la dispersió) i `next_cursor`
+    per continuar. Un zero només és una absència en aquest corpus, no una prova
+    que la forma no existeixi.
     """
     app = await get_app()
     return await _call(
@@ -371,7 +372,7 @@ async def cerca(
     `lema` cerca totes les formes del lema i admet una `categoria` (`subst`,
     `V`, `adj`...). `forma` cerca una sola forma gràfica. No es poden combinar
     totes dues. Retorna els mateixos contextos verificats que `cerca_frase`,
-    amb `pattern_echo`, total i cursor.
+    amb `pattern_echo`, total, `search_cursor` i `next_cursor`.
     """
     app = await get_app()
     return await _call(
@@ -422,14 +423,16 @@ async def continuar_cerca(cursor: str, limit: int | None = None) -> dict[str, An
 async def dispersio_cronologica(cursor: str) -> dict[str, Any]:
     """Retorna la dispersió cronològica d'una cerca del CTILC.
 
-    Passa el `next_cursor` d'una cerca concreta: la distribució només és
-    vàlida vinculada a aquella consulta. Retorna per tram `from_year`,
-    `to_year`, `hits`, `corpus_units` i `per_million` (ocurrències per milió
-    de paraules, derivades dels enters), i destaca els pics absolut i relatiu.
+    Passa el `search_cursor` d'una cerca concreta (o el `next_cursor`): la
+    distribució només és vàlida vinculada a aquella consulta. Retorna per tram
+    `from_year`, `to_year`, `hits`, `corpus_units` i `per_million` (ocurrències
+    per milió de paraules, derivades dels enters), i destaca els pics absolut i
+    relatiu.
 
     Les dades es validen: si el patró de la pàgina no és el de la cerca o la
-    suma dels trams no coincideix amb el total, l'eina ho indica i no presenta
-    la gràfica com a vàlida. Amb pocs testimonis, parla de concentració
+    suma dels trams no coincideix amb el total, `data_valid` és fals, `periods`
+    queda buit i les dades sense validar són a `unvalidated`; no s'han de
+    presentar com a resultats. Amb pocs testimonis, parla de concentració
     observada, no de tendència.
     """
     app = await get_app()

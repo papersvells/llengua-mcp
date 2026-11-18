@@ -146,6 +146,7 @@ class CtilcAdapter:
         # mal formada no ha de fer saltar la posició següent.
         next_start = start + offset
         has_more = bool(page.total and page.total > start - 1 + offset)
+        search_cursor = None
         next_cursor = None
 
         if status in {"ok", "no_matches"} and page.total is not None:
@@ -162,8 +163,13 @@ class CtilcAdapter:
             )
             if cursor_token:
                 self.cursors.update(cursor_token, payload)
+                search_cursor = cursor_token
+            else:
+                # Un cursor estable per vincular-hi eines com la dispersió,
+                # encara que tots els resultats càpiguen en una pàgina.
+                search_cursor = self.cursors.create(payload)
             if has_more:
-                next_cursor = cursor_token or self.cursors.create(payload)
+                next_cursor = search_cursor
 
         if status == "no_matches" and "zero_results" not in warnings:
             warnings.append("zero_results")
@@ -179,6 +185,7 @@ class CtilcAdapter:
             "total": page.total,
             "returned": returned,
             "has_more": has_more,
+            "search_cursor": search_cursor,
             "next_cursor": next_cursor,
             "occurrences": occurrences,
             "warnings": _dedupe(warnings),
@@ -306,6 +313,7 @@ class CtilcAdapter:
                             "total",
                             "returned",
                             "has_more",
+                            "search_cursor",
                             "next_cursor",
                             "occurrences",
                             "warnings",
@@ -370,6 +378,7 @@ class CtilcAdapter:
                 "total": payload.total,
                 "returned": 0,
                 "has_more": False,
+                "search_cursor": cursor,
                 "next_cursor": None,
                 "occurrences": [],
                 "warnings": [],
@@ -454,10 +463,11 @@ class CtilcAdapter:
     async def dispersio_cronologica(self, cursor: str) -> dict[str, Any]:
         """Dispersió cronològica d'una cerca, vinculada pel seu cursor.
 
-        Només es pot demanar sobre una cerca concreta: el gràfic s'ha de poder
-        vincular a aquella consulta. Es validen tres coses abans de presentar
-        les dades: que el patró de la pàgina sigui el de la cerca, que el total
-        coincideixi amb el de la cerca i que la suma dels trams sigui el total.
+        Accepta el `search_cursor` de qualsevol cerca vàlida, tingui o no
+        pàgines següents. Es validen tres coses abans de presentar les dades:
+        que el patró de la pàgina sigui el de la cerca, que el total coincideixi
+        amb el de la cerca i que la suma dels trams sigui el total. Si no
+        quadren, les dades queden a `unvalidated` i `periods` buit.
         """
 
         payload = self.cursors.get(cursor)
@@ -493,29 +503,40 @@ class CtilcAdapter:
         if not data["totals_match_search"]:
             warnings.append("totals_mismatch")
 
-        status = "ok"
+        invalid_reasons = [
+            reason
+            for reason in ("pattern_echo_unexpected", "corpus_updated", "totals_mismatch")
+            if reason in warnings
+        ]
+        data_valid = not invalid_reasons
+
         if "pattern_echo_unexpected" in warnings:
             status = "unexpected_response"
-        elif "totals_mismatch" in warnings or "corpus_updated" in warnings:
+        elif invalid_reasons:
             status = "partial"
+        else:
+            status = "ok"
 
-        periods = data["periods"]
-        return {
+        response: dict[str, Any] = {
             "status": status,
             "query": payload.query,
             "pattern_echo": data["pattern_echo"] or payload.pattern_echo,
             "search_total": payload.total,
-            "periods": periods,
-            "totals": data["totals"],
+            "data_valid": data_valid,
+            "periods": data["periods"] if data_valid else [],
+            "totals": data["totals"] if data_valid else None,
             "totals_match_search": data["totals_match_search"],
-            "peak_absolute": data["peak_absolute"],
-            "peak_relative": data["peak_relative"],
+            "peak_absolute": data["peak_absolute"] if data_valid else None,
+            "peak_relative": data["peak_relative"] if data_valid else None,
+            "unvalidated": None,
             "warnings": _dedupe(warnings),
             "note": (
                 "La taxa és ocurrències per milió de paraules del tram, derivada "
                 "dels enters del gràfic. La unitat del denominador són paraules "
                 "del corpus. Si hi ha pocs testimonis, parlem de concentració "
-                "observada, no de tendència general."
+                "observada, no de tendència general. Si `data_valid` és fals, "
+                "`periods` queda buit i les dades sense validar són a "
+                "`unvalidated`: no s'han de presentar com a resultats."
             ),
             "source": CRON_URL,
             "retrieved_at": datetime.now(UTC)
@@ -524,6 +545,25 @@ class CtilcAdapter:
             .replace("+00:00", "Z"),
             "citation": _citation(payload.pattern_echo),
         }
+        if not data_valid:
+            response["unvalidated"] = {
+                "periods": data["periods"],
+                "totals": data["totals"],
+                "peak_absolute": data["peak_absolute"],
+                "peak_relative": data["peak_relative"],
+            }
+            response["error"] = {
+                "code": invalid_reasons[0],
+                "message": (
+                    "Les dades de la dispersió no s'han pogut validar contra la "
+                    "cerca original: el patró o els totals no coincideixen."
+                ),
+                "hint": (
+                    "No presentis la distribució com a vàlida. Torna a executar "
+                    "la cerca i demana la dispersió amb el `search_cursor` nou."
+                ),
+            }
+        return response
 
     async def collocacions(
         self,
@@ -758,6 +798,7 @@ class CtilcAdapter:
             if entry.payload.query == patro_query(elements):
                 self.cursors._entries.pop(token, None)
         result["next_cursor"] = None
+        result["search_cursor"] = None
         warnings = list(result.get("warnings", []))
         if result.get("total") != CONTROL_TOTAL:
             warnings.append("corpus_updated")

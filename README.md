@@ -93,7 +93,7 @@ Variables d'entorn:
   amb el codi, `gramatica_text("28.1")`.
 - **Comprovar una expressió**: `cerca_frase("tenir foc al ulls", variants=["tenir foc als ulls"])`.
   Cada variant es retorna per separat; els totals no se sumen.
-- **Veure en quines èpoques apareix**: cerca i, amb el `next_cursor`,
+- **Veure en quines èpoques apareix**: cerca i, amb el `search_cursor`,
   `dispersio_cronologica(cursor)`.
 - **Saber quines paraules hi van a prop**: `collocacions("somriure")` — quins
   noms, adjectius o verbs hi coapareixen dins d'una finestra de ±3 mots.
@@ -109,11 +109,15 @@ Variables d'entorn:
   Si és `false`, el resultat no es pot presentar com una absència lingüística.
 - **`next_cursor`**: continua la mateixa cerca. És local i caduca; si el total o
   el patró canvien, l'eina retorna `stale_search` i no barreja pàgines.
-- **Dispersió cronològica**: passa el cursor d'una cerca concreta. Retorna per
-  tram `hits`, `corpus_units` i `per_million` (ocurrències per milió, derivades
-  dels enters del gràfic, mai del percentatge arrodonit). Es validen el patró i
-  la suma dels trams; si no coincideixen, la gràfica no es presenta com a
-  vàlida. Amb pocs testimonis, parla de concentració observada.
+- **`search_cursor`**: vincula la cerca amb eines com la dispersió. N'hi ha
+  sempre que la cerca sigui vàlida, encara que tots els resultats càpiguen en
+  una pàgina; `next_cursor` només hi és si queden pàgines.
+- **Dispersió cronològica**: passa el `search_cursor` (o el `next_cursor`)
+  d'una cerca concreta. Retorna per tram `hits`, `corpus_units` i `per_million`
+  (ocurrències per milió, derivades dels enters del gràfic, mai del percentatge
+  arrodonit). Es validen el patró i la suma dels trams; si no coincideixen,
+  `data_valid` és fals, `periods` queda buit i les dades sense validar són a
+  `unvalidated`. Amb pocs testimonis, parla de concentració observada.
 - **Optimot**: el nombre de resultats és un recompte de documents del portal, no
   una freqüència d'ús. Cal obrir la fitxa abans de citar-ne el criteri.
 - **DIEC**: cal citar l'entrada i l'accepció. No trobar-hi una forma no la fa
