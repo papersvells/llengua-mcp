@@ -12,7 +12,8 @@ verificades) i, per a l'abast, `AGENTS.md`.
 ## 1. Estat actual
 
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
-  `main`; els retocs de validació del 18/11/2026 ja són committats.
+  `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
+  ja són committats i pujats a `origin/main`.
 - **Tests sense xarxa:** 163 passats, 9 omesos (els live).
 - **Tests en directe:** 9, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **Ruff:** `ruff format` i `ruff check` nets.
@@ -185,7 +186,8 @@ directe amb `somriure` el 18/11/2026.
 - Contactar **`dcc@iec.cat`** abans de publicar o integrar l'MCP en un
   producte.
 - Citar sempre el CTILC i l'IEC; no usar el logo de l'IEC ni presentar-se com
-  a oficial.
+  a oficial. Quan se citi una resposta del Corpus de consultes, enllaçar la
+  consulta concreta.
 - No redistribuir extracts extensos ni obres protegides.
 
 ### 2.8 Proves d'ús real (resolt el 18/11/2026)
@@ -206,9 +208,9 @@ detectar problemes que els tests no veuen.
   indica apujar `freq_min` o triar un lema més específic.
 - **Servidor MCP antic a OpenCode.** El procés MCP carregat en iniciar la sessió
   no recarrega el codi: durant aquestes proves responia amb la versió anterior
-  a les fases A-D. Cal reiniciar l'editor o el servidor després de canviar el
-  codi; ho hem documentat al README. Les correccions s'han verificat amb
-  l'`App` directa i amb els tests en directe.
+  a les fases de validació, dispersió, Corpus i filtres. Cal reiniciar l'editor
+  o el servidor després de canviar el codi; ho hem documentat al README. Les
+  correccions s'han verificat amb l'`App` directa i amb els tests en directe.
 
 ---
 
@@ -236,6 +238,36 @@ async def main():
     try:
         r = await app.ctilc.collocacions("somriure", limit=3)
         print(r["total"], r["returned_categories"])
+    finally:
+        await app.aclose()
+
+asyncio.run(main())
+PY
+
+# Consulta manual amb filtres
+LLENGUA_DATA_DIR=./data .venv/bin/python - <<'PY'
+import asyncio
+from llengua_mcp.app import App
+from llengua_mcp.config import Settings
+from llengua_mcp.models import CtilcFilters, PatternElement
+
+ELEMENTS = [
+    PatternElement(type="lema", value="somriure"),
+    PatternElement(type="cg", category="adj"),
+]
+
+async def main():
+    app = App(Settings.from_env())
+    try:
+        base = await app.ctilc.search_pattern(ELEMENTS, limit=1)
+        filtrat = await app.ctilc.search_pattern(
+            ELEMENTS, limit=1, filters=CtilcFilters(varietat=["central"])
+        )
+        print(filtrat["total"], filtrat["total_unfiltered"], filtrat["filters_verified"])
+        valors = await app.ctilc.filtres_disponibles(
+            base["search_cursor"], tipus="autors", limit=5
+        )
+        print(valors["total"], [v["value"] for v in valors["values"]])
     finally:
         await app.aclose()
 

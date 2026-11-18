@@ -18,7 +18,7 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
 
 ## 2. Estat actual
 
-- Fase: **implementació inicial**. El paquet `llengua_mcp` i els tests ja existeixen; les eines estan disponibles per a OpenCode amb `opencode.jsonc`.
+- Fase: **MVP complet; en ampliació**. El paquet `llengua_mcp` i els tests existeixen, i les 23 eines estan disponibles per a OpenCode amb `opencode.jsonc`.
 - Implementat i provat en directe el 18/11/2026:
   - CTILC: `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `filtres_disponibles`, `xifres`, `etiquetes`, `salut`.
   - Optimot: `optimot_cerca`, `optimot_fitxa`.
@@ -82,19 +82,19 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
 | Font | Quan i com s’ha d’utilitzar |
 |---|---|
 | [Optimot](https://aplicacions.llengua.gencat.cat/llc/AppJava/index.html) | Per a dubtes gramaticals, de construcció o de registre. Si la consulta és una expressió concreta (p. ex. «tenir que»), provar `frase_exacta`; si és un fenomen, cercar amb `fitxes` les paraules clau. Obrir la fitxa pertinent i citar-ne la font original i la versió quan consti. |
+| [Corpus de consultes de l’IEC](https://consultes-linguistiques.iec.cat/) | Per trobar una pregunta semblant i veure com l’ha resolta l’IEC, amb l’enllaç a la gramàtica o al diccionari. Citar la consulta; no substitueix l’Optimot ni la norma. |
 | [DIEC](https://dlc.iec.cat/) | Per validar el lèxic: comprovar l’entrada i **l’accepció aplicable**. Una locució pot figurar dins l’article d’un dels seus mots. «No l’he trobada al DIEC» no justifica qualificar-la de barbarisme. |
-| [ésAdir](https://www.esadir.cat/) | Per a criteris d’estil de la CCMA, pronunciació i noms propis. Atribuir el criteri editorial a ésAdir; una cerca sense resultats no prova que la forma sigui incorrecta. |
-| CTILC | Per comprovar l’ús escrit: comparar patrons equivalents i llegir exemples en context. La freqüència, tota sola, no estableix la correcció ni el matís d’una expressió. |
+| [ésAdir](https://www.esadir.cat/) | Per a criteris d’estil de la CCMA, pronunciació i noms propis. Atribuir el criteri editorial a ésAdir; una cerca sense resultats no prova que la forma sigui incorrecta. Si `esadir_consulta` dona `no_entry_results`, obrir `suggested_fitxa` amb `esadir_fitxa`. |
+| CTILC | Per comprovar l’ús escrit: comparar patrons equivalents i llegir exemples en context. Admet filtres per autor, títol, any, tipus, gènere, varietat i traducció. La freqüència, tota sola, no estableix la correcció ni el matís d’una expressió. |
 | [BDLex](https://bdlex.iec.cat/) | Per consultar diccionaris històrics i dialectals (DCVB, DIEC, Fabra, obres dels segles XIX i XX). Pot cercar per entrada, definició, exemple o text lliure. És descriptiu i històric: una forma hi pot constar i no ser adequada avui; una absència no la fa incorrecta. Cal citar el diccionari concret. |
+| [OIEC](https://oiec.iec.cat/) | Per regles d’ortografia (apòstrofs, guionets, accents, dièresis) que afecten molts mots. Citar el codi i el títol de l’apartat. |
+| [GBU](https://gbu.iec.cat/inici), [GEIEC](https://geiec.iec.cat/inici) i [GIEC](https://giec.iec.cat/) | Per explicar una regla gramatical. La GBU és la consulta d’ús; la GEIEC, la versió en línia; la GIEC, la descripció especialitzada. |
 | [Diccionari de sinònims de Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) | Per trobar alternatives. Cercar primer la paraula o locució sencera; si no hi ha entrada per a *de mala fe*, no donar sinònims de *fe* com si fossin de la locució. Prioritzar una còpia local versionada de les dades amb [atribució i llicència CC BY 4.0](https://www.softcatala.org/diccionari-de-sinonims/credits/). |
 
 **Fonts addicionals previstes** (útils per respondre dubtes, encara no implementades):
 
 | Font | Quan i com s’ha d’utilitzar |
 |---|---|
-| [Corpus de consultes lingüístiques de l’IEC](https://consultes-linguistiques.iec.cat/) | Per trobar una pregunta semblant i veure com l’ha resolta l’IEC, amb l’enllaç a la gramàtica o al diccionari. No substitueix l’Optimot ni la norma. |
-| [GBU](https://gbu.iec.cat/inici) i [GIEC](https://giec.iec.cat/inici) | Per explicar una regla gramatical. La GBU és la consulta d’ús; la GIEC, la descripció especialitzada. |
-| [OIEC](https://oiec.iec.cat/inici) | Per regles d’ortografia (apòstrofs, guionets, accents, dièresis) que afecten molts mots. |
 | [Critèria](http://criteria.iec.cat/) | Per decisions editorials de l’IEC (majúscules, cursives, abreviacions) quan hi ha més d’una solució possible. |
 
 **Criteris específics del corpus:**
@@ -180,9 +180,9 @@ Aquestes regles estan verificades i no s’han de “simplificar” sense tornar
 19. **`strquery` és un canal CQL intern**, però no una API general. Permet reexecutar el CQL compilat; els rangs i el CQL simplificat no funcionen. No exposar-lo sense validació i advertències.
 20. **Els filtres canvien el total i l’eco.** Amb filtres, `Freqüència total` continua sent el total sense filtrar, i la xifra vàlida és `Quantitat filtrada`. Els camps `*Selec` (`autSelec`, `anySelec`, `varSelec`…) s’han de comparar amb els enviats. Si el resultat filtrat no té files, el portal pot retornar `1` com a valor de control: és `unexpected_response`, no una absència.
 
-## 8. Eines MCP previstes
+## 8. Eines MCP
 
-Eines de consulta previstes per a la primera versió:
+Eines de consulta disponibles (23):
 
 - `optimot_cerca` i `optimot_fitxa` — primera prioritat per verificar correccions; distingir candidats de fitxes llegides.
 - `consultes_iec` — respostes curades del Corpus de consultes de l'IEC. Serveix per trobar una pregunta semblant i veure com l'ha resolta l'IEC; retorna la pregunta, la resposta neta, el tema i els enllaços a la font. Cal citar la consulta i enllaçar la font; no substitueix la norma.
@@ -340,9 +340,11 @@ Proves d’acceptació del producte des d’OpenCode:
 3. **Alternatives:** davant «Què puc posar en lloc de “maliciós” a “un somriure maliciós”?», consulta Softcatalà i explica quines opcions conserven el sentit i quines el canvien. Cita l’entrada i presenta les alternatives com a suggeriments.
 
 **Estat de la definició de fet:** els tres casos d’acceptació i les eines del
-CTILC ja estan implementats i provats en directe (18/11/2026), amb 108 tests
-sense xarxa i sis proves en directe optatives (`LLENGUA_LIVE=1`). Els pendents
-són l’ampliació de fonts i les eines ajornades.
+CTILC ja estan implementats i provats en directe (18/11/2026), amb 163 tests
+sense xarxa i nou proves en directe optatives (`LLENGUA_LIVE=1`). Hi ha 23
+eines, incloent-hi el Corpus de consultes de l’IEC i els filtres del CTILC.
+Els pendents són l’ampliació de fonts (Critèria, DDLC) i les eines ajornades
+del CTILC (`Formes2`/`FormesLema2`, dispersió dialectal, obres, exportació).
 
 La part del CTILC es considera llesta quan:
 
@@ -353,6 +355,7 @@ La part del CTILC es considera llesta quan:
 5. Hi ha README, avís legal i citació.
 6. El rate limit i la cache funcionen.
 7. S’ha revisat el cas “tenir foc als ulls” com a test d’acceptació: la resposta ha de ser una fitxa d’evidència, no un “N → és quotidià”.
+8. Els filtres per autor, any, gènere i varietat validen l’eco i no converteixen el total de control (1) en una absència.
 
 ## 15. Enllaços
 
