@@ -15,7 +15,7 @@ sencers ni substitueix un corrector.
 | [BDLex](https://bdlex.iec.cat/) | `bdlex_consulta` | Diccionaris històrics i dialectals (DCVB, DIEC, Fabra...) |
 | [OIEC](https://oiec.iec.cat/) | `oiec_cerca`, `oiec_text` | Ortografia normativa: apòstrofs, guionets, accents |
 | Gramàtiques IEC | `gramatica_cerca`, `gramatica_text` | GBU, GEIEC i GIEC: perífrasis, pronoms, concordança |
-| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos |
+| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) | `cerca_sinonims` | Alternatives lèxiques (dades locals, CC BY 4.0) |
 
 ## Instal·lació
@@ -95,6 +95,8 @@ Variables d'entorn:
   Cada variant es retorna per separat; els totals no se sumen.
 - **Veure en quines èpoques apareix**: cerca i, amb el `next_cursor`,
   `dispersio_cronologica(cursor)`.
+- **Saber quines paraules hi van a prop**: `collocacions("somriure")` — quins
+  noms, adjectius o verbs hi coapareixen dins d'una finestra de ±3 mots.
 
 ## Com interpretar els resultats
 

@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import quote
 
 from llengua_mcp.compiler import (
     compile_pattern,
@@ -20,6 +22,7 @@ from llengua_mcp.errors import (
 )
 from llengua_mcp.http import HttpClient
 from llengua_mcp.models import CursorPayload, PatternElement
+from llengua_mcp.parsers.collocacions import COLLOCACIONS_URL, parse_collocacions
 from llengua_mcp.parsers.ctilc import parse_ctilc_page, patterns_equivalent
 from llengua_mcp.parsers.dades import parse_dades
 from llengua_mcp.parsers.dispersions import parse_cronologia
@@ -503,6 +506,69 @@ class CtilcAdapter:
             .isoformat()
             .replace("+00:00", "Z"),
             "citation": _citation(payload.pattern_echo),
+        }
+
+    async def collocacions(
+        self,
+        lema: str,
+        *,
+        radi: int = 3,
+        freq_min: int = 5,
+        limit: int = 5,
+    ) -> dict[str, Any]:
+        """Col·locacions d'un lema, agrupades per categoria gramatical.
+
+        Les xifres són freqüències de coaparició dins d'una finestra de ±`radi`
+        mots (0-5), no d'adjacència: no es barregen amb els recomptes de
+        `cerca_frase` ni de `cerca_patro`.
+        """
+
+        term = clean_text(lema)
+        if not term:
+            raise InvalidQueryError(
+                "Falta el lema.",
+                hint="Escriu el lema de què vols les col·locacions.",
+            )
+        if len(term) > 60 or re.search(r"\s", term):
+            raise InvalidQueryError(
+                f"«{term}» no és un lema vàlid.",
+                hint="Indica un sol lema, sense espais.",
+            )
+        radi = max(0, min(radi, 5))
+        freq_min = max(1, min(freq_min, 100))
+        limit = max(1, min(limit, 10))
+
+        body = (
+            f"seccio=CTILC1&cadlema={quote(term, safe='')}"
+            f"&cadlemacond=0&freqMin={freq_min}&radiE={radi}&radiD={radi}"
+        )
+        result = await self.client.post_text(COLLOCACIONS_URL, body)
+        data = parse_collocacions(result.text)
+
+        categories = [{**cat, "items": cat["items"][:limit]} for cat in data["categories"]]
+        warnings = list(result.warnings)
+        return {
+            "status": "ok",
+            "query": {"lema": term, "radi": radi, "freq_min": freq_min},
+            "lema": data["lema"],
+            "total": data["total"],
+            "returned_categories": len(categories),
+            "categories": categories,
+            "warnings": list(dict.fromkeys(warnings)),
+            "note": (
+                "Les xifres són freqüències de coaparició dins d'una finestra de "
+                f"±{radi} mots, amb un mínim de {freq_min} coaparicions. No són "
+                "recomptes d'adjacència ni de patró: no es poden comparar directament "
+                "amb els totals de `cerca_frase` o `cerca_patro`."
+            ),
+            "source": COLLOCACIONS_URL,
+            "retrieved_at": datetime.now(UTC)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z"),
+            "citation": (
+                f"CTILC (IEC), col·locacions del lema {term}, consulta feta el {_date_label()}."
+            ),
         }
 
     async def context(self, occurrence_id: str, *, obra: str | None = None) -> dict[str, Any]:

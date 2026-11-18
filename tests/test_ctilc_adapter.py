@@ -332,3 +332,51 @@ async def test_dispersio_amb_cursor_desconegut(tmp_path) -> None:
     adapter = CtilcAdapter(DispersioClient(""), _settings(tmp_path), CursorStore())
     with pytest.raises(StaleSearchError):
         await adapter.dispersio_cronologica("no-existeix")
+
+
+class CollocacionsClient:
+    def __init__(self, html: str) -> None:
+        self.html = html
+        self.bodies: list[str] = []
+
+    async def post_text(self, url: str, body: str, **kwargs) -> HttpResult:
+        self.bodies.append(body)
+        return HttpResult(text=self.html, status=200, url=url)
+
+    async def get_text(self, url: str, **kwargs) -> HttpResult:
+        return HttpResult(text=self.html, status=200, url=url)
+
+
+@pytest.mark.asyncio
+async def test_collocacions_construeix_el_cos_correcte(tmp_path) -> None:
+    html = (FIXTURES / "collocacions_somriure.html").read_text(encoding="utf-8")
+    client = CollocacionsClient(html)
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+    result = await adapter.collocacions("somriure", radi=2, freq_min=10, limit=2)
+    assert result["status"] == "ok"
+    assert result["lema"] == "somriure"
+    assert result["total"] == 1159
+    body = client.bodies[0]
+    assert "cadlema=somriure" in body
+    assert "radiE=2" in body
+    assert "radiD=2" in body
+    assert "freqMin=10" in body
+    assert "*" not in body.replace("*", "*")  # no hi ha claus NN*
+    assert result["query"]["radi"] == 2
+
+
+@pytest.mark.asyncio
+async def test_collocacions_rebutja_lema_amb_espais(tmp_path) -> None:
+    adapter = CtilcAdapter(CollocacionsClient(""), _settings(tmp_path), CursorStore())
+    with pytest.raises(InvalidQueryError):
+        await adapter.collocacions("somriure burleta")
+
+
+@pytest.mark.asyncio
+async def test_collocacions_limita_per_categoria(tmp_path) -> None:
+    html = (FIXTURES / "collocacions_somriure.html").read_text(encoding="utf-8")
+    client = CollocacionsClient(html)
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+    result = await adapter.collocacions("somriure", limit=1)
+    for category in result["categories"]:
+        assert len(category["items"]) == 1

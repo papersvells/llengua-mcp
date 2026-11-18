@@ -42,7 +42,9 @@ autoritat diferent i no les confonguis mai:
   zero no demostra que una forma no existeixi. No en dedueixis «ús quotidià».
   La dispersió cronològica serveix per dir en quins trams apareix més, amb
   ocurrències i taxa per milió; amb pocs testimonis, parla de concentració
-  observada, no de tendència.
+  observada, no de tendència. Les col·locacions indiquen quines paraules hi
+  coapareixen dins d'una finestra de mots; les seves xifres no es poden
+  comparar amb els recomptes de seqüència exacta.
 - Softcatalà: sinònims. Són propostes de significat; tria les que encaixen en
   la frase i explica'n el matís.
 
@@ -432,6 +434,41 @@ async def dispersio_cronologica(cursor: str) -> dict[str, Any]:
     return await _call(
         "https://ctilc.iec.cat/scripts/CTILCQDispersionsCron.asp",
         app.ctilc.dispersio_cronologica(cursor),
+    )
+
+
+@mcp.tool()
+async def collocacions(
+    lema: str,
+    radi: int = 3,
+    freq_min: int = 5,
+    limit: int = 5,
+) -> dict[str, Any]:
+    """Col·locacions d'un lema al CTILC, agrupades per categoria gramatical.
+
+    Serveix per saber quines paraules solen aparèixer a prop d'un lema: per a
+    «somriure» retorna quins noms, adjectius o verbs hi coapareixen més.
+    Retorna per categoria els lemes amb freqüència de coaparició.
+
+    Args:
+        lema: Un sol lema, sense espais (per exemple «somriure»).
+        radi: Finestra de coaparició en mots a cada costat (0-5, per defecte 3).
+        freq_min: Freqüència mínima de coaparició (per defecte 5).
+        limit: Màxim de lemes per categoria (1-10).
+
+    Important: les xifres són freqüències de **coaparició dins d'una finestra**,
+    no d'adjacència. No es poden comparar directament amb els totals de
+    `cerca_frase` o `cerca_patro`, que compten seqüències exactes.
+    """
+    app = await get_app()
+    return await _call(
+        "https://ctilc.iec.cat/scripts/CTILCQCol_LemesAgrup2.asp",
+        app.ctilc.collocacions(
+            lema,
+            radi=radi,
+            freq_min=freq_min,
+            limit=limit,
+        ),
     )
 
 

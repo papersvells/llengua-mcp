@@ -20,7 +20,7 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
 
 - Fase: **implementació inicial**. El paquet `llengua_mcp` i els tests ja existeixen; les eines estan disponibles per a OpenCode amb `opencode.jsonc`.
 - Implementat i provat en directe el 18/11/2026:
-  - CTILC: `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `xifres`, `etiquetes`, `salut`.
+  - CTILC: `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `xifres`, `etiquetes`, `salut`.
   - Optimot: `optimot_cerca`, `optimot_fitxa`.
   - DIEC: `diec_consulta`.
   - ésAdir: `esadir_consulta`, `esadir_fitxa`.
@@ -30,7 +30,7 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
   - Softcatalà: `cerca_sinonims` amb dades locals versionades.
 - **Corpus de consultes lingüístiques de l’IEC: investigat i descartat.** El contingut (1.176 consultes) només és accessible via JavaScript; la taula visible no filtra amb `cerca_text`/`wdt_var1`, l’AJAX de wpDataTables retorna sempre `recordsTotal: 1176, recordsFiltered: 0` i la cerca WP diu «El que busqueu no existeix». No és replicable sense navegador, que és fora d’abast.
 - **Critèria: WordPress** amb contingut en PDFs descarregables; l'API REST no publica els posts (0 elements). Poc valor cercable per a l'MCP.
-- Pendents: cerques bàsiques del CTILC (`Formes2`/`FormesLema2`), col·locacions, dispersió dialectal i general, obres, filtres i exportació.
+- Pendents: cerques bàsiques del CTILC (`Formes2`/`FormesLema2`), dispersió dialectal i general, obres, filtres i exportació.
 - Documents de referència:
   - `pla-mcp-ctilc.md` — pla inicial. És útil com a mapa del protocol, però **conté errors** i no s’ha d’implementar literalment.
   - `pla-mcp-ctilc-critiques.md` — revisió crítica amb verificació en directe, errors, correccions, golden tests i propostes. **És la font de veritat** quan els dos documents discrepin.
@@ -187,6 +187,7 @@ Prioritat dins l’adaptador CTILC:
 - `continuar_cerca(cursor, limit?)` — reprèn una pàgina amb el cursor local.
 - `cerca_patro(elements, limit?)` — patró avançat amb elements tipats.
 - `context(occurrence_id)` — context ±50 i paràgraf, amb metadades de l’obra.
+- `collocacions(lema, radi?, freq_min?, limit?)` — coaparicions dins d'una finestra de ±radi mots (0-5), agrupades per categoria gramatical. Els resultats són a `CTILCQCol_LemesAgrup2.asp` (POST amb `cadlema`, `radiE`/`radiD`, `freqMin`); l'apartat ALTRES barreja puntuació i noms propis i es filtra parcialment.
 - `xifres()` — mida i cobertura del corpus.
 - `etiquetes()` — categories i codis morfològics llegibles.
 - `salut()` — comprova que el lloc respon i que l’echo de control és correcte.
@@ -197,7 +198,6 @@ abans de publicar-los.
 
 Posteriors:
 
-- `collocacions`;
 - `dispersions`;
 - `obres` i `obres_descarregables`;
 - `filtres_disponibles`;
@@ -321,8 +321,8 @@ Proves d’acceptació del producte des d’OpenCode:
 3. **Alternatives:** davant «Què puc posar en lloc de “maliciós” a “un somriure maliciós”?», consulta Softcatalà i explica quines opcions conserven el sentit i quines el canvien. Cita l’entrada i presenta les alternatives com a suggeriments.
 
 **Estat de la definició de fet:** els tres casos d’acceptació i les eines del
-CTILC ja estan implementats i provats en directe (18/11/2026), amb 103 tests
-sense xarxa i cinc proves en directe optatives (`LLENGUA_LIVE=1`). Els pendents
+CTILC ja estan implementats i provats en directe (18/11/2026), amb 108 tests
+sense xarxa i sis proves en directe optatives (`LLENGUA_LIVE=1`). Els pendents
 són l’ampliació de fonts i les eines ajornades.
 
 La part del CTILC es considera llesta quan:

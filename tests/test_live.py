@@ -90,3 +90,19 @@ async def test_live_gramatiques() -> None:
     assert gbu["status"] == "ok" and gbu["hits"]
     assert giec["status"] == "ok" and giec["hits"]
     assert text["status"] == "ok" and "perífrasi" in text["content"].lower()
+
+
+@pytest.mark.asyncio
+async def test_live_collocacions() -> None:
+    app = App(Settings.from_env())
+    try:
+        result = await app.ctilc.collocacions("somriure", limit=3)
+    finally:
+        await app.aclose()
+    assert result["status"] == "ok"
+    assert result["total"] > 0
+    categories = {cat["categoria"] for cat in result["categories"]}
+    assert "nom" in categories
+    names = next(cat for cat in result["categories"] if cat["categoria"] == "nom")
+    assert names["items"]
+    assert all(item["freq"] >= 5 for item in names["items"])
