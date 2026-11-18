@@ -14,7 +14,7 @@ from llengua_mcp.errors import (
     UnexpectedResponseError,
     error_payload,
 )
-from llengua_mcp.models import PatternElement
+from llengua_mcp.models import CtilcFilters, PatternElement
 
 INSTRUCTIONS = """\
 Ets un servidor de consultes sobre la llengua catalana. Combina fonts amb
@@ -392,6 +392,7 @@ async def cerca_frase(
     frase: str,
     variants: list[str] | None = None,
     limit: int = 10,
+    filtres: CtilcFilters | None = None,
 ) -> dict[str, Any]:
     """Cerca una seqüència contigua de formes al CTILC.
 
@@ -402,11 +403,16 @@ async def cerca_frase(
     del patró, `search_cursor` (per a eines com la dispersió) i `next_cursor`
     per continuar. Un zero només és una absència en aquest corpus, no una prova
     que la forma no existeixi.
+
+    `filtres` permet restringir per autor, títol, anys, tipus (LIT/NLIT),
+    gènere (A/N/P/T), varietat i traducció. Amb filtres, un resultat sense
+    files no es presenta com una absència: el portal pot retornar un total de
+    control.
     """
     app = await get_app()
     return await _call(
         "https://ctilc.iec.cat/scripts/CTILCQConc_Coocur2.asp",
-        app.ctilc.search_phrase(frase, variants=variants, limit=limit),
+        app.ctilc.search_phrase(frase, variants=variants, limit=limit, filters=filtres),
     )
 
 
@@ -416,18 +422,26 @@ async def cerca(
     forma: str | None = None,
     categoria: str | None = None,
     limit: int = 10,
+    filtres: CtilcFilters | None = None,
 ) -> dict[str, Any]:
     """Cerca simple al CTILC per lema o per forma.
 
     `lema` cerca totes les formes del lema i admet una `categoria` (`subst`,
     `V`, `adj`...). `forma` cerca una sola forma gràfica. No es poden combinar
     totes dues. Retorna els mateixos contextos verificats que `cerca_frase`,
-    amb `pattern_echo`, total, `search_cursor` i `next_cursor`.
+    amb `pattern_echo`, total, `search_cursor` i `next_cursor`. `filtres`
+    funciona com a `cerca_frase`.
     """
     app = await get_app()
     return await _call(
         "https://ctilc.iec.cat/scripts/CTILCQConc_Coocur2.asp",
-        app.ctilc.cerca(lema=lema, forma=forma, categoria=categoria, limit=limit),
+        app.ctilc.cerca(
+            lema=lema,
+            forma=forma,
+            categoria=categoria,
+            limit=limit,
+            filters=filtres,
+        ),
     )
 
 
@@ -435,6 +449,7 @@ async def cerca(
 async def cerca_patro(
     elements: list[PatternElement],
     limit: int = 10,
+    filtres: CtilcFilters | None = None,
 ) -> dict[str, Any]:
     """Cerca un patró avançat al CTILC (combinacions).
 
@@ -445,12 +460,13 @@ async def cerca_patro(
 
     Retorna el patró executat, el total verificat i contextos. `optional` en
     diversos elements seguits emula un interval, però no s'ha de presentar com
-    una equivalència de rangs sense controls positius.
+    una equivalència de rangs sense controls positius. `filtres` funciona com a
+    `cerca_frase`.
     """
     app = await get_app()
     return await _call(
         "https://ctilc.iec.cat/scripts/CTILCQConc_Coocur2.asp",
-        app.ctilc.search_pattern(elements, limit=limit),
+        app.ctilc.search_pattern(elements, limit=limit, filters=filtres),
     )
 
 
@@ -526,6 +542,38 @@ async def collocacions(
             radi=radi,
             freq_min=freq_min,
             limit=limit,
+        ),
+    )
+
+
+@mcp.tool()
+async def filtres_disponibles(
+    cursor: str,
+    tipus: str = "autors",
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Llista els valors disponibles d'un filtre del CTILC.
+
+    Passa el `search_cursor` d'una cerca. Retorna els autors o els títols que
+    apareixen en aquell resultat, amb el recompte d'ocurrències de cadascun.
+    Serveix per triar valors vàlids abans de filtrar; un valor inventat pot
+    donar un resultat sense files que no és una absència verificable.
+
+    Args:
+        cursor: `search_cursor` d'una cerca.
+        tipus: `autors` o `titols`.
+        limit: Nombre màxim de valors (1-100).
+        offset: Posició inicial; usa `next_offset`.
+    """
+    app = await get_app()
+    return await _call(
+        "https://ctilc.iec.cat/scripts/CTILCQConcFiltObra_filtres.asp",
+        app.ctilc.filtres_disponibles(
+            cursor,
+            tipus=tipus,
+            limit=limit,
+            offset=offset,
         ),
     )
 

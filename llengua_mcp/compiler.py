@@ -27,8 +27,8 @@ class CompiledPattern:
     fields: tuple[tuple[str, str], ...]
     expected: dict[str, str] = field(default_factory=dict)
 
-    def body(self, *, start: int, offset: int) -> str:
-        return build_body(self.fields, start=start, offset=offset)
+    def body(self, *, start: int, offset: int, filters: dict[str, str] | None = None) -> str:
+        return build_body(self.fields, start=start, offset=offset, filters=filters)
 
     def public_query(self) -> dict:
         return {
@@ -262,6 +262,7 @@ def build_body(
     *,
     start: int,
     offset: int,
+    filters: dict[str, str] | None = None,
 ) -> str:
     """Construeix el cos amb `*` literal i valors codificats una vegada."""
 
@@ -281,6 +282,9 @@ def build_body(
                 hint="Les claus són del tipus `00*lema`.",
             )
         parts.append(f"{key}={quote(value, safe='')}")
+    for name, value in (filters or {}).items():
+        if value:
+            parts.append(f"{name}={quote(value, safe='')}")
     parts.append(f"iStart={start}")
     parts.append(f"iOffset={offset}")
     return "&".join(parts)

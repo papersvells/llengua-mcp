@@ -13,10 +13,10 @@ verificades) i, per a l'abast, `AGENTS.md`.
 
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els retocs de validació del 18/11/2026 ja són committats.
-- **Tests sense xarxa:** 151 passats, 8 omesos (els live).
-- **Tests en directe:** 8, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **Tests sense xarxa:** 163 passats, 9 omesos (els live).
+- **Tests en directe:** 9, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **Ruff:** `ruff format` i `ruff check` nets.
-- **Eines MCP:** 22 eines, agrupades per font.
+- **Eines MCP:** 23 eines, agrupades per font.
 
 ### Eines per font
 
@@ -30,7 +30,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 | OIEC | `oiec_cerca`, `oiec_text` | Implementat via `api-oiec.iec.cat` |
 | Gramàtiques | `gramatica_cerca`, `gramatica_text` | Implementat (GBU, GEIEC, GIEC) |
 | Softcatalà | `cerca_sinonims` | Dades locals versionades (CC BY 4.0) |
-| CTILC | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
+| CTILC | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `filtres_disponibles`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
 
 ### Decisions consolidades
 
@@ -44,6 +44,9 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - La dispersió només es presenta com a vàlida si el patró i els totals quadren.
   Si no, `data_valid` és fals, `periods` queda buit i les dades crues van a
   `unvalidated`.
+- Amb filtres, `total` és la «Quantitat filtrada» i `total_unfiltered` el total
+  sense filtres. Un resultat filtrat sense files no es presenta com una
+  absència: el portal pot retornar un total de control.
 - Les xifres de `collocacions` són freqüències de **coaparició dins d'una
   finestra**, no d'adjacència: no es comparen amb `cerca_frase`/`cerca_patro`.
   Cal validar `lema_echo_verified` i recordar que `total` inclou les files de
@@ -69,6 +72,11 @@ Expectatives datades, no llindars eterns:
 - Dispersió d'una cerca d'una sola pàgina (`somriure maliciós`, 32): hi ha
   `search_cursor` sense `next_cursor`; la dispersió torna `ok` amb
   `data_valid: true` i 10 trams.
+- Filtres del CTILC (`somriure` + adj, 2.136): varietat **central** → 1.237;
+  autor **Sagarra** → 42; **1960–1961** → 25; gènere **narrativa** → 1.567;
+  tipus **LIT** → 1.932; **sense traducció** → 1.899.
+  `filtres_disponibles(autors)` → 413 autors. Un autor inventat dona
+  `unexpected_response` (total 1, 0 files), no un zero.
 - Optimot «tenir que» → fitxa 6754/4 (05.04.2023).
 - Corpus de consultes de l'IEC: `consultes_iec("tenir")` → **257** (1.176 en
   total), 7 temes; `tema="Sintaxi"` → **347**; `camp="pregunta"` amb «tenir» →
@@ -138,12 +146,19 @@ directe amb `somriure` el 18/11/2026.
 
 ### 2.5 CTILC: eines ajornades
 
+- **Filtres per autor, títol, any, tipus, gènere, varietat i traducció:
+  resolts el 18/11/2026.** `cerca`, `cerca_frase` i `cerca_patro` accepten
+  `filtres`; el cursor els desa i `continuar_cerca` els reenvia.
+  `filtres_disponibles` llista autors i títols amb recompte. Amb filtres,
+  `total` és la «Quantitat filtrada» i `total_unfiltered` la freqüència sense
+  filtres; si no hi ha files, el portal pot retornar `1` com a valor de
+  control i es tracta com a `unexpected_response`, no com una absència.
+  Queden fora el `classtem` (taxonomia temàtica) i la validació global
+  d'autors fora del resultat.
 - Cerques bàsiques dedicades amb `Formes2` / `FormesLema2` (ara `cerca` va per
   `Coocur2` amb un sol element).
 - Dispersió dialectal i general.
 - Obres i obres descarregables.
-- Filtres per autor, any, gènere i varietat: el formulari els té, però cal
-  verificar-los amb fixtures abans de publicar-los.
 - **Exportació CSV:** `Qjson_concordancesCSV.asp` no està verificat i a les
   proves va retornar 500. No implementar com a eina estable fins a capturar
   una exportació real.
@@ -232,8 +247,8 @@ PY
 
 ## 4. Properes passes suggerides
 
-1. Triar la propera ampliació: filtres del CTILC (autor, any, gènere i
-   varietat) o les eines ajornades de 2.5.
+1. Reprendre les eines ajornades del CTILC (2.5): `Formes2`/`FormesLema2`,
+   dispersió dialectal i obres.
 2. Revisar Critèria i la cobertura del DDLC a BDLex (2.6) si es volen citar.
 3. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
    fum abans de donar per bona una versió.

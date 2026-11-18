@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -9,7 +10,7 @@ from llengua_mcp.config import Settings
 from llengua_mcp.cursors import CursorStore
 from llengua_mcp.errors import InvalidQueryError, StaleSearchError, UpstreamError
 from llengua_mcp.http import HttpResult
-from llengua_mcp.models import PatternElement
+from llengua_mcp.models import CtilcFilters, PatternElement
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -39,6 +40,48 @@ def _settings(tmp_path) -> Settings:
         data_dir=tmp_path,
         cache_dir=tmp_path,
     )
+
+
+def _filtered_page(
+    *,
+    filtered: int = 1237,
+    unfiltered: int = 2136,
+    echo_var: str = "@central",
+    with_rows: bool = True,
+) -> str:
+    html = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    html = html.replace(
+        "Freqüència total</b>:&nbsp;&nbsp;3",
+        f"Freqüència total</b>:&nbsp;&nbsp;{unfiltered}",
+    )
+    filter_table = (
+        '<center><table class="tableFILTREStop"><tr><td width="75%">'
+        "<b>Filtre per varietat</b>: central</td>"
+        f"<td><b>Quantitat filtrada</b>:&nbsp;&nbsp;{filtered}</td>"
+        "</tr></table></center>"
+    )
+    html = html.replace(
+        '</div>\n<div id="cHTML2">',
+        filter_table + '</div>\n<div id="cHTML2">',
+    )
+    html = html.replace(
+        "</body>",
+        f'<input type="hidden" name="varSelec" value="{echo_var}" /></body>',
+    )
+    if not with_rows:
+        html = re.sub(r'<div id="cHTML2">.*?</div>', "", html, flags=re.DOTALL)
+    return html
+
+
+class FilterListClient(FakeClient):
+    def __init__(self, search_html: str, list_html: str) -> None:
+        super().__init__(search_html)
+        self.list_html = list_html
+
+    async def post_text(self, url: str, body: str, **kwargs) -> HttpResult:
+        self.bodies.append(body)
+        text = self.list_html if "FiltObra_filtres" in url else self.html
+        return HttpResult(text=text, status=200, url=url)
 
 
 @pytest.mark.asyncio
@@ -577,3 +620,192 @@ async def test_collocacions_massa_gran_es_accioable(tmp_path) -> None:
         await adapter.collocacions("altre", freq_min=5)
     assert "freq_min" in info.value.hint
     assert "altre" in info.value.message
+
+
+@pytest.mark.asyncio
+async def test_filtres_construeix_el_cos_i_usa_total_filtrat(tmp_path) -> None:
+    client = FakeClient(_filtered_page())
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+    result = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ],
+        filters=CtilcFilters(varietat=["central"]),
+    )
+    assert result["status"] == "ok"
+    assert result["total"] == 1237
+    assert result["total_unfiltered"] == 2136
+    assert result["filters_verified"] is True
+    assert result["filters_summary"] == ["varietat: central"]
+    assert result["query"]["filters"] == {"varietat": ["central"]}
+    assert "varSelec=%40central" in client.bodies[0]
+
+
+@pytest.mark.asyncio
+async def test_filtres_eco_divergent(tmp_path) -> None:
+    client = FakeClient(_filtered_page(echo_var="@valencià"))
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+    result = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ],
+        filters=CtilcFilters(varietat=["central"]),
+    )
+    assert result["status"] == "unexpected_response"
+    assert result["filters_verified"] is False
+    assert "filters_echo_unexpected" in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_filtres_no_aplicats(tmp_path) -> None:
+    html = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    html = html.replace(
+        "Freqüència total</b>:&nbsp;&nbsp;3", "Freqüència total</b>:&nbsp;&nbsp;2136"
+    )
+    adapter = CtilcAdapter(FakeClient(html), _settings(tmp_path), CursorStore())
+    result = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ],
+        filters=CtilcFilters(varietat=["central"]),
+    )
+    assert result["status"] == "unexpected_response"
+    assert result["filters_verified"] is False
+    assert "filters_not_applied" in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_filtres_sense_files_no_es_absencia(tmp_path) -> None:
+    adapter = CtilcAdapter(
+        FakeClient(_filtered_page(filtered=1, with_rows=False)),
+        _settings(tmp_path),
+        CursorStore(),
+    )
+    result = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ],
+        filters=CtilcFilters(varietat=["central"]),
+    )
+    assert result["status"] == "unexpected_response"
+    assert result["returned"] == 0
+    assert "filtered_empty_unverified" in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_filtres_amb_query_buida_es_zero_valid(tmp_path) -> None:
+    page = (FIXTURES / "ctilc_zero.html").read_text(encoding="utf-8")
+    adapter = CtilcAdapter(FakeClient(page), _settings(tmp_path), CursorStore())
+    result = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="forma", value="amb", alternatives=["de"]),
+            PatternElement(type="forma", value="mala"),
+            PatternElement(type="forma", value="fe"),
+        ],
+        filters=CtilcFilters(varietat=["central"]),
+    )
+    assert result["status"] == "no_matches"
+    assert result["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_cursor_guarda_i_reenvia_els_filtres(tmp_path) -> None:
+    client = FakeClient(_filtered_page())
+    store = CursorStore()
+    adapter = CtilcAdapter(client, _settings(tmp_path), store)
+    start = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ],
+        limit=2,
+        filters=CtilcFilters(varietat=["central"]),
+    )
+    token = start["search_cursor"]
+    payload = store.get(token)
+    assert payload is not None
+    assert payload.filters == {"varSelec": "@central"}
+
+    await adapter.continue_search(token, limit=2)
+    assert "varSelec=%40central" in client.bodies[-1]
+
+
+@pytest.mark.asyncio
+async def test_filtres_invalids(tmp_path) -> None:
+    adapter = CtilcAdapter(FakeClient(""), _settings(tmp_path), CursorStore())
+    with pytest.raises(InvalidQueryError, match="rang d'anys"):
+        await adapter.cerca(lema="somriure", filters=CtilcFilters(any_min=2000, any_max=1990))
+    with pytest.raises(InvalidQueryError, match="gènere"):
+        await adapter.cerca(lema="somriure", filters=CtilcFilters(genere=["inventat"]))
+    with pytest.raises(InvalidQueryError, match="varietat"):
+        await adapter.cerca(lema="somriure", filters=CtilcFilters(varietat=["inventada"]))
+
+
+@pytest.mark.asyncio
+async def test_filtres_disponibles(tmp_path) -> None:
+    search_page = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    list_page = (FIXTURES / "ctilc_filtres_autors.html").read_text(encoding="utf-8")
+    client = FilterListClient(search_page, list_page)
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+    start = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ],
+        limit=2,
+    )
+    result = await adapter.filtres_disponibles(start["search_cursor"], tipus="autors", limit=2)
+    assert result["status"] == "ok"
+    assert result["total"] == 3
+    assert result["returned"] == 2
+    assert result["has_more"] is True
+    assert result["values"][0] == {
+        "value": "Abelló, Montserrat",
+        "label": "Abelló, Montserrat",
+        "count": 2,
+    }
+    assert "filt=authors" in client.bodies[-1]
+
+    second = await adapter.filtres_disponibles(
+        start["search_cursor"], tipus="autors", limit=2, offset=2
+    )
+    assert second["values"][0]["value"] == "Arbó, Sebastià"
+    assert second["has_more"] is False
+
+
+@pytest.mark.asyncio
+async def test_filtres_disponibles_tipus_invalid(tmp_path) -> None:
+    adapter = CtilcAdapter(FakeClient(""), _settings(tmp_path), CursorStore())
+    with pytest.raises(InvalidQueryError, match="tipus de filtre"):
+        await adapter.filtres_disponibles("qualsevol", tipus="anys")
+
+
+@pytest.mark.asyncio
+async def test_dispersio_amb_filtres_avisa(tmp_path) -> None:
+    search_page = _filtered_page()
+    dispersio_page = (FIXTURES / "dispersio_cron.html").read_text(encoding="utf-8")
+
+    class SwitchClient:
+        async def post_text(self, url: str, body: str, **kwargs) -> HttpResult:
+            return HttpResult(text=search_page, status=200, url=url)
+
+        async def get_text(self, url: str, **kwargs) -> HttpResult:
+            return HttpResult(text=dispersio_page, status=200, url=url)
+
+    adapter = CtilcAdapter(SwitchClient(), _settings(tmp_path), CursorStore())
+    start = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ],
+        limit=2,
+        filters=CtilcFilters(varietat=["central"]),
+    )
+    result = await adapter.dispersio_cronologica(start["search_cursor"])
+    assert "filters_not_applied" in result["warnings"]
+    assert result["status"] == "partial"

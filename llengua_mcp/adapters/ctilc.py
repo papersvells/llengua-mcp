@@ -22,14 +22,20 @@ from llengua_mcp.errors import (
     UpstreamError,
 )
 from llengua_mcp.http import HttpClient
-from llengua_mcp.models import CursorPayload, PatternElement
+from llengua_mcp.models import CtilcFilters, CursorPayload, PatternElement
 from llengua_mcp.parsers.collocacions import COLLOCACIONS_URL, parse_collocacions
 from llengua_mcp.parsers.ctilc import parse_ctilc_page, patterns_equivalent
 from llengua_mcp.parsers.dades import parse_dades
 from llengua_mcp.parsers.dispersions import parse_cronologia
+from llengua_mcp.parsers.filtres import (
+    EXTRA_PARAMS,
+    FILTRES_URL,
+    KINDS,
+    parse_filter_values,
+)
 from llengua_mcp.parsers.fitxa import parse_fitxa
 from llengua_mcp.tagset import tagset_payload
-from llengua_mcp.text import clean_text
+from llengua_mcp.text import clean_text, normalize_key
 
 BASE = "https://ctilc.iec.cat/scripts"
 COOCUR_URL = f"{BASE}/CTILCQConc_Coocur2.asp"
@@ -77,6 +83,150 @@ def _lema_matches(requested: str, echoed: str) -> bool:
     return bool(base) and suffix.isdigit() and base == requested_norm
 
 
+MIN_YEAR = 1832
+MAX_YEAR = 2022
+
+_TIPUS_VALUES = {
+    "lit": "LIT",
+    "literari": "LIT",
+    "nlit": "NLIT",
+    "noliterari": "NLIT",
+    "no literari": "NLIT",
+}
+_GENERE_VALUES = {
+    "a": "A",
+    "assaig": "A",
+    "n": "N",
+    "narrativa": "N",
+    "p": "P",
+    "poesia": "P",
+    "t": "T",
+    "teatre": "T",
+}
+_VARIETAT_VALUES = {
+    "balearic": "baleàric",
+    "baleàric": "baleàric",
+    "central": "central",
+    "nord-occidental": "nord-occidental",
+    "nord occidental": "nord-occidental",
+    "septentrional": "septentrional",
+    "valencia": "valencià",
+    "valencià": "valencià",
+}
+
+
+def _map_filter_values(
+    values: list[str], mapping: dict[str, str], *, label: str, hint: str
+) -> list[str]:
+    mapped: list[str] = []
+    for value in values:
+        key = normalize_key(value)
+        if key not in mapping:
+            raise InvalidQueryError(
+                f"El valor «{value}» no és vàlid per a {label}.",
+                hint=hint,
+            )
+        if mapping[key] not in mapped:
+            mapped.append(mapping[key])
+    return mapped
+
+
+def _resolve_filters(filters: CtilcFilters | None) -> tuple[dict[str, str], dict[str, Any] | None]:
+    """Converteix els filtres públics en els camps del formulari del CTILC."""
+
+    if filters is None:
+        return {}, None
+
+    fields: dict[str, str] = {}
+    public: dict[str, Any] = {}
+
+    if filters.autor:
+        values = [clean_text(value) for value in filters.autor if clean_text(value)]
+        if not values:
+            raise InvalidQueryError("La llista d'autors és buida.")
+        fields["autSelec"] = ", ".join(f"@{value}" for value in values)
+        public["autor"] = values
+    if filters.titol:
+        values = [clean_text(value) for value in filters.titol if clean_text(value)]
+        if not values:
+            raise InvalidQueryError("La llista de títols és buida.")
+        fields["titSelec"] = ", ".join(f"@{value}" for value in values)
+        public["titol"] = values
+
+    if filters.any_min is not None or filters.any_max is not None:
+        low = filters.any_min if filters.any_min is not None else MIN_YEAR
+        high = filters.any_max if filters.any_max is not None else MAX_YEAR
+        if low < MIN_YEAR or high > MAX_YEAR or low > high:
+            raise InvalidQueryError(
+                f"El rang d'anys no és vàlid: {low}–{high}.",
+                hint=f"El corpus va de {MIN_YEAR} a {MAX_YEAR} i el mínim no pot superar el màxim.",
+            )
+        fields["anySelec"] = ", ".join(f"@{year}" for year in range(low, high + 1))
+        public["any_min"] = low
+        public["any_max"] = high
+
+    if filters.tipus:
+        values = _map_filter_values(
+            filters.tipus,
+            _TIPUS_VALUES,
+            label="tipus",
+            hint="Valors: LIT (literari), NLIT (no literari).",
+        )
+        fields["tipusSelec"] = ", ".join(f"@{value}" for value in values)
+        public["tipus"] = values
+
+    if filters.genere:
+        values = _map_filter_values(
+            filters.genere,
+            _GENERE_VALUES,
+            label="gènere",
+            hint="Valors: A (assaig), N (narrativa), P (poesia), T (teatre).",
+        )
+        fields["genSelec"] = ", ".join(f"@{value}" for value in values)
+        public["genere"] = values
+
+    if filters.varietat:
+        values = _map_filter_values(
+            filters.varietat,
+            _VARIETAT_VALUES,
+            label="varietat",
+            hint=("Valors: baleàric, central, nord-occidental, septentrional, valencià."),
+        )
+        fields["varSelec"] = ", ".join(f"@{value}" for value in values)
+        public["varietat"] = values
+
+    if filters.traduccio is not None:
+        fields["tradSelec"] = "sí" if filters.traduccio else "no"
+        public["traduccio"] = filters.traduccio
+
+    return fields, (public or None)
+
+
+def _filter_tokens(value: str) -> list[str]:
+    """Separa `@A, @B` sense trencar els noms que contenen comes."""
+
+    return sorted(
+        clean_text(part).lstrip("@").strip().casefold()
+        for part in re.split(r",\s*(?=@)", value)
+        if part.strip()
+    )
+
+
+def _filters_match(sent: dict[str, str], echo: dict[str, str]) -> bool:
+    if not sent:
+        return True
+    if not echo:
+        return False
+    for name, value in sent.items():
+        echoed = echo.get(name, "")
+        if name == "tradSelec":
+            if normalize_key(echoed) != normalize_key(value):
+                return False
+        elif _filter_tokens(echoed) != _filter_tokens(value):
+            return False
+    return True
+
+
 class CtilcAdapter:
     def __init__(
         self,
@@ -98,12 +248,14 @@ class CtilcAdapter:
         cursor_token: str | None = None,
         use_cache: bool = True,
         persist_cursor: bool = True,
+        filters: dict[str, str] | None = None,
+        filter_query: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if start < 1:
             raise InvalidQueryError("`start` ha de ser 1 o més gran.")
         offset = max(1, min(limit, self.settings.max_occurrences))
         compiled = compile_pattern(elements)
-        body = compiled.body(start=start, offset=offset)
+        body = compiled.body(start=start, offset=offset, filters=filters)
         result = await self.client.post_text(COOCUR_URL, body, use_cache=use_cache)
         expected_pattern = " ".join(compiled.expected.values())
         page = parse_ctilc_page(
@@ -111,12 +263,28 @@ class CtilcAdapter:
             expected=compiled.expected,
             expected_pattern=expected_pattern,
         )
+        if filter_query:
+            query = {**query, "filters": filter_query}
 
         warnings = _dedupe(result.warnings + page.warnings)
         status = "ok"
         error_note = None
+        filters_ok = True
+        if filters and page.total_unfiltered != 0:
+            if page.filtered_total is None:
+                filters_ok = False
+                warnings.append("filters_not_applied")
+            elif not _filters_match(filters, page.filters_echo):
+                filters_ok = False
+                warnings.append("filters_echo_unexpected")
 
-        if page.total is None:
+        if not filters_ok:
+            status = "unexpected_response"
+            error_note = (
+                "Els filtres enviats no s'han pogut verificar a la pàgina del CTILC. "
+                "El resultat no es pot presentar com un recompte filtrat ni com una absència."
+            )
+        elif page.total is None:
             status = "unexpected_response"
             error_note = (
                 "No s'ha pogut llegir un total verificat. La pàgina no es pot "
@@ -138,10 +306,18 @@ class CtilcAdapter:
                 )
         elif page.total is not None and page.total > 0 and not page.occurrences:
             status = "unexpected_response"
-            error_note = (
-                "El servidor dona un total positiu però la pàgina no conté files. "
-                "Pot ser un resultat remot caducat o un canvi de format."
-            )
+            if filters and page.filtered_total is not None:
+                warnings.append("filtered_empty_unverified")
+                error_note = (
+                    "Amb filtres, el portal dona un total positiu però no retorna files. "
+                    "Aquest total pot ser un valor de control (1) i no un recompte fiable; "
+                    "no es pot interpretar com una absència."
+                )
+            else:
+                error_note = (
+                    "El servidor dona un total positiu però la pàgina no conté files. "
+                    "Pot ser un resultat remot caducat o un canvi de format."
+                )
 
         returned = len(page.occurrences)
         # Avancem la mida de pàgina demanada, no les files parsejades: una fila
@@ -159,6 +335,7 @@ class CtilcAdapter:
                 total=page.total,
                 resultat=page.server_fields.get("resultat"),
                 qlocali=page.server_fields.get("Qlocali"),
+                filters=filters or {},
                 next_start=next_start,
                 page_size=offset,
                 created_at=datetime.now(UTC),
@@ -202,16 +379,27 @@ class CtilcAdapter:
             response["error"] = {"code": status, "message": error_note}
         if page.zero_message:
             response["zero_message"] = page.zero_message
+        if filters:
+            response["filters_verified"] = filters_ok
+            response["total_unfiltered"] = page.total_unfiltered
+            response["filters_summary"] = page.filters_summary
         return response
 
     async def search_pattern(
-        self, elements: list[PatternElement], *, limit: int = 10
+        self,
+        elements: list[PatternElement],
+        *,
+        limit: int = 10,
+        filters: CtilcFilters | None = None,
     ) -> dict[str, Any]:
+        filter_fields, filter_query = _resolve_filters(filters)
         return await self.search(
             elements=elements,
             query=patro_query(elements),
             limit=limit,
             start=1,
+            filters=filter_fields,
+            filter_query=filter_query,
         )
 
     async def cerca(
@@ -221,6 +409,7 @@ class CtilcAdapter:
         forma: str | None = None,
         categoria: str | None = None,
         limit: int = 10,
+        filters: CtilcFilters | None = None,
     ) -> dict[str, Any]:
         """Cerca simple per lema o per forma, amb contextos."""
 
@@ -253,11 +442,14 @@ class CtilcAdapter:
             element = PatternElement(type="forma", value=forma)
             query = {"mode": "cerca", "forma": forma}
 
+        filter_fields, filter_query = _resolve_filters(filters)
         return await self.search(
             elements=[element],
             query=query,
             limit=limit,
             start=1,
+            filters=filter_fields,
+            filter_query=filter_query,
         )
 
     async def search_phrase(
@@ -266,12 +458,18 @@ class CtilcAdapter:
         *,
         variants: list[str] | None = None,
         limit: int = 10,
+        filters: CtilcFilters | None = None,
     ) -> dict[str, Any]:
         phrases = [clean_text(frase)]
         for variant in variants or []:
             cleaned = clean_text(variant)
             if cleaned and cleaned not in phrases:
                 phrases.append(cleaned)
+
+        filter_fields, filter_query = _resolve_filters(filters)
+        base_query = phrase_query(frase, variants)
+        if filter_query:
+            base_query = {**base_query, "filters": filter_query}
 
         outcomes: list[dict[str, Any]] = []
         errors = 0
@@ -282,9 +480,10 @@ class CtilcAdapter:
             try:
                 outcome = await self.search(
                     elements=phrase_elements(variant),
-                    query={**phrase_query(frase), "variant": variant},
+                    query={**base_query, "variant": variant},
                     limit=limit,
                     start=1,
+                    filters=filter_fields,
                 )
             except LlenguaError as exc:
                 errors += 1
@@ -317,6 +516,9 @@ class CtilcAdapter:
                             "has_more",
                             "search_cursor",
                             "next_cursor",
+                            "filters_verified",
+                            "total_unfiltered",
+                            "filters_summary",
                             "occurrences",
                             "warnings",
                             "zero_message",
@@ -343,7 +545,7 @@ class CtilcAdapter:
         )
         return {
             "status": status,
-            "query": {**phrase_query(frase, variants), "limit": limit},
+            "query": {**base_query, "limit": limit},
             "variants": outcomes,
             "variants_tested": [item["variant"] for item in outcomes],
             "not_summed_note": (
@@ -399,9 +601,11 @@ class CtilcAdapter:
             limit=limit or payload.page_size,
             start=payload.next_start,
             cursor_token=cursor,
+            filters=payload.filters or None,
         )
         if (
             result["status"] == "unexpected_response"
+            and not payload.filters
             and result.get("total")
             and result.get("returned") == 0
             and result["total"] >= payload.next_start
@@ -494,6 +698,8 @@ class CtilcAdapter:
         warnings: list[str] = list(result.warnings)
         if not payload.resultat:
             warnings.append("no_remote_result")
+        if payload.filters:
+            warnings.append("filters_not_applied")
         if (
             payload.pattern_echo
             and data["pattern_echo"]
@@ -514,7 +720,7 @@ class CtilcAdapter:
 
         if "pattern_echo_unexpected" in warnings:
             status = "unexpected_response"
-        elif invalid_reasons:
+        elif invalid_reasons or "filters_not_applied" in warnings:
             status = "partial"
         else:
             status = "ok"
@@ -538,7 +744,9 @@ class CtilcAdapter:
                 "del corpus. Si hi ha pocs testimonis, parlem de concentració "
                 "observada, no de tendència general. Si `data_valid` és fals, "
                 "`periods` queda buit i les dades sense validar són a "
-                "`unvalidated`: no s'han de presentar com a resultats."
+                "`unvalidated`: no s'han de presentar com a resultats. Si la "
+                "cerca tenia filtres, la dispersió no els aplica "
+                "(`filters_not_applied`)."
             ),
             "source": CRON_URL,
             "retrieved_at": datetime.now(UTC)
@@ -695,6 +903,72 @@ class CtilcAdapter:
             "source": COLLOCACIONS_URL,
             "retrieved_at": retrieved_at,
             "citation": citation,
+        }
+
+    async def filtres_disponibles(
+        self,
+        cursor: str,
+        *,
+        tipus: str = "autors",
+        limit: int = 50,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Valors disponibles d'un filtre per a una cerca concreta."""
+
+        if tipus not in KINDS:
+            raise InvalidQueryError(
+                f"El tipus de filtre «{tipus}» no existeix.",
+                hint="Tipus disponibles: " + ", ".join(sorted(KINDS)) + ".",
+            )
+        if offset < 0:
+            raise InvalidQueryError("`offset` ha de ser 0 o més gran.")
+        limit = max(1, min(limit, 100))
+
+        payload = self.cursors.get(cursor)
+        if payload is None:
+            raise StaleSearchError(
+                "El cursor no existeix o ha caducat.",
+                hint="Torna a executar la cerca i demana'n els filtres.",
+                source=FILTRES_URL,
+            )
+        if not payload.resultat:
+            raise StaleSearchError(
+                "Aquesta cerca no té un resultat remot per consultar-ne els filtres.",
+                hint="Torna a executar la cerca; el cursor pot haver quedat desfassat.",
+                source=FILTRES_URL,
+            )
+
+        body = (
+            f"filt={KINDS[tipus]}&seccio=CTILC1&resultat={payload.resultat}&{EXTRA_PARAMS[tipus]}"
+        )
+        result = await self.client.post_text(FILTRES_URL, body, cache_ttl=300)
+        values = parse_filter_values(result.text, tipus=tipus)
+        total = len(values)
+        page = values[offset : offset + limit]
+        has_more = offset + len(page) < total
+        return {
+            "status": "ok",
+            "query": {"tipus": tipus, "limit": limit, "offset": offset},
+            "result_total": payload.total,
+            "total": total,
+            "returned": len(page),
+            "has_more": has_more,
+            "next_offset": offset + len(page) if has_more else None,
+            "values": page,
+            "warnings": list(result.warnings),
+            "note": (
+                "Els recomptes són de la cerca original i indiquen quantes "
+                "ocurrències té cada valor. Passa `value` a `filtres`; `label` "
+                "és el nom llegible."
+            ),
+            "source": FILTRES_URL,
+            "retrieved_at": datetime.now(UTC)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z"),
+            "citation": (
+                f"CTILC (IEC), filtres de {tipus} per a una consulta feta el {_date_label()}."
+            ),
         }
 
     async def context(self, occurrence_id: str, *, obra: str | None = None) -> dict[str, Any]:

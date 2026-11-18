@@ -89,6 +89,32 @@ def test_zero_page_without_chtml1_container() -> None:
     assert page.zero_message
 
 
+def test_filtered_page_uses_filtered_total_and_echo() -> None:
+    html = _html("ctilc_two_rows.html")
+    html = html.replace(
+        "Freqüència total</b>:&nbsp;&nbsp;3", "Freqüència total</b>:&nbsp;&nbsp;2136"
+    )
+    filter_table = (
+        '<center><table class="tableFILTREStop"><tr><td width="75%">'
+        "<b>Filtre per varietat</b>: central</td>"
+        "<td><b>Quantitat filtrada</b>:&nbsp;&nbsp;1237</td></tr></table></center>"
+    )
+    html = html.replace('</div>\n<div id="cHTML2">', filter_table + '</div>\n<div id="cHTML2">')
+    html = html.replace(
+        "</body>", '<input type="hidden" name="varSelec" value="@central" /></body>'
+    )
+
+    page = parse_ctilc_page(
+        html,
+        expected={"00*lema": "somriure", "01*cg": "adj:-"},
+    )
+    assert page.total == 1237
+    assert page.total_unfiltered == 2136
+    assert page.filtered_total == 1237
+    assert page.filters_echo == {"varSelec": "@central"}
+    assert page.filters_summary == ["varietat: central"]
+
+
 def test_patterns_equivalent_handles_display_variants() -> None:
     from llengua_mcp.parsers.ctilc import patterns_equivalent
 

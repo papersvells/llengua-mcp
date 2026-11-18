@@ -16,6 +16,18 @@ _PATTERN_RE = re.compile(
 )
 _PATTERN_FALLBACK_RE = re.compile(r"Patró seleccionat\s*:\s*(.*?)\s*CTILC1", re.DOTALL)
 _TOTAL_RE = re.compile(r"Freqüència total\s*:\s*([\d.]+)")
+_FILTERED_TOTAL_RE = re.compile(r"Quantitat filtrada\s*:\s*([\d.]+)")
+_FILTER_SUMMARY_RE = re.compile(r"<b>Filtre per ([^:<]+?)</b>\s*:\s*([^<]*)")
+_FILTER_FIELDS = (
+    "autSelec",
+    "titSelec",
+    "anySelec",
+    "tipusSelec",
+    "genSelec",
+    "classtemSelec",
+    "tradSelec",
+    "varSelec",
+)
 _ZERO_RE = re.compile(
     r"No s'han trobat ocurrències per al patró seleccionat\s*:\s*([^<]{0,300})",
     re.DOTALL,
@@ -92,6 +104,30 @@ def parse_ctilc_page(
             total = _int_from_dots(total_match.group(1))
             explicit_zero = total == 0
 
+    total_unfiltered = total
+    filtered_total = None
+    filtered_match = _FILTERED_TOTAL_RE.search(header_text) or _FILTERED_TOTAL_RE.search(whole_text)
+    if filtered_match:
+        filtered_total = _int_from_dots(filtered_match.group(1))
+        total = filtered_total
+        explicit_zero = total == 0
+
+    filters_echo: dict[str, str] = {}
+    for name in _FILTER_FIELDS:
+        node = doc.css_first(f'input[name="{name}"]')
+        if node is not None:
+            filters_echo[name] = clean_text(node.attributes.get("value") or "")
+    filters_summary: list[str] = []
+    summary_source = header.html if header is not None else html
+    for item in _FILTER_SUMMARY_RE.finditer(summary_source):
+        label = clean_text(item.group(1))
+        value = clean_text(item.group(2).split('"')[0].split(";")[0])
+        if not value or value.startswith(("if ", "function ", "var ")):
+            continue
+        entry = f"{label}: {value}"
+        if entry not in filters_summary:
+            filters_summary.append(entry)
+
     zero_message = None
     zero_node = doc.css_first("div.tvermell")
     if zero_node is not None:
@@ -166,6 +202,10 @@ def parse_ctilc_page(
     return CtilcPage(
         pattern_echo=pattern_echo,
         total=total,
+        total_unfiltered=total_unfiltered,
+        filtered_total=filtered_total,
+        filters_echo=filters_echo,
+        filters_summary=filters_summary,
         occurrences=occurrences,
         zero_message=zero_message,
         echo_verified=echo_verified,

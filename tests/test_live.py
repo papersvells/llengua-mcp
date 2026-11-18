@@ -6,7 +6,7 @@ import pytest
 
 from llengua_mcp.app import App
 from llengua_mcp.config import Settings
-from llengua_mcp.models import PatternElement
+from llengua_mcp.models import CtilcFilters, PatternElement
 
 pytestmark = pytest.mark.skipif(
     os.getenv("LLENGUA_LIVE") != "1",
@@ -26,6 +26,30 @@ async def test_live_ctilc_control() -> None:
     assert result["pattern_echo"] == "somriure adj:-"
     assert isinstance(result["observed_total"], int)
     assert result["observed_total"] > 0
+
+
+@pytest.mark.asyncio
+async def test_live_filtres_ctilc() -> None:
+    elements = [
+        PatternElement(type="lema", value="somriure"),
+        PatternElement(type="cg", category="adj"),
+    ]
+    app = App(Settings.from_env())
+    try:
+        base = await app.ctilc.search_pattern(elements, limit=1)
+        central = await app.ctilc.search_pattern(
+            elements, limit=1, filters=CtilcFilters(varietat=["central"])
+        )
+        values = await app.ctilc.filtres_disponibles(base["search_cursor"], tipus="autors", limit=3)
+    finally:
+        await app.aclose()
+    assert base["status"] == "ok"
+    assert central["status"] == "ok"
+    assert central["total"] < base["total"]
+    assert central["filters_verified"] is True
+    assert central["total_unfiltered"] == base["total"]
+    assert values["status"] == "ok"
+    assert values["values"]
 
 
 @pytest.mark.asyncio

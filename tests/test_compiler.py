@@ -28,6 +28,21 @@ def test_values_are_encoded_once() -> None:
     pattern = compile_pattern([PatternElement(type="forma", value="50%")])
     body = pattern.body(start=1, offset=10)
     assert "00*forma=50%25" in body
+
+
+def test_filters_are_appended_once() -> None:
+    pattern = compile_pattern([PatternElement(type="lema", value="somriure")])
+    body = pattern.body(
+        start=1,
+        offset=5,
+        filters={
+            "varSelec": "@nord-occidental",
+            "anySelec": "@1960, @1961",
+        },
+    )
+    assert "varSelec=%40nord-occidental" in body
+    assert "anySelec=%401960%2C%20%401961" in body
+    assert body.index("00*lema") < body.index("varSelec") < body.index("iStart")
     assert "%2525" not in body
 
 

@@ -20,7 +20,7 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
 
 - Fase: **implementació inicial**. El paquet `llengua_mcp` i els tests ja existeixen; les eines estan disponibles per a OpenCode amb `opencode.jsonc`.
 - Implementat i provat en directe el 18/11/2026:
-  - CTILC: `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `xifres`, `etiquetes`, `salut`.
+  - CTILC: `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `filtres_disponibles`, `xifres`, `etiquetes`, `salut`.
   - Optimot: `optimot_cerca`, `optimot_fitxa`.
   - Corpus de consultes de l'IEC: `consultes_iec` (1.176 respostes curades; nonce + AJAX de wpDataTables, `table_id=7`).
   - DIEC: `diec_consulta`.
@@ -37,7 +37,7 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
   Els temes són Fonètica, Lèxic, Morfologia, Onomàstica, Ortografia, Sintaxi i
   Altres. El filtre de pregunta és `columns[4][search][value]`.
 - **Critèria: WordPress** amb contingut en PDFs descarregables; l'API REST no publica els posts (0 elements). Poc valor cercable per a l'MCP.
-- Pendents: cerques bàsiques del CTILC (`Formes2`/`FormesLema2`), dispersió dialectal i general, obres, filtres i exportació.
+- Pendents: cerques bàsiques del CTILC (`Formes2`/`FormesLema2`), dispersió dialectal i general, obres i exportació.
 - Documents de referència:
   - `pla-mcp-ctilc.md` — pla inicial. És útil com a mapa del protocol, però **conté errors** i no s’ha d’implementar literalment.
   - `pla-mcp-ctilc-critiques.md` — revisió crítica amb verificació en directe, errors, correccions, golden tests i propostes. **És la font de veritat** quan els dos documents discrepin.
@@ -142,6 +142,7 @@ llengua_mcp/
     softcatala.py
   parsers/
     ctilc.py
+    filtres.py
     fitxa.py
     dades.py
     optimot.py
@@ -177,6 +178,7 @@ Aquestes regles estan verificades i no s’han de “simplificar” sense tornar
 17. **L'eco visible també es valida.** Els camps ocults `formdata` han de coincidir amb la consulta enviada i el patró visible ha de ser equivalent; si no, el resultat no es presenta com una absència.
 18. **La continuació no barreja cerques.** Si el total o el patró canvien respecte del cursor, `continuar_cerca` retorna `stale_search` i descarta les files noves.
 19. **`strquery` és un canal CQL intern**, però no una API general. Permet reexecutar el CQL compilat; els rangs i el CQL simplificat no funcionen. No exposar-lo sense validació i advertències.
+20. **Els filtres canvien el total i l’eco.** Amb filtres, `Freqüència total` continua sent el total sense filtrar, i la xifra vàlida és `Quantitat filtrada`. Els camps `*Selec` (`autSelec`, `anySelec`, `varSelec`…) s’han de comparar amb els enviats. Si el resultat filtrat no té files, el portal pot retornar `1` com a valor de control: és `unexpected_response`, no una absència.
 
 ## 8. Eines MCP previstes
 
@@ -200,18 +202,22 @@ Prioritat dins l’adaptador CTILC:
 - `context(occurrence_id)` — context ±50 i paràgraf, amb metadades de l’obra.
 - `dispersio_cronologica(cursor)` — distribució per trams. Accepta el `search_cursor` de qualsevol cerca vàlida (o el `next_cursor`); si el patró o els totals no quadren, `data_valid` és fals, `periods` queda buit i les dades crues van a `unvalidated`.
 - `collocacions(lema, radi?, freq_min?, limit?)` — coaparicions dins d'una finestra de ±radi mots (0-5), agrupades per categoria gramatical. Els resultats són a `CTILCQCol_LemesAgrup2.asp` (POST amb `cadlema`, `radiE`/`radiD`, `freqMin`); la pàgina conté totes les files. Les de puntuació de l'apartat ALTRES es descarten (`excluded_rows`) i els noms propis es retornen a part, a `altres`. Cal validar `lema_echo_verified` abans de fer servir les dades.
+- `filtres_disponibles(cursor, tipus?, limit?, offset?)` — autors o títols d’un resultat concret, amb recompte. Serveix per triar valors vàlids abans de filtrar.
 - `xifres()` — mida i cobertura del corpus.
 - `etiquetes()` — categories i codis morfològics llegibles.
 - `salut()` — comprova que el lloc respon i que l’echo de control és correcte. No crea ni esborra cursors.
 
-Els filtres per autor, any, gènere o varietat encara no s’exposen: el
-formulari del CTILC els té, però cal verificar-los i provar-los amb fixtures
-abans de publicar-los.
+`cerca`, `cerca_frase` i `cerca_patro` accepten `filtres` (`autor`, `titol`,
+`any_min`/`any_max`, `tipus`, `genere`, `varietat`, `traduccio`). Amb filtres,
+`total` és la «Quantitat filtrada» i `total_unfiltered` la freqüència sense
+filtres; `filters_verified` ha de ser cert. Si no hi ha files, el portal pot
+retornar un total de control (1): és `unexpected_response` amb
+`filtered_empty_unverified`, no una absència. Els valors per a
+`tipus`/`genere`/`varietat` són LIT/NLIT, A/N/P/T i les cinc varietats.
 
 Posteriors:
 
 - `obres` i `obres_descarregables`;
-- `filtres_disponibles`;
 - `exportar` (només si es verifica).
 
 ### Esquema de sortida mínim

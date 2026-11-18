@@ -20,6 +20,24 @@ class FormSpec(BaseModel):
     )
 
 
+class CtilcFilters(BaseModel):
+    """Filtres estructurals d'una consulta al CTILC.
+
+    Els valors es normalitzen a l'adaptador. `any_min` i `any_max` es poden
+    fer servir sols; el rang vàlid és 1832–2022. `traduccio` és `True` per a
+    obres traduïdes, `False` per a originals i `None` per a totes.
+    """
+
+    autor: list[str] | None = None
+    titol: list[str] | None = None
+    any_min: int | None = None
+    any_max: int | None = None
+    tipus: list[str] | None = None
+    genere: list[str] | None = None
+    varietat: list[str] | None = None
+    traduccio: bool | None = None
+
+
 class PatternElement(BaseModel):
     """Un element del patró de combinacions del CTILC.
 
@@ -83,6 +101,10 @@ class CtilcPage(BaseModel):
 
     pattern_echo: str = ""
     total: int | None = None
+    total_unfiltered: int | None = None
+    filtered_total: int | None = None
+    filters_echo: dict[str, str] = Field(default_factory=dict)
+    filters_summary: list[str] = Field(default_factory=list)
     occurrences: list[Occurrence] = Field(default_factory=list)
     zero_message: str | None = None
     echo_verified: bool = False
@@ -103,6 +125,7 @@ class CursorPayload(BaseModel):
     total: int = 0
     resultat: str | None = None
     qlocali: str | None = None
+    filters: dict[str, str] = Field(default_factory=dict)
     next_start: int = 1
     page_size: int = 10
     created_at: datetime

@@ -16,7 +16,7 @@ sencers ni substitueix un corrector.
 | [BDLex](https://bdlex.iec.cat/) | `bdlex_consulta` | Diccionaris històrics i dialectals (DCVB, DIEC, Fabra...) |
 | [OIEC](https://oiec.iec.cat/) | `oiec_cerca`, `oiec_text` | Ortografia normativa: apòstrofs, guionets, accents |
 | Gramàtiques IEC | `gramatica_cerca`, `gramatica_text` | GBU, GEIEC i GIEC: perífrasis, pronoms, concordança |
-| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos |
+| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `filtres_disponibles`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos, amb filtres per obra |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) | `cerca_sinonims` | Alternatives lèxiques (dades locals, CC BY 4.0) |
 
 ## Instal·lació
@@ -102,6 +102,9 @@ Variables d'entorn:
   Cada variant es retorna per separat; els totals no se sumen.
 - **Veure en quines èpoques apareix**: cerca i, amb el `search_cursor`,
   `dispersio_cronologica(cursor)`.
+- **Restringir a un autor, any o varietat**: `cerca_patro(..., filtres={...})`
+  amb `autor`, `titol`, `any_min`/`any_max`, `tipus`, `genere`, `varietat` o
+  `traduccio`. Per triar autors o títols vàlids, `filtres_disponibles(cursor)`.
 - **Saber quines paraules hi van a prop**: `collocacions("somriure")` — quins
   noms, adjectius o verbs hi coapareixen dins d'una finestra de ±3 mots.
 
@@ -124,7 +127,13 @@ Variables d'entorn:
   (ocurrències per milió, derivades dels enters del gràfic, mai del percentatge
   arrodonit). Es validen el patró i la suma dels trams; si no coincideixen,
   `data_valid` és fals, `periods` queda buit i les dades sense validar són a
-  `unvalidated`. Amb pocs testimonis, parla de concentració observada.
+  `unvalidated`. Amb pocs testimonis, parla de concentració observada. Si la
+  cerca tenia filtres, la dispersió no els aplica (`filters_not_applied`).
+- **Filtres del CTILC**: amb filtres, `total` és la «Quantitat filtrada» i
+  `total_unfiltered` la freqüència sense filtres; `filters_verified` ha de ser
+  cert. Si el portal no retorna files, el total pot ser un valor de control
+  (1): no es presenta com una absència. Un valor de filtre inventat pot donar
+  aquest cas; comprova'l amb `filtres_disponibles`.
 - **Optimot**: el nombre de resultats és un recompte de documents del portal, no
   una freqüència d'ús. Cal obrir la fitxa abans de citar-ne el criteri.
 - **Consultes de l'IEC**: són respostes curades, no la norma. Cita la consulta i
