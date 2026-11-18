@@ -25,8 +25,11 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
   - DIEC: `diec_consulta`.
   - ésAdir: `esadir_consulta`, `esadir_fitxa`.
   - BDLex: `bdlex_consulta` (entrada, definició, exemple i text lliure; DCVB inclòs).
+  - OIEC: `oiec_cerca`, `oiec_text` (ortografia normativa, via `api-oiec.iec.cat`).
   - Softcatalà: `cerca_sinonims` amb dades locals versionades.
-- Pendents: cerques bàsiques del CTILC (`Formes2`/`FormesLema2`), col·locacions, dispersió dialectal i general, obres, filtres, exportació, Corpus de consultes lingüístiques de l’IEC i gramàtiques de l’IEC.
+- **Corpus de consultes lingüístiques de l’IEC: investigat i descartat.** El contingut (1.176 consultes) només és accessible via JavaScript; la taula visible no filtra amb `cerca_text`/`wdt_var1`, l’AJAX de wpDataTables retorna sempre `recordsTotal: 1176, recordsFiltered: 0` i la cerca WP diu «El que busqueu no existeix». No és replicable sense navegador, que és fora d’abast.
+- **GBU/GIEC: la GBU és una SPA** que renderitza amb JavaScript; cal trobar l’endpoint de dades (per investigar, mateix patró que l’OIEC).
+- Pendents: cerques bàsiques del CTILC (`Formes2`/`FormesLema2`), col·locacions, dispersió dialectal i general, obres, filtres, exportació, Critèria i GBU.
 - Documents de referència:
   - `pla-mcp-ctilc.md` — pla inicial. És útil com a mapa del protocol, però **conté errors** i no s’ha d’implementar literalment.
   - `pla-mcp-ctilc-critiques.md` — revisió crítica amb verificació en directe, errors, correccions, golden tests i propostes. **És la font de veritat** quan els dos documents discrepin.
@@ -172,6 +175,7 @@ Eines de consulta previstes per a la primera versió:
 - `diec_consulta` — recuperar l’article i identificar l’accepció que justifica la resposta.
 - `esadir_consulta` i `esadir_fitxa` — descobrir i llegir entrades d’estil.
 - `bdlex_consulta` — diccionaris històrics i dialectals, amb cerca per entrada, definició, exemple o text lliure. Usa el motor intern de BDLex, que no és una API pública documentada; si canvia, caldrà actualitzar el parser.
+- `oiec_cerca` i `oiec_text` — ortografia normativa: cerca per paraula i lectura d'apartats pel codi. L'API (`api-oiec.iec.cat`) és JSON net i sense autenticació.
 - `cerca_sinonims` — trobar alternatives a un mot o una expressió. Si l’usuari dona context, el model selecciona dues o tres opcions pertinents, quan n’hi hagi, i explica el matís de cadascuna. Pot comprovar-ne el sentit al DIEC i la combinació al CTILC.
 
 Prioritat dins l’adaptador CTILC:
@@ -315,8 +319,8 @@ Proves d’acceptació del producte des d’OpenCode:
 3. **Alternatives:** davant «Què puc posar en lloc de “maliciós” a “un somriure maliciós”?», consulta Softcatalà i explica quines opcions conserven el sentit i quines el canvien. Cita l’entrada i presenta les alternatives com a suggeriments.
 
 **Estat de la definició de fet:** els tres casos d’acceptació i les eines del
-CTILC ja estan implementats i provats en directe (18/11/2026), amb 83 tests
-sense xarxa i tres proves en directe optatives (`LLENGUA_LIVE=1`). Els pendents
+CTILC ja estan implementats i provats en directe (18/11/2026), amb 95 tests
+sense xarxa i quatre proves en directe optatives (`LLENGUA_LIVE=1`). Els pendents
 són l’ampliació de fonts i les eines ajornades.
 
 La part del CTILC es considera llesta quan:

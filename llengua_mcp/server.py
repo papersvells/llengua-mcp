@@ -33,6 +33,8 @@ autoritat diferent i no les confonguis mai:
   cercar per definició o exemple. És descriptiu: una forma hi pot constar i
   no ser adequada avui. Cita sempre el diccionari concret.
 - ésAdir: estil de la CCMA, pronunciació i noms propis. No és la norma de l'IEC.
+- OIEC: ortografia normativa (apòstrofs, guionets, accents, dièresi). Cita
+  sempre el codi d'apartat i el títol de la secció.
 - CTILC: ús escrit i contextos. Un total positiu només demostra atestació; un
   zero no demostra que una forma no existeixi. No en dedueixis «ús quotidià».
   La dispersió cronològica serveix per dir en quins trams apareix més, amb
@@ -228,6 +230,39 @@ async def bdlex_consulta(
             max_senses=max_senses,
         ),
     )
+
+
+@mcp.tool()
+async def oiec_cerca(
+    paraula: str,
+    coincidencia: str = "contains",
+) -> dict[str, Any]:
+    """Cerca a l'Ortografia catalana (OIEC) de l'IEC.
+
+    Serveix per explicar regles d'ortografia que afecten molts mots: apòstrofs,
+    guionets, accents, dièresi, majúscules, pronoms febles... Retorna fins a
+    cinc apartats amb el codi (`codi_text`), el títol, un fragment que conté la
+    paraula i l'enllaç. Per llegir un apartat sencer, passa el codi a
+    `oiec_text`. L'OIEC és la referència normativa de l'ortografia: cita
+    sempre el codi i el títol de la secció.
+    """
+    app = await get_app()
+    return await _call(
+        "https://api-oiec.iec.cat",
+        app.oiec.cerca(paraula, coincidencia=coincidencia),
+    )
+
+
+@mcp.tool()
+async def oiec_text(codi: str) -> dict[str, Any]:
+    """Llegeix un apartat de l'Ortografia catalana (OIEC) pel seu codi.
+
+    Usa el `codi_text` retornat per `oiec_cerca` (per exemple `4.1.2b`).
+    Retorna el text complet de l'apartat, net d'etiquetes, amb els codis
+    d'apartat anterior i següent per navegar-hi.
+    """
+    app = await get_app()
+    return await _call("https://api-oiec.iec.cat", app.oiec.text(codi))
 
 
 @mcp.tool()

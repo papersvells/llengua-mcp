@@ -15,6 +15,8 @@ async def test_tools_are_registered() -> None:
         "esadir_consulta",
         "esadir_fitxa",
         "bdlex_consulta",
+        "oiec_cerca",
+        "oiec_text",
         "cerca_sinonims",
         "cerca",
         "cerca_frase",

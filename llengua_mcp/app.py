@@ -7,6 +7,7 @@ from llengua_mcp.adapters import (
     CtilcAdapter,
     DiecAdapter,
     EsadirAdapter,
+    OiecAdapter,
     OptimotAdapter,
     SoftcatalaAdapter,
 )
@@ -23,6 +24,7 @@ class App:
         self.cursors = CursorStore(ttl_seconds=settings.cache_ttl_seconds)
         self.bdlex = BdlexAdapter(self.http)
         self.ctilc = CtilcAdapter(self.http, settings, self.cursors)
+        self.oiec = OiecAdapter(self.http)
         self.optimot = OptimotAdapter(self.http)
         self.diec = DiecAdapter(self.http)
         self.esadir = EsadirAdapter(self.http)

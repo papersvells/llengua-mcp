@@ -63,3 +63,16 @@ async def test_live_dispersio_cronologica() -> None:
     first = disp["periods"][0]
     assert first["corpus_units"] > 0
     assert first["per_million"] == round(first["hits"] / first["corpus_units"] * 1_000_000, 2)
+
+
+@pytest.mark.asyncio
+async def test_live_oiec() -> None:
+    app = App(Settings.from_env())
+    try:
+        result = await app.oiec.cerca("apostrofa")
+    finally:
+        await app.aclose()
+    assert result["status"] == "ok"
+    assert result["hits"]
+    codis = [hit["codi_text"] for hit in result["hits"]]
+    assert any(codi and codi.startswith("4.") for codi in codis)

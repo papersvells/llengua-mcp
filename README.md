@@ -13,6 +13,7 @@ sencers ni substitueix un corrector.
 | [DIEC](https://dlc.iec.cat/) | `diec_consulta` | Lèxic normatiu i accepcions |
 | [ésAdir](https://www.esadir.cat/) | `esadir_consulta`, `esadir_fitxa` | Estil de la CCMA, pronunciació i noms propis |
 | [BDLex](https://bdlex.iec.cat/) | `bdlex_consulta` | Diccionaris històrics i dialectals (DCVB, DIEC, Fabra...) |
+| [OIEC](https://oiec.iec.cat/) | `oiec_cerca`, `oiec_text` | Ortografia normativa: apòstrofs, guionets, accents |
 | [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) | `cerca_sinonims` | Alternatives lèxiques (dades locals, CC BY 4.0) |
 
@@ -85,6 +86,8 @@ Variables d'entorn:
   i triar les opcions que conserven el sentit.
 - **Documentar una forma antiga o dialectal**: `bdlex_consulta("engrunar")`, o
   cercar per definició: `bdlex_consulta(definicio="esclafar")`.
+- **Explicar una regla d'ortografia**: `oiec_cerca("guionet")` i, amb el codi,
+  `oiec_text("4.4.2.2")` per llegir l'apartat sencer.
 - **Comprovar una expressió**: `cerca_frase("tenir foc al ulls", variants=["tenir foc als ulls"])`.
   Cada variant es retorna per separat; els totals no se sumen.
 - **Veure en quines èpoques apareix**: cerca i, amb el `next_cursor`,
@@ -116,6 +119,8 @@ Variables d'entorn:
   diccionari concret de cada entrada (`dictionary` / `dictionary_label`) i no
   tractar una forma antiga o dialectal com a adequada per a un text formal
   actual. Una absència tampoc no la fa incorrecta.
+- **OIEC**: l'ortografia normativa. Cita sempre el codi d'apartat (`codi_text`)
+  i el títol de la secció.
 - **Sinònims**: són propostes de significat. Cada grup indica `relation`
   (`synonym` o `antonym`); un antònim no es presenta mai com a sinònim. Cal
   triar les opcions segons la frase i explicar-ne el matís.
@@ -126,9 +131,10 @@ Variables d'entorn:
 - Les cerques bàsiques del CTILC (`Formes2`, `FormesLema2`) i les col·locacions
   encara no s'exposen: calen fixtures i proves pròpies.
 - L'exportació CSV del CTILC no s'implementa: l'endpoint no s'ha pogut verificar.
-- El Corpus de consultes lingüístiques de l'IEC, la GBU, l'OIEC i Critèria són
-  fonts previstes, però la seva consulta fiable requereix un flux addicional
-  que encara no s'ha validat.
+- El Corpus de consultes lingüístiques de l'IEC està investigat i **descartat**:
+  el contingut només és accessible via JavaScript i no és replicable sense
+  navegador. La GBU és una SPA i cal trobar-hi l'endpoint de dades; Critèria
+  queda per investigar.
 - BDLex no té una API pública documentada: l'adaptador usa el motor de la
   plataforma. Si el servei canvia, caldrà revisar el parser. Les respostes es
   retallen (entrades, accepcions, exemples, subentrades i fonètica) per no
