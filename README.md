@@ -35,6 +35,9 @@ Les dades es desen a `LLENGUA_DATA_DIR` (per defecte, el directori de dades de
 l'usuari). El descàrrec usa un commit fixat perquè la instal·lació sigui
 reproduïble; per actualitzar-les, `--ref master --force`.
 
+La configuració d'OpenCode és local i no es versiona: copia
+`opencode.jsonc.example`, ajusta-hi les rutes i desa'l com a `opencode.jsonc`.
+
 ## Configuració d'OpenCode
 
 ```jsonc

@@ -8,3 +8,4 @@ build/
 dist/
 data/
 .DS_Store
+opencode.jsonc
