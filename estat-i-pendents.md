@@ -12,9 +12,9 @@ verificades) i, per a l'abast, `AGENTS.md`.
 ## 1. Estat actual
 
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
-  `main`, darrer commit `85a05d5` («Afegeix collocacions del CTILC»).
-- **Tests sense xarxa:** 108 passats, 6 omesos (els live).
-- **Tests en directe:** 6, opcionals amb `LLENGUA_LIVE=1`.
+  `main`; els retocs de validació del 18/11/2026 ja són committats.
+- **Tests sense xarxa:** 127 passats, 6 omesos (els live).
+- **Tests en directe:** 6, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **Ruff:** `ruff format` i `ruff check` nets.
 - **Eines MCP:** 21 eines, agrupades per font.
 
@@ -40,6 +40,8 @@ verificades) i, per a l'abast, `AGENTS.md`.
   canvien, es retorna `stale_search`.
 - Les xifres de `collocacions` són freqüències de **coaparició dins d'una
   finestra**, no d'adjacència: no es comparen amb `cerca_frase`/`cerca_patro`.
+  Cal validar `lema_echo_verified` i recordar que `total` inclou les files de
+  puntuació descartades (`excluded_rows`).
 - Rate limit per host, cache TTL en memòria, User-Agent identificable.
 - `opencode.jsonc` és local i està ignorat; l'exemple és
   `opencode.jsonc.example`.
@@ -51,8 +53,13 @@ Expectatives datades, no llindars eterns:
 - `00*lema=somriure&01*cg=adj:-` → **2.136** (control de `salut`).
 - `00*lema=somriure&01*cg=adj:-` amb variants de patró: 1.829 (subst).
 - `somriure` + `maliciós` → 32; `tenir foc al/als ulls` → 0 amb eco verificat.
-- `collocacions("somriure")` → **1.159** col·locacions, 18 categories;
-  top noms: llavi 235, ull 167, home 119; top verbs: va 2192, fer 760.
+- `collocacions("somriure")` → **1.159** files al servidor, **1.141**
+  aprofitables, **18** de puntuació descartades, **17** categories i **84**
+  noms propis a `altres`; top noms: llavi 235, ull 167, home 119; top verbs:
+  va 2192, fer 760. Amb `limit=8` es retornen 8 verbs.
+- Gramàtiques: GIEC `8.3.3` → «La posició dels pronoms febles», amb l'enllaç
+  `https://giec.iec.cat/textgramatica/codi/8.3.3`; GBU codi `28` (només títol)
+  → error accionable.
 - Optimot «tenir que» → fitxa 6754/4 (05.04.2023).
 - DIEC «maliciós» → 3 accepcions.
 - ésAdir «a gust», «hidrosisme» → fitxa i AFI.
@@ -61,48 +68,43 @@ Expectatives datades, no llindars eterns:
 
 ## 2. Pendents
 
-### 2.1 Collocacions del CTILC (acabat de fer, cal polir)
+### 2.1 Collocacions del CTILC (resolt el 18/11/2026)
 
-Implementat a `adapters/ctilc.py` i `parsers/collocacions.py`.
+Implementat a `adapters/ctilc.py` i `parsers/collocacions.py`; verificat en
+directe amb `somriure` el 18/11/2026.
 
-- **Límit intern de 5.** El parser només desa `MAX_PER_CATEGORY = 5` items per
-  categoria, però l'eina accepta `limit` fins a 10. Amb `limit=8` es retornen
-  silenciosament 5. Cal fer que el parser desi prou items (o que el límit
-  intern i el de l'eina coincideixin) i validar-ho amb un test.
-- **Sense validació d'eco del lema.** No es comprova que el `<i>` de la pàgina
-  coincideixi amb el lema consultat. Si el servidor retorna una altra pàgina,
-  el resultat es presenta com a bo.
-- **Desquadre `counted_rows` vs `total`.** Amb `somriure`: total 1.159,
-  files comptades 1.141. La diferència són les files de puntuació de l'apartat
-  ALTRES que es descarten. El codi té un `pass` sense efecte: cal convertir-ho
-  en un avís explícit (`partial_rows`) o documentar-ho a la resposta.
-- **Apartat ALTRES parcialment filtrat.** Es descarta la puntuació (`,`, `.`,
-  `—`, `#NA#`…) perquè no comença per lletra, i els noms propis queden amb
-  `pos: null`. Revisar si val la pena separar-los en una clau pròpia en lloc
-  de barrejar-los amb les categories gramaticals.
-- **Col·locacions d'una forma** (`CTILCQCol_FormesAgrup2.asp`) no
-  implementades; només hi ha col·locacions de lema.
+- **Límit intern de 5: resolt.** El parser desa totes les files (la pàgina en
+  porta 1.159) i l'adaptador retalla a `limit` (1-10). La resposta indica
+  `rows` per categoria i l'avís `collocations_truncated` si s'ha retallat.
+  Amb `limit=8` es retornen 8 verbs.
+- **Eco del lema: resolt.** Es valida el `<i>` de la pàgina
+  (`lema_echo_verified`). Si no coincideix, `unexpected_response`, avís
+  `lema_echo_unexpected` i cap categoria. S'accepta el sufix d'homonímia
+  (`altre_1`).
+- **Desquadre de files: resolt.** `total` 1.159, `counted_rows` 1.141,
+  `excluded_rows` 18 (puntuació) i avís `partial_rows`, explicat a `note`.
+- **Apartat ALTRES: resolt.** Els 84 noms propis es retornen a `altres`; les 18
+  files de puntuació es descarten.
+- **Pendent:** col·locacions d'una forma (`CTILCQCol_FormesAgrup2.asp`); només
+  hi ha col·locacions de lema.
 
-### 2.2 Gramàtiques (GBU, GEIEC, GIEC)
+### 2.2 Gramàtiques (GBU, GEIEC, GIEC) (resolt el 18/11/2026)
 
-- **Fals `no_results`.** `parse_search_hits` fa
-  `payload.get("texts") or []`: un diccionari sense `texts` (error de l'API,
-  canvi de format) es converteix en una llista buida i es presenta com a «cap
-  resultat». Cal distingir «resposta sense `texts`» de «llista buida».
-- **Adapter massa tolerant.** Si la resposta no és ni diccionari ni llista,
-  l'adaptador també acaba retornant `[]` en lloc d'un error estructurat.
-- **Sense verificació del codi retornat.** `parse_text` no comprova que
-  `codiText` coincideixi amb el `codi` sol·licitat. El test simulat de la GIEC
-  demana `8.3.3` i rep `28.1` i passa igualment. Cal validar-ho i afegir-hi un
-  test negatiu.
-- **Enllaç del portal de la GIEC.** El prefix actual és
-  `https://giec.iec.cat/textgramatica/` sense `/codi/`, però la configuració
-  oficial referencia `https://giec.iec.cat/textgramatica/codi/`. Verificar la
-  ruta real del frontal (l'SPA retorna 200 per qualsevol ruta, així que no
-  serveix com a prova).
-- **Codis que són només títol.** L'OIEC va tornar `null` per a `4.1` (títol).
-  A les gramàtiques pot passar el mateix: el missatge d'error ja ho insinua,
-  però cal provar-ho amb codis de títol reals i documentar-ho.
+- **Fals `no_results`: resolt.** `parse_search_hits` exigeix el camp `texts`
+  quan la resposta és un objecte; un objecte sense `texts`, un `texts` que no
+  sigui llista o un tipus inesperat són `unexpected_response`.
+- **Adapter massa tolerant: resolt.** El total i els hits surten del parser, que
+  és l'única font; ja no es converteix un payload desconegut en `[]`.
+- **Codi retornat: resolt.** `parse_text` compara `codiText` amb el codi
+  sol·licitat i dona error si divergeix. Hi ha test negatiu.
+- **Enllaç de la GIEC: resolt.** El bundle Angular confirma
+  `textgramatica` → `codi/:codi`; el prefix és
+  `https://giec.iec.cat/textgramatica/codi/`. Verificat amb `8.3.3`.
+- **Codis de títol: verificat.** `text_by_cody?codi=28` de la GBU retorna
+  `contingut: null`; l'eina dona l'error accionable («Aquest apartat no té text
+  llegible») i hi ha test.
+- **Nodes sense contingut en una cerca:** es retorna `partial` amb l'avís
+  `no_readable_sections`, no `no_results`.
 
 ### 2.3 Dispersió cronològica
 
@@ -194,10 +196,9 @@ PY
 
 ## 4. Properes passes suggerides
 
-1. Tancar els retocs de les col·locacions (límit, eco, avís de files
-   parcials) amb tests.
-2. Reforçar la validació de les gramàtiques (`texts` absent, `codiText`
-   divergent) i verificar l'enllaç de la GIEC.
+1. Tancar la dispersió cronològica: cursor estable (encara que la cerca càpiga
+   en una pàgina) i dades no validades fora de `periods` (a `unvalidated`).
+2. Fer que `salut` no esborri cursors de l'usuari.
 3. Fer servir les eines amb preguntes reals i corregir el que falli abans
    d'afegir fonts noves.
 4. Decidir si es reprèn el Corpus de consultes amb una captura real de

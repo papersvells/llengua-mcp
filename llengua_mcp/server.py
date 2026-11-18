@@ -280,7 +280,8 @@ async def gramatica_cerca(
 
     Serveix per explicar una regla gramatical: perífrasis, pronoms febles,
     concordança, subordinades... Retorna fins a cinc apartats amb el codi
-    (`codi_text`), el títol, un fragment que conté la paraula i l'enllaç.
+    (`codi_text`), el títol, un fragment que conté la paraula i l'enllaç. Si
+    hi ha nodes sense text llegible, l'estat és `partial`, no `no_results`.
 
     Args:
         paraula: Paraula o fenomen gramatical (per exemple «perífrasi verbal»).
@@ -303,7 +304,8 @@ async def gramatica_text(codi: str, font: str = "gbu") -> dict[str, Any]:
 
     Usa el `codi_text` retornat per `gramatica_cerca` (per exemple `28.1`).
     Retorna el text complet de l'apartat, net d'etiquetes, amb l'enllaç a la
-    secció al portal corresponent.
+    secció al portal corresponent. Es valida que el codi retornat coincideixi
+    amb el sol·licitat; els codis que només són títols donen error.
     """
     app = await get_app()
     return await _call(
@@ -448,7 +450,10 @@ async def collocacions(
 
     Serveix per saber quines paraules solen aparèixer a prop d'un lema: per a
     «somriure» retorna quins noms, adjectius o verbs hi coapareixen més.
-    Retorna per categoria els lemes amb freqüència de coaparició.
+    Retorna per categoria els lemes amb freqüència de coaparició; `rows` és el
+    nombre de files disponibles abans de retallar-les a `limit` i `altres`
+    recull els noms propis. Cal que `lema_echo_verified` sigui cert: si és
+    fals, les dades no són del lema demanat.
 
     Args:
         lema: Un sol lema, sense espais (per exemple «somriure»).

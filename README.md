@@ -127,7 +127,14 @@ Variables d'entorn:
 - **OIEC**: l'ortografia normativa. Cita sempre el codi d'apartat (`codi_text`)
   i el títol de la secció.
 - **Gramàtiques**: per a un dubte d'ús, la GBU; la GEIEC és la versió en línia;
-  la GIEC, la descripció exhaustiva. Cita el codi i el títol.
+  la GIEC, la descripció exhaustiva. Cita el codi i el títol. Si el codi retornat
+  no coincideix amb el sol·licitat, l'eina dona error; un total sense cap apartat
+  llegible és `partial`, no `no_results`.
+- **Col·locacions**: `total` és el recompte del servidor i inclou les files de
+  puntuació descartades (`excluded_rows`); `counted_rows` en són les
+  aprofitables. `rows` de cada categoria és el nombre disponible abans de
+  retallar-lo a `limit`, i `altres` recull els noms propis sense categoria. Cal
+  que `lema_echo_verified` sigui cert abans de fer servir les dades.
 - **Sinònims**: són propostes de significat. Cada grup indica `relation`
   (`synonym` o `antonym`); un antònim no es presenta mai com a sinònim. Cal
   triar les opcions segons la frase i explicar-ne el matís.
@@ -135,8 +142,9 @@ Variables d'entorn:
 ## Límits coneguts
 
 - La revisió automàtica de paràgrafs sencers no forma part de l'abast.
-- Les cerques bàsiques del CTILC (`Formes2`, `FormesLema2`) i les col·locacions
-  encara no s'exposen: calen fixtures i proves pròpies.
+- Les cerques bàsiques del CTILC (`Formes2`, `FormesLema2`), la dispersió
+  dialectal i les col·locacions d'una forma encara no s'exposen: calen fixtures
+  i proves pròpies.
 - L'exportació CSV del CTILC no s'implementa: l'endpoint no s'ha pogut verificar.
 - El Corpus de consultes lingüístiques de l'IEC està investigat i **descartat**:
   el contingut només és accessible via JavaScript i no és replicable sense

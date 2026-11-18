@@ -59,6 +59,23 @@ def _dedupe(items: list[str]) -> list[str]:
     return list(dict.fromkeys(item for item in items if item))
 
 
+def _lema_matches(requested: str, echoed: str) -> bool:
+    """Comprova que l'eco de la pàgina correspongui al lema demanat.
+
+    El CTILC desambigua els homògrafs amb un sufix numèric (`altre_1`), que no
+    forma part del lema que escriu l'usuari.
+    """
+
+    requested_norm = " ".join(requested.split()).casefold()
+    echoed_norm = " ".join(echoed.split()).casefold()
+    if not requested_norm or not echoed_norm:
+        return False
+    if echoed_norm == requested_norm:
+        return True
+    base, _, suffix = echoed_norm.rpartition("_")
+    return bool(base) and suffix.isdigit() and base == requested_norm
+
+
 class CtilcAdapter:
     def __init__(
         self,
@@ -545,30 +562,85 @@ class CtilcAdapter:
         result = await self.client.post_text(COLLOCACIONS_URL, body)
         data = parse_collocacions(result.text)
 
-        categories = [{**cat, "items": cat["items"][:limit]} for cat in data["categories"]]
         warnings = list(result.warnings)
+        lema_echo = data["lema_echo"]
+        echo_verified = _lema_matches(term, lema_echo)
+        retrieved_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        citation = f"CTILC (IEC), col·locacions del lema {term}, consulta feta el {_date_label()}."
+        note = (
+            "Les xifres són freqüències de coaparició dins d'una finestra de "
+            f"±{radi} mots, amb un mínim de {freq_min} coaparicions. No són "
+            "recomptes d'adjacència ni de patró: no es poden comparar directament "
+            "amb els totals de `cerca_frase` o `cerca_patro`."
+        )
+        common = {
+            "query": {"lema": term, "radi": radi, "freq_min": freq_min},
+            "lema": term,
+            "lema_echo": lema_echo,
+            "total": data["total"],
+            "counted_rows": data["counted_rows"],
+            "excluded_rows": data["excluded_rows"],
+        }
+
+        if not echo_verified:
+            return {
+                "status": "unexpected_response",
+                **common,
+                "lema_echo_verified": False,
+                "returned_categories": 0,
+                "returned_items": 0,
+                "categories": [],
+                "altres": {"rows": 0, "items": []},
+                "warnings": _dedupe(warnings + ["lema_echo_unexpected"]),
+                "error": {
+                    "code": "lema_echo_unexpected",
+                    "message": (
+                        f"El servidor ha retornat col·locacions de «{lema_echo}» "
+                        f"en lloc de «{term}»."
+                    ),
+                    "hint": (
+                        "No es poden presentar aquestes dades com a col·locacions "
+                        "del lema demanat. Torna a provar la consulta."
+                    ),
+                },
+                "note": note,
+                "source": COLLOCACIONS_URL,
+                "retrieved_at": retrieved_at,
+                "citation": citation,
+            }
+
+        categories = [
+            {**category, "items": category["items"][:limit]} for category in data["categories"]
+        ]
+        altres_items = data["altres"]["items"][:limit]
+        truncated = any(category["rows"] > len(category["items"]) for category in categories) or (
+            data["altres"]["rows"] > len(altres_items)
+        )
+        if data["excluded_rows"]:
+            warnings.append("partial_rows")
+        if truncated:
+            warnings.append("collocations_truncated")
+        returned_items = sum(len(category["items"]) for category in categories) + len(altres_items)
+        rows_note = (
+            "`total` és el recompte del servidor i inclou les files de puntuació "
+            f"descartades ({data['excluded_rows']}); per això s'afegeix l'avís "
+            "`partial_rows` quan n'hi ha. `counted_rows` en són les files "
+            "aprofitables; `rows` de cada categoria és el nombre disponible abans "
+            "de retallar-lo a `limit`."
+        )
         return {
             "status": "ok",
-            "query": {"lema": term, "radi": radi, "freq_min": freq_min},
-            "lema": data["lema"],
-            "total": data["total"],
+            **common,
+            "lema_echo_verified": True,
             "returned_categories": len(categories),
+            "returned_items": returned_items,
             "categories": categories,
-            "warnings": list(dict.fromkeys(warnings)),
-            "note": (
-                "Les xifres són freqüències de coaparició dins d'una finestra de "
-                f"±{radi} mots, amb un mínim de {freq_min} coaparicions. No són "
-                "recomptes d'adjacència ni de patró: no es poden comparar directament "
-                "amb els totals de `cerca_frase` o `cerca_patro`."
-            ),
+            "altres": {"rows": data["altres"]["rows"], "items": altres_items},
+            "warnings": _dedupe(warnings),
+            "note": f"{note} {rows_note}",
             "source": COLLOCACIONS_URL,
-            "retrieved_at": datetime.now(UTC)
-            .replace(microsecond=0)
-            .isoformat()
-            .replace("+00:00", "Z"),
-            "citation": (
-                f"CTILC (IEC), col·locacions del lema {term}, consulta feta el {_date_label()}."
-            ),
+            "retrieved_at": retrieved_at,
+            "citation": citation,
         }
 
     async def context(self, occurrence_id: str, *, obra: str | None = None) -> dict[str, Any]:

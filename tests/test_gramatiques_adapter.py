@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from llengua_mcp.adapters.gramatiques import GramatiquesAdapter
-from llengua_mcp.errors import InvalidQueryError
+from llengua_mcp.errors import InvalidQueryError, UnexpectedResponseError
 from llengua_mcp.http import HttpResult
 
 GBU_SEARCH = (
@@ -15,6 +15,11 @@ GIEC_SEARCH = (
     '{"texts": [{"idText": 2, "titol": "La posició dels pronoms febles", '
     '"codiText": "8.3.3", "contingut": "<p>Els <em>pronoms</em> febles poden '
     'anar abans o després del verb.</p>"}]}'
+)
+GIEC_TEXT = (
+    '{"codiText": "8.3.3", "titolText": "La posició dels pronoms febles", '
+    '"contingut": "<p>Els <em>pronoms</em> febles poden anar abans o després '
+    'del verb.</p>"}'
 )
 TEXT_BY_CODY = (
     '{"codiText": "28.1", "titolText": "Les perífrasis verbals", '
@@ -99,12 +104,46 @@ async def test_text_gbu() -> None:
 
 @pytest.mark.asyncio
 async def test_text_giec_uses_the_plain_endpoint() -> None:
-    client = FakeClient(TEXT_BY_CODY)
+    client = FakeClient(GIEC_TEXT)
     adapter = GramatiquesAdapter(client)
     result = await adapter.text("8.3.3", font="giec")
     assert result["status"] == "ok"
     assert "/TextGramatica/8.3.3" in client.urls[0]
     assert "text_by_cody" not in client.urls[0]
+    assert result["url"] == "https://giec.iec.cat/textgramatica/codi/8.3.3"
+
+
+@pytest.mark.asyncio
+async def test_text_rebutja_un_codi_diferent() -> None:
+    adapter = GramatiquesAdapter(FakeClient(TEXT_BY_CODY))
+    with pytest.raises(UnexpectedResponseError, match="8.3.3"):
+        await adapter.text("8.3.3", font="giec")
+
+
+@pytest.mark.asyncio
+async def test_text_dun_codi_de_titol_es_error() -> None:
+    titol = '{"codiText": "28", "titolText": "Les perífrasis verbals", "contingut": null}'
+    adapter = GramatiquesAdapter(FakeClient(titol))
+    with pytest.raises(UnexpectedResponseError, match="text llegible"):
+        await adapter.text("28", font="gbu")
+
+
+@pytest.mark.asyncio
+async def test_cerca_sense_texts_es_error() -> None:
+    adapter = GramatiquesAdapter(FakeClient('{"lemma": {"lemma": "res"}}'))
+    with pytest.raises(UnexpectedResponseError, match="texts"):
+        await adapter.cerca("res", font="giec")
+
+
+@pytest.mark.asyncio
+async def test_cerca_nomes_titols_es_partial() -> None:
+    body = '{"texts": [{"codiText": "8.3", "titol": "Títol", "contingut": null}]}'
+    adapter = GramatiquesAdapter(FakeClient(body))
+    result = await adapter.cerca("res", font="giec")
+    assert result["status"] == "partial"
+    assert result["total_hits"] == 1
+    assert result["hits"] == []
+    assert "no_readable_sections" in result["warnings"]
 
 
 @pytest.mark.asyncio

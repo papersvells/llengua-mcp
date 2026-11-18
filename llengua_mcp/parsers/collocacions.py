@@ -8,6 +8,11 @@ gramatical, amb seccions d'aquesta forma:
     <a class="lnkU" ...>...js...>va VA</a></td> <td>2192</td>
 
 El nombre total de col·locacions és a `getElementById("freq").innerHTML = N`.
+La pàgina conté totes les files; no cal retallar-les aquí.
+
+L'apartat ALTRES barreja noms propis (sense categoria) i files de puntuació
+(',' , '.', '—'...). Les files de puntuació no són col·locacions i es compten
+a `excluded_rows`; els noms propis es retornen a part, a `altres`.
 """
 
 from __future__ import annotations
@@ -28,7 +33,7 @@ _TOTAL_RE = re.compile(r'getElementById\("freq"\)\.innerHTML\s*=\s*(\d+)')
 _TERM_RE = re.compile(r">([A-Za-zÀ-ÿ_·\d][^<>]*)\s*$")
 _TERM_CONTENT_RE = re.compile(r"^[A-Za-zÀ-ÿ_·\\d]")
 
-MAX_PER_CATEGORY = 5
+ALT_SECTION = "ALT"
 
 
 def _visible_term(inner: str) -> str | None:
@@ -46,6 +51,17 @@ def _visible_term(inner: str) -> str | None:
     if match:
         return clean_text(match.group(1))
     return None
+
+
+def _item(term: str, freq: str) -> dict[str, Any]:
+    lemma, _, pos = term.rpartition(" ")
+    if not lemma:
+        # Terme sense POS (noms propis de l'apartat ALTRES, p. ex.).
+        lemma, pos = term, None
+    item: dict[str, Any] = {"lema": lemma, "freq": int(freq)}
+    if pos:
+        item["pos"] = pos
+    return item
 
 
 def parse_collocacions(html: str) -> dict[str, Any]:
@@ -69,7 +85,8 @@ def parse_collocacions(html: str) -> dict[str, Any]:
     total = int(total_match.group(1)) if total_match else None
 
     categories: list[dict[str, Any]] = []
-    counted = 0
+    altres: list[dict[str, Any]] = []
+    excluded_rows = 0
     for code, info in sections.items():
         starts = [s["position"] for s in sections.values() if s["position"] > info["position"]]
         end = min(starts) if starts else len(html)
@@ -80,34 +97,32 @@ def parse_collocacions(html: str) -> dict[str, Any]:
             if not term or not _TERM_CONTENT_RE.match(term):
                 # L'apartat ALTRES inclou puntuació (',', '.', '—'...):
                 # no són col·locacions útils i es descarten.
+                excluded_rows += 1
                 continue
-            counted += 1
-            if len(items) < MAX_PER_CATEGORY:
-                lemma, _, pos = term.rpartition(" ")
-                if not lemma:
-                    # Term sense POS (noms propis de l'apartat ALTRES, p. ex.).
-                    lemma, pos = term, None
-                items.append({"lema": lemma, "pos": pos or None, "freq": int(freq)})
+            if code == ALT_SECTION:
+                altres.append(_item(term, freq))
+            else:
+                items.append(_item(term, freq))
         if items:
             categories.append(
                 {
                     "codi": code,
                     "categoria": info["categoria"],
+                    "rows": len(items),
                     "items": items,
                 }
             )
 
-    if total is not None and counted and counted != total:
-        # La pàgina pot incloure files extra; avisem si la xifra no quadraria.
-        pass
-
+    counted_rows = sum(category["rows"] for category in categories) + len(altres)
     return {
-        "lema": next(iter(sections.values()))["lema"],
+        "lema_echo": next(iter(sections.values()))["lema"],
         "total": total,
-        "counted_rows": counted,
+        "counted_rows": counted_rows,
+        "excluded_rows": excluded_rows,
         "categories": categories,
+        "altres": {"rows": len(altres), "items": altres},
         "source": COLLOCACIONS_URL,
     }
 
 
-__all__ = ["COLLOCACIONS_URL", "parse_collocacions"]
+__all__ = ["ALT_SECTION", "COLLOCACIONS_URL", "parse_collocacions"]

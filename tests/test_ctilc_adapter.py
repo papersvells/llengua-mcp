@@ -380,3 +380,51 @@ async def test_collocacions_limita_per_categoria(tmp_path) -> None:
     result = await adapter.collocacions("somriure", limit=1)
     for category in result["categories"]:
         assert len(category["items"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_collocacions_limit_8_retorna_8(tmp_path) -> None:
+    html = (FIXTURES / "collocacions_moltes.html").read_text(encoding="utf-8")
+    adapter = CtilcAdapter(CollocacionsClient(html), _settings(tmp_path), CursorStore())
+    result = await adapter.collocacions("somriure", limit=8)
+    verbs = next(category for category in result["categories"] if category["codi"] == "V")
+    assert len(verbs["items"]) == 8
+    assert verbs["rows"] == 12
+    assert result["returned_items"] == 9
+    assert "collocations_truncated" in result["warnings"]
+    assert result["altres"]["items"] == [{"lema": "joan", "freq": 9}]
+
+
+@pytest.mark.asyncio
+async def test_collocacions_eco_divergent(tmp_path) -> None:
+    html = (FIXTURES / "collocacions_somriure.html").read_text(encoding="utf-8")
+    adapter = CtilcAdapter(CollocacionsClient(html), _settings(tmp_path), CursorStore())
+    result = await adapter.collocacions("riure")
+    assert result["status"] == "unexpected_response"
+    assert result["lema_echo"] == "somriure"
+    assert result["lema_echo_verified"] is False
+    assert result["categories"] == []
+    assert "lema_echo_unexpected" in result["warnings"]
+    assert result["error"]["code"] == "lema_echo_unexpected"
+
+
+@pytest.mark.asyncio
+async def test_collocacions_avisa_de_files_parcials(tmp_path) -> None:
+    html = (FIXTURES / "collocacions_somriure.html").read_text(encoding="utf-8")
+    adapter = CtilcAdapter(CollocacionsClient(html), _settings(tmp_path), CursorStore())
+    result = await adapter.collocacions("somriure")
+    assert result["status"] == "ok"
+    assert result["lema_echo_verified"] is True
+    assert result["total"] == 1159
+    assert result["counted_rows"] == 4
+    assert result["excluded_rows"] == 1
+    assert "partial_rows" in result["warnings"]
+    assert "partial_rows" in result["note"]
+
+
+def test_lema_matches_accepta_sufix_d_homonimia() -> None:
+    from llengua_mcp.adapters.ctilc import _lema_matches
+
+    assert _lema_matches("somriure", "Somriure") is True
+    assert _lema_matches("altre", "altre_1") is True
+    assert _lema_matches("altre", "altra") is False

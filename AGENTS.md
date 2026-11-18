@@ -187,7 +187,7 @@ Prioritat dins l’adaptador CTILC:
 - `continuar_cerca(cursor, limit?)` — reprèn una pàgina amb el cursor local.
 - `cerca_patro(elements, limit?)` — patró avançat amb elements tipats.
 - `context(occurrence_id)` — context ±50 i paràgraf, amb metadades de l’obra.
-- `collocacions(lema, radi?, freq_min?, limit?)` — coaparicions dins d'una finestra de ±radi mots (0-5), agrupades per categoria gramatical. Els resultats són a `CTILCQCol_LemesAgrup2.asp` (POST amb `cadlema`, `radiE`/`radiD`, `freqMin`); l'apartat ALTRES barreja puntuació i noms propis i es filtra parcialment.
+- `collocacions(lema, radi?, freq_min?, limit?)` — coaparicions dins d'una finestra de ±radi mots (0-5), agrupades per categoria gramatical. Els resultats són a `CTILCQCol_LemesAgrup2.asp` (POST amb `cadlema`, `radiE`/`radiD`, `freqMin`); la pàgina conté totes les files. Les de puntuació de l'apartat ALTRES es descarten (`excluded_rows`) i els noms propis es retornen a part, a `altres`. Cal validar `lema_echo_verified` abans de fer servir les dades.
 - `xifres()` — mida i cobertura del corpus.
 - `etiquetes()` — categories i codis morfològics llegibles.
 - `salut()` — comprova que el lloc respon i que l’echo de control és correcte.

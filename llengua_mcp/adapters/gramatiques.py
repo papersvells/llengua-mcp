@@ -79,27 +79,27 @@ class GramatiquesAdapter:
             # dues vegades (el component fa encodeURIComponent i el servei
             # afegeix la query codificada).
             url = f"{config['api']}/TextGramatica/cercadic/{quote(mode)}?paraula={quote(term)}"
-            result = await self.client.get_text(url, cache_ttl=86400)
-            payload = _load(result.text, font)
-            total = len(payload.get("texts") or [])
-            hits = parse_search_hits(payload, term, font=font)
-            warnings.extend(result.warnings)
         else:
             # La GBU i la GEIEC comparteixen endpoints.
             url = f"{config['api']}/search_text?" + urlencode(
                 {"searchWord": term, "criteria": mode, "fonetica": "false"}
             )
-            result = await self.client.get_text(url, cache_ttl=86400)
-            payload = _load(result.text, font)
-            items = payload if isinstance(payload, list) else []
-            total = len(items)
-            hits = parse_search_hits(items, term, font=font)
-            warnings.extend(result.warnings)
+        result = await self.client.get_text(url, cache_ttl=86400)
+        payload = _load(result.text, font)
+        data = parse_search_hits(payload, term, font=font)
+        total = data["total"]
+        hits = data["hits"]
+        warnings.extend(result.warnings)
+        warnings.extend(data["warnings"])
 
-        if total > len(hits):
-            warnings.append("truncated")
+        if hits:
+            status = "ok"
+        elif total == 0:
+            status = "no_results"
+        else:
+            # Hi ha nodes, però cap amb text llegible: no és una absència.
+            status = "partial"
 
-        status = "ok" if hits else "no_results"
         return {
             "status": status,
             "query": {"paraula": term, "font": font, "coincidencia": mode},
@@ -143,7 +143,7 @@ class GramatiquesAdapter:
 
         result = await self.client.get_text(url, cache_ttl=86400)
         payload = _load(result.text, font)
-        data = parse_text(payload, font=font)
+        data = parse_text(payload, font=font, expected=codi)
         return {
             "status": "ok",
             "font": font,
