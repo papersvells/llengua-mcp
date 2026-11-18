@@ -53,6 +53,12 @@ SECTIONS = {normalize_key(key): value for key, value in _SECTION_LABELS.items()}
 _ALLOWED_PREFIXES = ("/entrades/", "/toponims/", "/nomspropis/")
 
 
+def _is_entry_url(url: str) -> bool:
+    """Distingeix una fitxa d'entrada dels títols de filmoteca i del llibre d'estil."""
+
+    return urlsplit(url).path.startswith(_ALLOWED_PREFIXES)
+
+
 def _now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
@@ -104,12 +110,20 @@ class EsadirAdapter:
 
         result = await self.client.get_text(SEARCH_URL, params=params, cache_ttl=86400)
         parsed = parse_search(result.text)
-        results = parsed["results"][: max(1, limit)]
+        # Les fitxes d'entrada van primer: la filmoteca i el llibre d'estil
+        # no són entrades lèxiques.
+        ordered = sorted(
+            parsed["results"],
+            key=lambda item: 0 if _is_entry_url(item["url"]) else 1,
+        )
+        results = ordered[: max(1, limit)]
         count = parsed["count"]
 
         warnings = list(dict.fromkeys(result.warnings + parsed["warnings"]))
         if count and count > len(results):
             warnings.append("truncated")
+        if condition == "0" and not any(_is_entry_url(item["url"]) for item in ordered):
+            warnings.append("no_entry_results")
         status = "ok"
         if count == 0:
             status = "no_results"
@@ -130,8 +144,10 @@ class EsadirAdapter:
             "warnings": warnings,
             "note": (
                 "ésAdir és el portal d'estil de la CCMA, no la norma de l'IEC. "
-                "La cerca exacta pot no trobar entrades multiparaula: si coneixes "
-                "la forma, obre-la amb `esadir_fitxa`."
+                "La cerca exacta pot no trobar entrades multiparaula i retornar "
+                "títols de filmoteca o documents del llibre d'estil: si apareix "
+                "`no_entry_results`, obre la fitxa amb `esadir_fitxa(termes)` "
+                "abans de concloure que no hi ha entrada."
             ),
             "source": str(result.url),
             "retrieved_at": _now(),
@@ -141,6 +157,8 @@ class EsadirAdapter:
                 + f": {termes}"
             ),
         }
+        if "no_entry_results" in warnings:
+            payload["suggested_fitxa"] = termes
         if status == "unexpected_response":
             payload["error"] = {
                 "code": status,

@@ -13,7 +13,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els retocs de validació del 18/11/2026 ja són committats.
-- **Tests sense xarxa:** 131 passats, 7 omesos (els live).
+- **Tests sense xarxa:** 137 passats, 7 omesos (els live).
 - **Tests en directe:** 7, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **Ruff:** `ruff format` i `ruff check` nets.
 - **Eines MCP:** 21 eines, agrupades per font.
@@ -168,6 +168,28 @@ directe amb `somriure` el 18/11/2026.
   a oficial.
 - No redistribuir extracts extensos ni obres protegides.
 
+### 2.8 Proves d'ús real (resolt el 18/11/2026)
+
+Proves fetes amb preguntes reals (les tres d'acceptació i casos límit) per
+detectar problemes que els tests no veuen.
+
+- **DIEC: articles massa llargs.** `diec_consulta("fe")` retornava 56
+  accepcions de `fer²` i un article enorme. Ara hi ha `max_senses` (20 per
+  defecte, fins a 50), `senses_total` i `senses_truncated`, amb l'avís
+  corresponent. Amb `max_senses=20`, `mala fe` (accepció 18 de `fe²`) hi és.
+- **ésAdir: la cerca exacta no trobava entrades.** `esadir_consulta("a gust")`
+  retornava títols de filmoteca i cap entrada, tot i que `esadir_fitxa("a gust")`
+  funciona. Ara les fitxes d'entrada van primer i, si no n'hi ha cap, s'afegeix
+  l'avís `no_entry_results` i `suggested_fitxa` per obrir-la directament.
+- **Col·locacions massa grans.** `collocacions("altre")` supera el límit de
+  4 MB de resposta i fallava amb un error genèric. Ara l'error és accionable:
+  indica apujar `freq_min` o triar un lema més específic.
+- **Servidor MCP antic a OpenCode.** El procés MCP carregat en iniciar la sessió
+  no recarrega el codi: durant aquestes proves responia amb la versió anterior
+  a les fases A-D. Cal reiniciar l'editor o el servidor després de canviar el
+  codi; ho hem documentat al README. Les correccions s'han verificat amb
+  l'`App` directa i amb els tests en directe.
+
 ---
 
 ## 3. Comandes útils
@@ -205,7 +227,9 @@ PY
 
 ## 4. Properes passes suggerides
 
-1. Fer servir les eines amb preguntes reals i corregir el que falli abans
-   d'afegir fonts noves.
-2. Decidir si es reprèn el Corpus de consultes amb una captura real de
+1. Decidir si es reprèn el Corpus de consultes amb una captura real de
    navegador, o si es descarta definitivament.
+2. Triar la propera ampliació segons l'ús real: eines ajornades del CTILC
+   (2.5) o les fonts de 2.6.
+3. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
+   fum abans de donar per bona una versió.

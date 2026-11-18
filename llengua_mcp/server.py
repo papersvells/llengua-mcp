@@ -130,15 +130,24 @@ async def optimot_fitxa(ref: str) -> dict[str, Any]:
 
 
 @mcp.tool()
-async def diec_consulta(paraula: str, limit: int = 3) -> dict[str, Any]:
+async def diec_consulta(paraula: str, limit: int = 3, max_senses: int = 20) -> dict[str, Any]:
     """Consulta el DIEC i retorna les accepcions de l'entrada.
 
     Serveix per validar el lèxic i, sobretot, per identificar l'accepció
     aplicable. Una locució pot figurar dins de l'article d'un dels mots. Si no
     hi ha entrada, això no converteix la forma en incorrecta.
+
+    Args:
+        paraula: Mot o locució curta.
+        limit: Nombre màxim d'entrades (1-5).
+        max_senses: Nombre màxim d'accepcions per entrada (1-50). Si l'article
+            és llarg, `senses_truncated` indica que cal apujar-lo.
     """
     app = await get_app()
-    return await _call("https://dlc.iec.cat/Results", app.diec.consulta(paraula, limit=limit))
+    return await _call(
+        "https://dlc.iec.cat/Results",
+        app.diec.consulta(paraula, limit=limit, max_senses=max_senses),
+    )
 
 
 @mcp.tool()
@@ -157,9 +166,10 @@ async def esadir_consulta(
         condicio: `coincident`, `aproximat`, `comença per`, `conté` o `acaba en`.
         limit: Nombre màxim de resultats.
 
-    La cerca exacta pot fallar en entrades multiparaula. Si coneixes la forma,
-    obre-la directament amb `esadir_fitxa`. ésAdir és estil de la CCMA, no la
-    norma de l'IEC.
+    La cerca exacta pot fallar en entrades multiparaula i retornar títols de
+    filmoteca. Si apareix `no_entry_results`, prova `esadir_fitxa` amb el
+    `suggested_fitxa` abans de concloure que no hi ha entrada. ésAdir és estil
+    de la CCMA, no la norma de l'IEC.
     """
     app = await get_app()
     return await _call(

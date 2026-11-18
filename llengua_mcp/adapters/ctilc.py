@@ -19,6 +19,7 @@ from llengua_mcp.errors import (
     InvalidQueryError,
     LlenguaError,
     StaleSearchError,
+    UpstreamError,
 )
 from llengua_mcp.http import HttpClient
 from llengua_mcp.models import CursorPayload, PatternElement
@@ -600,7 +601,19 @@ class CtilcAdapter:
             f"seccio=CTILC1&cadlema={quote(term, safe='')}"
             f"&cadlemacond=0&freqMin={freq_min}&radiE={radi}&radiD={radi}"
         )
-        result = await self.client.post_text(COLLOCACIONS_URL, body)
+        try:
+            result = await self.client.post_text(COLLOCACIONS_URL, body)
+        except UpstreamError as exc:
+            if "supera el límit de mida" not in exc.message:
+                raise
+            raise UpstreamError(
+                f"La pàgina de col·locacions de «{term}» és massa gran per descarregar-la.",
+                hint=(
+                    f"El lema «{term}» és molt freqüent. Apuja `freq_min` "
+                    f"(ara {freq_min}) o consulta'n un de més específic."
+                ),
+                source=COLLOCACIONS_URL,
+            ) from exc
         data = parse_collocacions(result.text)
 
         warnings = list(result.warnings)

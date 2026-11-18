@@ -173,8 +173,8 @@ Aquestes regles estan verificades i no s’han de “simplificar” sense tornar
 Eines de consulta previstes per a la primera versió:
 
 - `optimot_cerca` i `optimot_fitxa` — primera prioritat per verificar correccions; distingir candidats de fitxes llegides.
-- `diec_consulta` — recuperar l’article i identificar l’accepció que justifica la resposta.
-- `esadir_consulta` i `esadir_fitxa` — descobrir i llegir entrades d’estil.
+- `diec_consulta` — recuperar l’article i identificar l’accepció que justifica la resposta. Els articles llargs es retallen a `max_senses`; si `senses_truncated` és cert, apuja’l per veure les locucions del final.
+- `esadir_consulta` i `esadir_fitxa` — descobrir i llegir entrades d’estil. Si `esadir_consulta` retorna `no_entry_results`, cal obrir `suggested_fitxa` amb `esadir_fitxa` abans de concloure que no hi ha entrada.
 - `bdlex_consulta` — diccionaris històrics i dialectals, amb cerca per entrada, definició, exemple o text lliure. Usa el motor intern de BDLex, que no és una API pública documentada; si canvia, caldrà actualitzar el parser.
 - `oiec_cerca` i `oiec_text` — ortografia normativa: cerca per paraula i lectura d'apartats pel codi. L'API (`api-oiec.iec.cat`) és JSON net i sense autenticació.
 - `gramatica_cerca` i `gramatica_text` — regles gramaticals a la GBU, la GEIEC i la GIEC. La GIEC fa servir el patró de l'OIEC (`cercadic/{mode}` amb la paraula codificada dues vegades); la GBU i la GEIEC, `search_text`/`text_by_cody`.

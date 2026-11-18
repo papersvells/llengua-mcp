@@ -38,7 +38,9 @@ class DiecAdapter:
     def __init__(self, client: HttpClient) -> None:
         self.client = client
 
-    async def consulta(self, paraula: str, *, limit: int = 3) -> dict[str, Any]:
+    async def consulta(
+        self, paraula: str, *, limit: int = 3, max_senses: int = 20
+    ) -> dict[str, Any]:
         paraula = clean_text(paraula)
         if not paraula:
             raise InvalidQueryError(
@@ -51,6 +53,7 @@ class DiecAdapter:
                 hint="Consulta un mot o una locució curta.",
             )
         limit = max(1, min(limit, 5))
+        max_senses = max(1, min(max_senses, 50))
 
         params = {"DecEntradaText": paraula, **SEARCH_PARAMS}
         result = await self.client.get_text(SEARCH_URL, params=params, cache_ttl=86400)
@@ -110,10 +113,13 @@ class DiecAdapter:
                     cache_ttl=86400,
                 )
                 parsed_entry = parse_accepcio(str(content.get("content", "")))
+                senses = parsed_entry["senses"]
                 payload.update(
                     {
                         "title": parsed_entry["title"] or entry["entry"],
-                        "senses": parsed_entry["senses"],
+                        "senses": senses[:max_senses],
+                        "senses_total": len(senses),
+                        "senses_truncated": len(senses) > max_senses,
                         "warnings": parsed_entry["warnings"] + response.warnings,
                     }
                 )
@@ -124,10 +130,12 @@ class DiecAdapter:
 
         if any(item.get("warnings") for item in detailed):
             warnings.append("parse_partial")
+        if any(item.get("senses_truncated") for item in detailed):
+            warnings.append("senses_truncated")
 
         return {
             "status": "ok" if all(item.get("senses") for item in detailed) else "partial",
-            "query": {"paraula": paraula},
+            "query": {"paraula": paraula, "max_senses": max_senses},
             "matched_entry": parsed["matched_entry"],
             "count": parsed["count"],
             "entries": detailed,
@@ -135,7 +143,9 @@ class DiecAdapter:
             "note": (
                 "El DIEC és la referència normativa del lèxic. Cal citar l'entrada "
                 "i l'accepció que justifiquen la resposta; una locució pot aparèixer "
-                "dins de l'article d'un dels mots."
+                "dins de l'article d'un dels mots. Si `senses_truncated` és cert, "
+                "apuja `max_senses` per veure les accepcions finals, on sovint hi "
+                "ha les locucions."
             ),
             "source": str(result.url),
             "retrieved_at": _now(),

@@ -40,6 +40,10 @@ reproduïble; per actualitzar-les, `--ref master --force`.
 La configuració d'OpenCode és local i no es versiona: copia
 `opencode.jsonc.example`, ajusta-hi les rutes i desa'l com a `opencode.jsonc`.
 
+Després de canviar el codi del servidor, reinicia el servidor MCP (o l'editor):
+OpenCode no recarrega en calent els processos MCP i, si no, les eines
+continuen responent amb la versió anterior.
+
 ## Configuració d'OpenCode
 
 ```jsonc
@@ -121,9 +125,12 @@ Variables d'entorn:
 - **Optimot**: el nombre de resultats és un recompte de documents del portal, no
   una freqüència d'ús. Cal obrir la fitxa abans de citar-ne el criteri.
 - **DIEC**: cal citar l'entrada i l'accepció. No trobar-hi una forma no la fa
-  incorrecta.
+  incorrecta. Els articles llargs es retallen a `max_senses` (20 per defecte);
+  si `senses_truncated` és cert, apuja'l per veure les locucions finals.
 - **ésAdir**: és estil de la CCMA, no la norma de l'IEC. Una cerca sense resultats
-  no demostra que una forma sigui incorrecta.
+  no demostra que una forma sigui incorrecta. Si apareix `no_entry_results`, la
+  cerca no ha trobat cap fitxa d'entrada (pot retornar títols de filmoteca):
+  obre `suggested_fitxa` amb `esadir_fitxa` abans de concloure res.
 - **BDLex**: agrupa diccionaris de períodes i abasts diferents. Cal citar el
   diccionari concret de cada entrada (`dictionary` / `dictionary_label`) i no
   tractar una forma antiga o dialectal com a adequada per a un text formal

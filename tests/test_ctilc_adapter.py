@@ -7,7 +7,7 @@ import pytest
 from llengua_mcp.adapters.ctilc import CtilcAdapter
 from llengua_mcp.config import Settings
 from llengua_mcp.cursors import CursorStore
-from llengua_mcp.errors import InvalidQueryError, StaleSearchError
+from llengua_mcp.errors import InvalidQueryError, StaleSearchError, UpstreamError
 from llengua_mcp.http import HttpResult
 from llengua_mcp.models import PatternElement
 
@@ -556,3 +556,24 @@ def test_lema_matches_accepta_sufix_d_homonimia() -> None:
     assert _lema_matches("somriure", "Somriure") is True
     assert _lema_matches("altre", "altre_1") is True
     assert _lema_matches("altre", "altra") is False
+
+
+class TooLargeClient:
+    async def post_text(self, url: str, body: str, **kwargs) -> HttpResult:
+        raise UpstreamError(
+            "La resposta supera el límit de mida configurat.",
+            hint="Redueix el nombre de files o augmenta LLENGUA_MAX_BYTES.",
+            source=url,
+        )
+
+    async def get_text(self, url: str, **kwargs) -> HttpResult:
+        raise AssertionError("no s'hauria de cridar")
+
+
+@pytest.mark.asyncio
+async def test_collocacions_massa_gran_es_accioable(tmp_path) -> None:
+    adapter = CtilcAdapter(TooLargeClient(), _settings(tmp_path), CursorStore())
+    with pytest.raises(UpstreamError, match="massa gran") as info:
+        await adapter.collocacions("altre", freq_min=5)
+    assert "freq_min" in info.value.hint
+    assert "altre" in info.value.message
