@@ -10,6 +10,7 @@ sencers ni substitueix un corrector.
 | Font | Eina | Què aporta |
 |---|---|---|
 | [Optimot](https://aplicacions.llengua.gencat.cat/llc/AppJava/index.html) | `optimot_cerca`, `optimot_fitxa` | Criteris sobre gramàtica, construcció, registre i lèxic |
+| [Corpus de consultes de l'IEC](https://consultes-linguistiques.iec.cat/) | `consultes_iec` | Respostes curades a dubtes reals, amb enllaços a la font |
 | [DIEC](https://dlc.iec.cat/) | `diec_consulta` | Lèxic normatiu i accepcions |
 | [ésAdir](https://www.esadir.cat/) | `esadir_consulta`, `esadir_fitxa` | Estil de la CCMA, pronunciació i noms propis |
 | [BDLex](https://bdlex.iec.cat/) | `bdlex_consulta` | Diccionaris històrics i dialectals (DCVB, DIEC, Fabra...) |
@@ -85,6 +86,8 @@ Variables d'entorn:
 - **Corregir una construcció**: `optimot_cerca("tenir que", mode="frase_exacta")`
   i `optimot_fitxa(ref)` per justificar *he d'anar* en lloc de *tinc que anar*.
   Si la cerca exacta no dona res, `optimot_cerca("perífrasi d'obligació")`.
+- **Veure com s'ha resolt un dubte semblant**: `consultes_iec("tenir que")` o,
+  si només vols preguntes, `consultes_iec("tenir", camp="pregunta")`.
 - **Comparar dues formulacions**: `diec_consulta("maliciós")` per al sentit i
   `cerca_patro` amb `lema=somriure@subst` + `cg=adj` per als contextos reals.
 - **Trobar alternatives**: `cerca_sinonims("maliciós", context="un somriure maliciós")`
@@ -124,6 +127,9 @@ Variables d'entorn:
   `unvalidated`. Amb pocs testimonis, parla de concentració observada.
 - **Optimot**: el nombre de resultats és un recompte de documents del portal, no
   una freqüència d'ús. Cal obrir la fitxa abans de citar-ne el criteri.
+- **Consultes de l'IEC**: són respostes curades, no la norma. Cita la consulta i
+  enllaça la font que citen (GIEC, DIEC, Optimot). `camp="pregunta"` limita la
+  cerca al títol de la consulta i sol ser més precís que la cerca global.
 - **DIEC**: cal citar l'entrada i l'accepció. No trobar-hi una forma no la fa
   incorrecta. Els articles llargs es retallen a `max_senses` (20 per defecte);
   si `senses_truncated` és cert, apuja'l per veure les locucions finals.
@@ -157,10 +163,10 @@ Variables d'entorn:
   dialectal i les col·locacions d'una forma encara no s'exposen: calen fixtures
   i proves pròpies.
 - L'exportació CSV del CTILC no s'implementa: l'endpoint no s'ha pogut verificar.
-- El Corpus de consultes lingüístiques de l'IEC està investigat i **descartat**:
-  el contingut només és accessible via JavaScript i no és replicable sense
-  navegador. Critèria és WordPress amb contingut en PDFs; l'API REST no publica
-  els posts.
+- El Corpus de consultes de l'IEC es llegeix amb el nonce de la pàgina i
+  l'endpoint AJAX de wpDataTables. Si el portal canvia el nonce o la taula,
+  l'eina retorna un error accionable; no se'n fan descàrregues massives.
+  Critèria és WordPress amb contingut en PDFs; l'API REST no publica els posts.
 - BDLex no té una API pública documentada: l'adaptador usa el motor de la
   plataforma. Si el servei canvia, caldrà revisar el parser. Les respostes es
   retallen (entrades, accepcions, exemples, subentrades i fonètica) per no

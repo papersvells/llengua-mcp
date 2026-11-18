@@ -13,16 +13,17 @@ verificades) i, per a l'abast, `AGENTS.md`.
 
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els retocs de validació del 18/11/2026 ja són committats.
-- **Tests sense xarxa:** 137 passats, 7 omesos (els live).
-- **Tests en directe:** 7, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **Tests sense xarxa:** 151 passats, 8 omesos (els live).
+- **Tests en directe:** 8, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **Ruff:** `ruff format` i `ruff check` nets.
-- **Eines MCP:** 21 eines, agrupades per font.
+- **Eines MCP:** 22 eines, agrupades per font.
 
 ### Eines per font
 
 | Font | Eines | Estat |
 |---|---|---|
 | Optimot | `optimot_cerca`, `optimot_fitxa` | Implementat i provat en directe |
+| Corpus de consultes IEC | `consultes_iec` | Implementat i provat en directe |
 | DIEC | `diec_consulta` | Implementat i provat en directe |
 | ésAdir | `esadir_consulta`, `esadir_fitxa` | Implementat i provat en directe |
 | BDLex | `bdlex_consulta` | Implementat i provat en directe (DCVB inclòs) |
@@ -69,6 +70,9 @@ Expectatives datades, no llindars eterns:
   `search_cursor` sense `next_cursor`; la dispersió torna `ok` amb
   `data_valid: true` i 10 trams.
 - Optimot «tenir que» → fitxa 6754/4 (05.04.2023).
+- Corpus de consultes de l'IEC: `consultes_iec("tenir")` → **257** (1.176 en
+  total), 7 temes; `tema="Sintaxi"` → **347**; `camp="pregunta"` amb «tenir» →
+  **12**. L'endpoint necessita el nonce de la pàgina i `table_id=7`.
 - DIEC «maliciós» → 3 accepcions.
 - ésAdir «a gust», «hidrosisme» → fitxa i AFI.
 
@@ -146,12 +150,13 @@ directe amb `somriure` el 18/11/2026.
 
 ### 2.6 Fonts encara no integrades
 
-- **Corpus de consultes lingüístiques de l'IEC.** Investigat i aturat: el
-  contingut (1.176 consultes) sembla només accessible via JavaScript, però la
-  conclusió «no és possible sense navegador» **no està establerta**. Cal
-  capturar la petició real del navegador (XHR) abans de descartar-ho. Les
-  crides provades a wpDataTables retornaven `recordsTotal: 1176` i
-  `recordsFiltered: 0`.
+- **Corpus de consultes lingüístiques de l'IEC: resolt el 18/11/2026.** Eina
+  `consultes_iec`. La pàgina `/cerca-general/` porta el nonce
+  `wdtNonceFrontendServerSide_7`; amb els paràmetres DataTables complets,
+  l'AJAX de wpDataTables retorna les 1.176 consultes. Es poden filtrar per tema
+  (Fonètica, Lèxic, Morfologia, Onomàstica, Ortografia, Sintaxi, Altres) i per
+  pregunta. Els intents anteriors donaven zero perquè faltava el nonce i es
+  feia servir `table_id=1` (la portada) en lloc de `7`.
 - **Critèria.** Només explorat parcialment. L'API REST `/wp-json/wp/v2/types`
   respon; no hi ha evidència que no tingui contingut cercable. Cal revisar-ho
   abans de descartar-ho.
@@ -227,9 +232,8 @@ PY
 
 ## 4. Properes passes suggerides
 
-1. Decidir si es reprèn el Corpus de consultes amb una captura real de
-   navegador, o si es descarta definitivament.
-2. Triar la propera ampliació segons l'ús real: eines ajornades del CTILC
-   (2.5) o les fonts de 2.6.
+1. Triar la propera ampliació: filtres del CTILC (autor, any, gènere i
+   varietat) o les eines ajornades de 2.5.
+2. Revisar Critèria i la cobertura del DDLC a BDLex (2.6) si es volen citar.
 3. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
    fum abans de donar per bona una versió.

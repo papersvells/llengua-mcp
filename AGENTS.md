@@ -22,13 +22,20 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
 - Implementat i provat en directe el 18/11/2026:
   - CTILC: `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `xifres`, `etiquetes`, `salut`.
   - Optimot: `optimot_cerca`, `optimot_fitxa`.
+  - Corpus de consultes de l'IEC: `consultes_iec` (1.176 respostes curades; nonce + AJAX de wpDataTables, `table_id=7`).
   - DIEC: `diec_consulta`.
   - ésAdir: `esadir_consulta`, `esadir_fitxa`.
   - BDLex: `bdlex_consulta` (entrada, definició, exemple i text lliure; DCVB inclòs).
   - OIEC: `oiec_cerca`, `oiec_text` (ortografia normativa, via `api-oiec.iec.cat`).
   - Gramàtiques: `gramatica_cerca`, `gramatica_text` (GBU, GEIEC i GIEC, amb APIs JSON equivalents).
   - Softcatalà: `cerca_sinonims` amb dades locals versionades.
-- **Corpus de consultes lingüístiques de l’IEC: investigat i descartat.** El contingut (1.176 consultes) només és accessible via JavaScript; la taula visible no filtra amb `cerca_text`/`wdt_var1`, l’AJAX de wpDataTables retorna sempre `recordsTotal: 1176, recordsFiltered: 0` i la cerca WP diu «El que busqueu no existeix». No és replicable sense navegador, que és fora d’abast.
+- **Corpus de consultes lingüístiques de l’IEC: implementat el 18/11/2026.**
+  La pàgina `/cerca-general/` porta un nonce (`wdtNonceFrontendServerSide_7`)
+  que cal enviar a `admin-ajax.php?action=get_wdtable&table_id=7`. Amb el nonce
+  i els paràmetres DataTables complets, l’AJAX retorna les 1.176 consultes;
+  sense nonce o amb `table_id=1` (portada) retorna zero o el «Dubte del dia».
+  Els temes són Fonètica, Lèxic, Morfologia, Onomàstica, Ortografia, Sintaxi i
+  Altres. El filtre de pregunta és `columns[4][search][value]`.
 - **Critèria: WordPress** amb contingut en PDFs descarregables; l'API REST no publica els posts (0 elements). Poc valor cercable per a l'MCP.
 - Pendents: cerques bàsiques del CTILC (`Formes2`/`FormesLema2`), dispersió dialectal i general, obres, filtres i exportació.
 - Documents de referència:
@@ -45,6 +52,7 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
 - `00*lema=somriure&01*forma=<>amb` → **13.727**; `00*formalema=somriure:V¬somriure:IF|somreia:3II` → **3.489**; amb un `[]?` opcional abans de *mala fe* → **0** amb eco verificat.
 - `tenir foc al ulls` i `tenir foc als ulls` → **0** cadascun, amb eco verificat; és una absència en aquest corpus, no una prova que l’expressió no existeixi.
 - Optimot, mode `frase_exacta` per «tenir que» → fitxa **6754/4**, versió **05.04.2023**, que qualifica *tenir que + infinitiu* com a no acceptable i dona *heu d’estudiar* com a forma correcta.
+- Corpus de consultes de l’IEC: «tenir» → **257** (1.176 en total); tema **Sintaxi** → **347**; «tenir» a la pregunta → **12**.
 - DIEC, «maliciós» → 3 accepcions; la tercera inclou l’exemple «Un somriure maliciós».
 - ésAdir, «a gust» → fitxa amb definició i exemples; «hidrosisme» → AFI `[or.] iðɾusízmə` i `[occ.] iðɾosízme`.
 
@@ -128,6 +136,7 @@ llengua_mcp/
   adapters/
     ctilc.py
     optimot.py
+    consultes.py
     diec.py
     esadir.py
     softcatala.py
@@ -136,6 +145,7 @@ llengua_mcp/
     fitxa.py
     dades.py
     optimot.py
+    consultes.py
     diec.py
     esadir.py
 tests/
@@ -173,6 +183,7 @@ Aquestes regles estan verificades i no s’han de “simplificar” sense tornar
 Eines de consulta previstes per a la primera versió:
 
 - `optimot_cerca` i `optimot_fitxa` — primera prioritat per verificar correccions; distingir candidats de fitxes llegides.
+- `consultes_iec` — respostes curades del Corpus de consultes de l'IEC. Serveix per trobar una pregunta semblant i veure com l'ha resolta l'IEC; retorna la pregunta, la resposta neta, el tema i els enllaços a la font. Cal citar la consulta i enllaçar la font; no substitueix la norma.
 - `diec_consulta` — recuperar l’article i identificar l’accepció que justifica la resposta. Els articles llargs es retallen a `max_senses`; si `senses_truncated` és cert, apuja’l per veure les locucions del final.
 - `esadir_consulta` i `esadir_fitxa` — descobrir i llegir entrades d’estil. Si `esadir_consulta` retorna `no_entry_results`, cal obrir `suggested_fitxa` amb `esadir_fitxa` abans de concloure que no hi ha entrada.
 - `bdlex_consulta` — diccionaris històrics i dialectals, amb cerca per entrada, definició, exemple o text lliure. Usa el motor intern de BDLex, que no és una API pública documentada; si canvia, caldrà actualitzar el parser.

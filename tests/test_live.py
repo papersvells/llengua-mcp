@@ -29,6 +29,23 @@ async def test_live_ctilc_control() -> None:
 
 
 @pytest.mark.asyncio
+async def test_live_consultes() -> None:
+    app = App(Settings.from_env())
+    try:
+        result = await app.consultes.cerca("tenir", limit=2)
+        tema = await app.consultes.cerca(tema="Sintaxi", limit=1)
+    finally:
+        await app.aclose()
+    assert result["status"] == "ok"
+    assert result["total"] > 0
+    assert result["results"]
+    assert result["available_themes"]
+    assert result["results"][0]["pregunta"]
+    assert tema["status"] == "ok"
+    assert tema["total"] > 0
+
+
+@pytest.mark.asyncio
 async def test_live_bdlex() -> None:
     app = App(Settings.from_env())
     try:

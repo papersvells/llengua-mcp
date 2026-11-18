@@ -1,0 +1,35 @@
+{
+  "draw": 1,
+  "recordsTotal": 1176,
+  "recordsFiltered": 2,
+  "data": [
+    [
+      "5895",
+      "s",
+      null,
+      "Sintaxi",
+      "<p>Com es diu <em>tenir que</em> anar a casa?</p>",
+      "<p>Cal fer servir <em>haver de</em> + infinitiu, com a la <a href=\"https://giec.iec.cat/textgramatica/codi/28.1\">GIEC</a> i a l'<a href=\"https://aplicacions.llengua.gencat.cat/llc/AppJava/index.html\">Optimot</a>.</p>",
+      null,
+      "f",
+      "Consultes",
+      "Sintaxi",
+      null,
+      null
+    ],
+    [
+      "5894",
+      "s",
+      "g",
+      "Lèxic",
+      "<p>Què vol dir <em>engrunar</em>?</p>",
+      "<p>Vegeu el <a href=\"https://dlc.iec.cat/Results?DecEntradaText=engrunar\">DIEC</a>.</p>",
+      null,
+      "f",
+      "Dubte del dia",
+      null,
+      null,
+      null
+    ]
+  ]
+}

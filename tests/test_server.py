@@ -11,6 +11,7 @@ async def test_tools_are_registered() -> None:
     expected = {
         "optimot_cerca",
         "optimot_fitxa",
+        "consultes_iec",
         "diec_consulta",
         "esadir_consulta",
         "esadir_fitxa",

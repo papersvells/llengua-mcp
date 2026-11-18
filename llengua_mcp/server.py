@@ -26,6 +26,9 @@ autoritat diferent i no les confonguis mai:
   fenomen, cerca amb `fitxes` les paraules clau (p. ex. «perífrasi d'obligació»).
   Si l'usuari pregunta per un mot antic o dialectal que no surt al DIEC, prova
   `bdlex_consulta` abans de qualificar-lo: potser el recull el DCVB.
+- Corpus de consultes de l'IEC: respostes curades a dubtes reals. Serveix per
+  veure com s'ha resolt una qüestió semblant i per enllaçar la font que cita
+  (GIEC, DIEC, Optimot). Cita la consulta; no substitueix la norma.
 - DIEC: lèxic normatiu. Cita l'entrada i l'accepció; una locució pot ser dins
   de l'article d'un dels mots. No trobar-hi una forma no la fa incorrecta.
 - BDLex: diccionaris històrics i dialectals (DCVB, DIEC, Fabra, obres dels
@@ -126,6 +129,43 @@ async def optimot_fitxa(ref: str) -> dict[str, Any]:
     return await _call(
         "https://aplicacions.llengua.gencat.cat/llc/AppJava/index.html",
         app.optimot.fitxa(ref),
+    )
+
+
+@mcp.tool()
+async def consultes_iec(
+    cerca: str | None = None,
+    tema: str | None = None,
+    camp: str = "tot",
+    limit: int = 5,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Cerca al Corpus de consultes lingüístiques de l'IEC.
+
+    Són respostes curades a dubtes reals, amb el tema i els enllaços a la font
+    que citen (GIEC, DIEC, Optimot...). Serveix per veure com s'ha resolt una
+    qüestió semblant; no substitueix la norma ni la fitxa d'una altra font.
+
+    Args:
+        cerca: Text lliure (per exemple «tenir que»).
+        tema: Filtra per tema: Fonètica, Lèxic, Morfologia, Onomàstica,
+            Ortografia, Sintaxi o Altres.
+        camp: `tot` (pregunta i resposta) o `pregunta` (només la pregunta).
+        limit: Nombre màxim de consultes (1-20).
+        offset: Posició inicial per paginar; usa `next_offset`.
+
+    Cal indicar `cerca` o `tema`. Cita la consulta i enllaça la font.
+    """
+    app = await get_app()
+    return await _call(
+        "https://consultes-linguistiques.iec.cat/cerca-general/",
+        app.consultes.cerca(
+            cerca,
+            tema=tema,
+            camp=camp,
+            limit=limit,
+            offset=offset,
+        ),
     )
 
 

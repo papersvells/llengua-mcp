@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from llengua_mcp.adapters import (
     BdlexAdapter,
+    ConsultesAdapter,
     CtilcAdapter,
     DiecAdapter,
     EsadirAdapter,
@@ -24,6 +25,7 @@ class App:
         self.http = HttpClient(settings)
         self.cursors = CursorStore(ttl_seconds=settings.cache_ttl_seconds)
         self.bdlex = BdlexAdapter(self.http)
+        self.consultes = ConsultesAdapter(self.http)
         self.ctilc = CtilcAdapter(self.http, settings, self.cursors)
         self.oiec = OiecAdapter(self.http)
         self.optimot = OptimotAdapter(self.http)
