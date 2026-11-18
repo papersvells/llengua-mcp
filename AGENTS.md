@@ -1,0 +1,338 @@
+# AGENTS.md — MCP de consultes de llengua catalana
+
+## 1. Què és aquest projecte
+
+`llengua` serà un **servidor MCP d’assessorament sobre la llengua catalana**. Des d’OpenCode, l’usuari podrà plantejar un dubte sobre una paraula, una expressió o una frase. L’agent triarà les eines adequades, contrastarà les fonts quan calgui i donarà una resposta pràctica i documentada. Detectar barbarismes, comparar formulacions i trobar sinònims són tres casos d’ús inicials. La revisió automàtica de documents sencers queda fora d’abast.
+
+**El repertori d’eines és obert.** Optimot, DIEC, ésAdir, CTILC i el diccionari de sinònims de Softcatalà són les primeres fonts previstes. S’hi podran incorporar altres recursos fiables segons les necessitats de consulta: per exemple, un conjugador per resoldre un dubte de flexió o un diccionari terminològic per trobar el terme precís d’un àmbit especialitzat.
+
+Un dels adaptadors consulta el **CTILC** (Corpus Textual Informatitzat de la Llengua Catalana, de l’Institut d’Estudis Catalans). Les seves eines han de permetre:
+
+- cercar lemes, formes i combinacions;
+- obtenir contextos i fitxes de localització;
+- consultar col·locacions, dispersions i xifres del corpus;
+- diferenciar una **absència real** d’una **consulta mal formada**;
+- citar i interpretar les dades amb les cauteles correctes.
+
+El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un motor de consultes intern. La feina principal és **traduir una intenció lingüística a una consulta vàlida** i tornar resultats estructurats, no HTML cru.
+
+## 2. Estat actual
+
+- Fase: **implementació inicial**. El paquet `llengua_mcp` i els tests ja existeixen; les eines estan disponibles per a OpenCode amb `opencode.jsonc`.
+- Implementat i provat en directe el 18/11/2026:
+  - CTILC: `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `xifres`, `etiquetes`, `salut`.
+  - Optimot: `optimot_cerca`, `optimot_fitxa`.
+  - DIEC: `diec_consulta`.
+  - ésAdir: `esadir_consulta`, `esadir_fitxa`.
+  - BDLex: `bdlex_consulta` (entrada, definició, exemple i text lliure; DCVB inclòs).
+  - Softcatalà: `cerca_sinonims` amb dades locals versionades.
+- Pendents: cerques bàsiques del CTILC (`Formes2`/`FormesLema2`), col·locacions, dispersió dialectal i general, obres, filtres, exportació, Corpus de consultes lingüístiques de l’IEC i gramàtiques de l’IEC.
+- Documents de referència:
+  - `pla-mcp-ctilc.md` — pla inicial. És útil com a mapa del protocol, però **conté errors** i no s’ha d’implementar literalment.
+  - `pla-mcp-ctilc-critiques.md` — revisió crítica amb verificació en directe, errors, correccions, golden tests i propostes. **És la font de veritat** quan els dos documents discrepin.
+- Data de les comprovacions inicials: **18/11/2026**. Els recomptes del corpus poden canviar.
+- Per a l’abast i les proves de cada adaptador, vegeu també `pla-mcp-ctilc-tercer-en-discordia.md`, `pla-incorporacio-optimot-mcp.md` i `pla-incorporacio-esadir-mcp.md`.
+
+**Comprovacions en directe del 18/11/2026** (expectatives datades, no llindars eterns):
+
+- `00*lema=somriure&01*cg=adj:-` → **2.136** (control de `salut`).
+- `00*lema=somriure@subst&01*cg=adj:-` → **1.829**.
+- `00*forma=somriure&01*forma=maliciós` → **32**; `00*lema=somriure&01*forma=amb|de&02*forma=mala&03*forma=fe` → **0**, amb eco verificat.
+- `00*lema=somriure&01*forma=<>amb` → **13.727**; `00*formalema=somriure:V¬somriure:IF|somreia:3II` → **3.489**; amb un `[]?` opcional abans de *mala fe* → **0** amb eco verificat.
+- `tenir foc al ulls` i `tenir foc als ulls` → **0** cadascun, amb eco verificat; és una absència en aquest corpus, no una prova que l’expressió no existeixi.
+- Optimot, mode `frase_exacta` per «tenir que» → fitxa **6754/4**, versió **05.04.2023**, que qualifica *tenir que + infinitiu* com a no acceptable i dona *heu d’estudiar* com a forma correcta.
+- DIEC, «maliciós» → 3 accepcions; la tercera inclou l’exemple «Un somriure maliciós».
+- ésAdir, «a gust» → fitxa amb definició i exemples; «hidrosisme» → AFI `[or.] iðɾusízmə` i `[occ.] iðɾosízme`.
+
+## 3. Objectius
+
+1. **Consultes fiables:** cada adaptador retorna evidència adequada a la font: article i accepció, fitxa i criteri, o bé patró, total i concordances per al CTILC.
+2. **Zero falsos zeros:** si l’echo no coincideix amb la consulta enviada, no presentar el resultat com una absència lingüística.
+3. **Interfície senzilla per a qualsevol model:** eines d’alt nivell que amaguin `NN*clau`, codis morfològics i detalls d’encoding.
+4. **Reproducibilitat:** golden tests amb data, consulta exacta i resultat esperat; fixtures per a CI.
+5. **Cortesia i legalitat:** rate limit, cache, User-Agent identificable, citació i contacte amb l’IEC abans de publicar.
+6. **Compatibilitat amb OpenCode:** servidor MCP local per stdio, eines clares, configurable amb `mcp.servers`.
+
+## 4. Fora d’abast (non-goals)
+
+- No fer descàrregues massives ni mirall del corpus.
+- No saltar captchas, límits o proteccions.
+- No fer servir un navegador si n’hi ha prou amb HTTP.
+- No afirmar que el CTILC representa la llengua oral o l’“ús quotidià”.
+- No publicar extracts extensos ni redistribuir obres protegides.
+- No presentar el projecte com un producte oficial de l’IEC.
+- No exposar CQL cru com a API estable sense validació i advertències.
+
+## 5. Principis de producte
+
+**Resposta a l’usuari:** el model ha de consultar l’MCP, donar primer la correcció o la tria recomanada, explicar-ne breument el motiu i citar la font que ha llegit. Cal preservar el sentit i el to de la frase. Si l’original ja és correcte, es pot suggerir una alternativa més natural, marcada com a **opció d’estil**. Si una font no respon o no tracta el cas, cal dir-ho sense atribuir-li cap criteri.
+
+| Font | Quan i com s’ha d’utilitzar |
+|---|---|
+| [Optimot](https://aplicacions.llengua.gencat.cat/llc/AppJava/index.html) | Per a dubtes gramaticals, de construcció o de registre. Si la consulta és una expressió concreta (p. ex. «tenir que»), provar `frase_exacta`; si és un fenomen, cercar amb `fitxes` les paraules clau. Obrir la fitxa pertinent i citar-ne la font original i la versió quan consti. |
+| [DIEC](https://dlc.iec.cat/) | Per validar el lèxic: comprovar l’entrada i **l’accepció aplicable**. Una locució pot figurar dins l’article d’un dels seus mots. «No l’he trobada al DIEC» no justifica qualificar-la de barbarisme. |
+| [ésAdir](https://www.esadir.cat/) | Per a criteris d’estil de la CCMA, pronunciació i noms propis. Atribuir el criteri editorial a ésAdir; una cerca sense resultats no prova que la forma sigui incorrecta. |
+| CTILC | Per comprovar l’ús escrit: comparar patrons equivalents i llegir exemples en context. La freqüència, tota sola, no estableix la correcció ni el matís d’una expressió. |
+| [BDLex](https://bdlex.iec.cat/) | Per consultar diccionaris històrics i dialectals (DCVB, DIEC, Fabra, obres dels segles XIX i XX). Pot cercar per entrada, definició, exemple o text lliure. És descriptiu i històric: una forma hi pot constar i no ser adequada avui; una absència no la fa incorrecta. Cal citar el diccionari concret. |
+| [Diccionari de sinònims de Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) | Per trobar alternatives. Cercar primer la paraula o locució sencera; si no hi ha entrada per a *de mala fe*, no donar sinònims de *fe* com si fossin de la locució. Prioritzar una còpia local versionada de les dades amb [atribució i llicència CC BY 4.0](https://www.softcatala.org/diccionari-de-sinonims/credits/). |
+
+**Fonts addicionals previstes** (útils per respondre dubtes, encara no implementades):
+
+| Font | Quan i com s’ha d’utilitzar |
+|---|---|
+| [Corpus de consultes lingüístiques de l’IEC](https://consultes-linguistiques.iec.cat/) | Per trobar una pregunta semblant i veure com l’ha resolta l’IEC, amb l’enllaç a la gramàtica o al diccionari. No substitueix l’Optimot ni la norma. |
+| [GBU](https://gbu.iec.cat/inici) i [GIEC](https://giec.iec.cat/inici) | Per explicar una regla gramatical. La GBU és la consulta d’ús; la GIEC, la descripció especialitzada. |
+| [OIEC](https://oiec.iec.cat/inici) | Per regles d’ortografia (apòstrofs, guionets, accents, dièresis) que afecten molts mots. |
+| [Critèria](http://criteria.iec.cat/) | Per decisions editorials de l’IEC (majúscules, cursives, abreviacions) quan hi ha més d’una solució possible. |
+
+**Criteris específics del corpus:**
+
+- **Primer l’evidència, després la conclusió.** L’MCP dona dades; el model no ha de convertir `N > 0` en “és molt habitual”.
+- **Atestació ≠ freqüència ≠ quotidianitat.**
+  - `N > 0`: la seqüència està atestada en el corpus.
+  - `N = 0`: no apareix en aquest corpus, no “no existeix”.
+  - “Quotidià”: requereix corpus oral, registres i comparació; el CTILC tot sol no ho pot respondre.
+- **El context mana.** Una ocurrència pot ser literal, figurada, una traducció, un error o una repetició dins d’una mateixa obra.
+- **La dispersió és part del resultat.** No n’hi ha prou amb el total: calen obres, autors, anys, gèneres i varietats.
+- **La normalització és obligatòria.** Per comparar èpoques, usar freqüència per milió o proporcions, no només recomptes absoluts.
+
+## 6. Arquitectura tècnica prevista
+
+- **Llenguatge:** Python 3.11+.
+- **MCP:** SDK oficial `mcp` 2.x, classe `MCPServer` (l’antiga `FastMCP`), transport **stdio** per a OpenCode.
+- **HTTP:** `httpx.AsyncClient` (no `requests` síncron dins d’una tool async).
+- **Parsing:** `selectolax` o `lxml`/`BeautifulSoup`; **DOM, no només regex**.
+- **Models:** `pydantic`.
+- **Tests:** `pytest`, fixtures locals, VCR/cassettes; tests live opcionals.
+- **Estructura prevista:**
+
+```text
+llengua_mcp/
+  __init__.py
+  server.py          # eines MCP
+  app.py             # composició d'adaptadors
+  config.py          # variables d'entorn
+  http.py            # httpx, rate limit per host, cache
+  cache.py           # cache TTL en memòria
+  cursors.py         # cursors locals amb caducitat
+  compiler.py        # QuerySpec -> NN*clau
+  models.py
+  tagset.py
+  text.py            # normalització d'HTML i text
+  sinonims.py        # índex local de Softcatalà
+  fetch_sinonims.py  # baixada versionada de les dades
+  adapters/
+    ctilc.py
+    optimot.py
+    diec.py
+    esadir.py
+    softcatala.py
+  parsers/
+    ctilc.py
+    fitxa.py
+    dades.py
+    optimot.py
+    diec.py
+    esadir.py
+tests/
+  fixtures/
+```
+
+No cal un únic fitxer. La separació per parsers i client és important perquè cada pàgina del CTILC té una estructura diferent.
+
+## 7. Regles crítiques del protocol CTILC
+
+Aquestes regles estan verificades i no s’han de “simplificar” sense tornar-les a provar:
+
+1. **`POST` a `CTILCQConc_Coocur2.asp`** amb `seccio=CTILC1` i elements `NN*clau=valor`. `GET` retorna 500.
+2. **El `*` de la clau ha de quedar literal.** `requests`/`httpx` amb un `dict` l’envien com `%2A` i el servidor retorna 500. Construir el cos manualment o amb un encoder que respecti `*`.
+3. **`cg` necessita morfologia.** `cg=adj` sol retorna 500; `cg=adj:-` funciona. Si no hi ha morfologia, generar `-`.
+4. **`lema@CG` funciona; `lema:CG` no.** `formalema` té una gramàtica pròpia: `lema:cg¬forma:cg|forma:cg`.
+5. **Els rangs no existeixen com a clau.** `01-03*cg=...` s’ignora i produeix un fals zero. Expandir a `01*cg`, `02*cg`, `03*cg`.
+6. **`<>` i `()` no es poden combinar.** `(<>amb)` retorna 500. Validar `negat && opcional` com a error.
+7. **`forma` és una sola forma.** Els espais es converteixen en `_`; per a frases cal un element per paraula. `cerca_forma("somriure mofeta")` no és el mateix que `cerca_patro` amb dos elements.
+8. **`iStart` és 1-based.** `iStart=0` no és equivalent; validar `>= 1`. Paginar amb `iStart=1,1001,2001` i `iOffset=1000` funciona.
+9. **L’ID `resultat` és un enter de 64 bits.** Ha de ser `string` a l’esquema, al JSON i al cursor. Un ID arrodonit pot retornar el total correcte i **0 files**.
+10. **`resultat_id` no és un cursor.** Cal un cursor amb la consulta original, `Qlocali`, el patró i el proper offset; recompilar i re-POSTejar és més robust que dependre del cache del servidor.
+11. **Les eines bàsiques i les combinacions tenen parsers diferents.** `Coocur2` fa servir `Patró seleccionat`; `Formes2`/`FormesLema2` fan servir `Forma`/`Lemes`.
+12. **Els nuclis poden contenir etiquetes i espais d’amplada zero.** Netejar `<...>`, `&nbsp;`, `\u200b`, `\xa0` i col·lapsar espais.
+13. **Col·locacions:** els resultats són a `CTILCQCol_LemesAgrup2.asp` / `FormesAgrup2.asp`, no a `Agrup1`. Calen `radiE`, `radiD` i `freqMin`; el resultat s’agrupa per categoria gramatical.
+14. **Fitxa de localització:** `CTILCQFitxaLocalitzacio.asp` és una fitxa d’una ocurrència, no d’una obra. El paràmetre `obra` de la URL **no** és l’ID canònic; cal llegir `Id. obra` de la pàgina.
+15. **CSV:** `Qjson_concordancesCSV.asp` no està verificat; a les proves va retornar 500. No implementar-lo com a tool estable fins a capturar una exportació real del navegador.
+16. **Un zero només és una absència verificada** si la pàgina dona un comptador explícit `0` i el missatge reconegut de cap coincidència. Un missatge de zero sense comptador, o un total il·legible, és `unexpected_response`, no `no_matches`.
+17. **L'eco visible també es valida.** Els camps ocults `formdata` han de coincidir amb la consulta enviada i el patró visible ha de ser equivalent; si no, el resultat no es presenta com una absència.
+18. **La continuació no barreja cerques.** Si el total o el patró canvien respecte del cursor, `continuar_cerca` retorna `stale_search` i descarta les files noves.
+19. **`strquery` és un canal CQL intern**, però no una API general. Permet reexecutar el CQL compilat; els rangs i el CQL simplificat no funcionen. No exposar-lo sense validació i advertències.
+
+## 8. Eines MCP previstes
+
+Eines de consulta previstes per a la primera versió:
+
+- `optimot_cerca` i `optimot_fitxa` — primera prioritat per verificar correccions; distingir candidats de fitxes llegides.
+- `diec_consulta` — recuperar l’article i identificar l’accepció que justifica la resposta.
+- `esadir_consulta` i `esadir_fitxa` — descobrir i llegir entrades d’estil.
+- `bdlex_consulta` — diccionaris històrics i dialectals, amb cerca per entrada, definició, exemple o text lliure. Usa el motor intern de BDLex, que no és una API pública documentada; si canvia, caldrà actualitzar el parser.
+- `cerca_sinonims` — trobar alternatives a un mot o una expressió. Si l’usuari dona context, el model selecciona dues o tres opcions pertinents, quan n’hi hagi, i explica el matís de cadascuna. Pot comprovar-ne el sentit al DIEC i la combinació al CTILC.
+
+Prioritat dins l’adaptador CTILC:
+
+- `cerca_frase(frase, variants?, limit?)` — tokenitza, prova variants (`al`/`als`, accents, etc.), compila el patró i retorna una fitxa d’evidència.
+- `cerca(lema?, forma?, categoria?, limit?)` — cerca simple per a la majoria de preguntes.
+- `continuar_cerca(cursor, limit?)` — reprèn una pàgina amb el cursor local.
+- `cerca_patro(elements, limit?)` — patró avançat amb elements tipats.
+- `context(occurrence_id)` — context ±50 i paràgraf, amb metadades de l’obra.
+- `xifres()` — mida i cobertura del corpus.
+- `etiquetes()` — categories i codis morfològics llegibles.
+- `salut()` — comprova que el lloc respon i que l’echo de control és correcte.
+
+Els filtres per autor, any, gènere o varietat encara no s’exposen: el
+formulari del CTILC els té, però cal verificar-los i provar-los amb fixtures
+abans de publicar-los.
+
+Posteriors:
+
+- `collocacions`;
+- `dispersions`;
+- `obres` i `obres_descarregables`;
+- `filtres_disponibles`;
+- `exportar` (només si es verifica).
+
+### Esquema de sortida mínim
+
+Una cerca de concordances del CTILC amb recompte verificat ha de retornar:
+
+```json
+{
+  "query": {},
+  "pattern_echo": "…",
+  "total": 0,
+  "returned": 0,
+  "has_more": false,
+  "occurrences": [],
+  "warnings": [],
+  "source": "https://ctilc.iec.cat/…",
+  "retrieved_at": "…",
+  "citation": "CTILC (IEC), consulta feta el …"
+}
+```
+
+`warnings` ha de cobrir, com a mínim: `zero_results`, `pattern_echo_unexpected`, `transport_eof`, `result_cache_miss`, `parse_partial`, `corpus_updated`.
+
+## 9. Interpretació de dades: coses a anar amb compte
+
+- **Mida del corpus:** 126.604.218 paraules; **102.493.057 analitzades** morfosintàcticament. La resta són noms propis, no analitzables o altres. Un zero en una cerca per lema/categoria pot ser una manca d’anotació.
+- **Període:** dades des de 1832 fins a 2022; la prosa del lloc de vegades diu 1833. No és un corpus oral.
+- **Creixement:** uns 5 milions de paraules l’any. Els recomptes i golden tests es mouen; registrar sempre la data i el total.
+- **Dispersió:** un total alt pot concentrar-se en un autor, una obra, un gènere o una dècada. Cal mirar obres/autors únics i proporcions.
+- **Col·locacions:** les xifres de la tool de col·locacions (±3) no són les mateixes que les d’adjacència. No barrejar mètriques.
+- **Literal vs figuratiu:** el model ha de llegir contextos; l’MCP no ho classifica automàticament.
+- **“Quotidià”:** no es pot concloure del CTILC. Caldria corpus oral i dades sociolingüístiques.
+
+## 10. Legal, ètica i privacitat
+
+- Ús personal/de recerca: possible, però **no hi ha una autorització explícita** a les pàgines del CTILC.
+- `robots.txt` i `sitemap.xml` retornen 404; **l’absència no és permís**.
+- No fer descàrregues massives; limitar el ritme (~1 req/s o menys) i cachejar.
+- Contactar **`dcc@iec.cat`** abans de publicar o integrar l’MCP en un producte.
+- Citar sempre el CTILC i l’IEC; no usar el logo de l’IEC ni presentar-se com a oficial.
+- No redistribuir extracts extensos ni obres protegides.
+- El `resultat` cachejat al servidor pot quedar accessible per ID; no hi posar consultes sensibles.
+- No loguejar textos sencers de les consultes; minimitzar dades.
+
+## 11. Qualitat i tests
+
+- **Unitaris:** encoder (`*` literal), compilador, `01-03` expandit, `negat+opcional` rebutjat, cursor, IDs com a `string`, eco visible, zero explícit, continuació stale, antònims de sinònims, XML inesperat i `no-store`.
+- **Fixtures:** 50 files, 1.000 files, 0 files, fila mal formada, `<i>`, `&#8203;`, `Forma`, `Lemes`, col·locació, dispersió, fitxa.
+- **Contracte:** VCR/cassettes; CI sense xarxa.
+- **Live:** opcional (`CTILC_LIVE=1`), amb rate limit i data; no a CI.
+- **Drift:** `salut` comprova una consulta de control (`00*lema=somriure&01*cg=adj:-` → 2.136 el 18/11/2026) i l’echo.
+- **Golden tests:** els de `pla-mcp-ctilc-critiques.md`, no els del pla original sense corregir.
+
+## 12. Convencions de codi i repositori
+
+- Codis i noms tècnics en anglès; **descripcions d’eines, errors i documentació d’usuari en català**.
+- Type hints i models Pydantic; evitar `Any` innecessari.
+- `ruff format` / `ruff check`; `pytest`.
+- No secrets al repositori; fer servir variables d’entorn (`CTILC_USER_AGENT`, `CTILC_CONTACT`, `CTILC_RATE`, `CTILC_CACHE_DIR`).
+- Missatges d’error accionables: dir què ha fallat i com corregir-ho.
+- No reescriure els documents de planificació sense petició explícita; les decisions noves van a la documentació del codi o a un nou document.
+- Si es descobreix un canvi de protocol, actualitzar el test i el document de crítiques; no “arreglar” el test perquè passi.
+
+## 13. Integració amb OpenCode
+
+Configuració local prevista:
+
+El repositori ja inclou `opencode.jsonc` amb aquesta configuració:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "llengua": {
+        "type": "local",
+        "command": [
+          "/ruta/al/projecte/.venv/bin/python",
+          "-m",
+          "llengua_mcp.server"
+        ],
+        "cwd": ".",
+        "environment": {
+          "LLENGUA_USER_AGENT": "llengua-mcp/0.1 (recerca; contacte)",
+          "LLENGUA_DATA_DIR": "/ruta/al/projecte/data"
+        },
+        "timeout": { "execution": 60000 },
+        "codemode": false
+      }
+    }
+  }
+}
+```
+
+Instal·lació i dades:
+
+```sh
+uv venv .venv
+uv pip install --python .venv/bin/python -e .
+LLENGUA_DATA_DIR=./data .venv/bin/python -m llengua_mcp.fetch_sinonims
+```
+
+- `codemode: false` exposa les eines directament i és més compatible amb models petits; Code Mode es pot activar després.
+- Les eines apareixeran com `llengua_<tool>` (o `tools.llengua.<tool>` amb Code Mode).
+- Instruccions d’agent recomanades:
+  - consultar el CTILC per a afirmacions empíriques sobre el català;
+  - dir la data, la mida del corpus i les variants provades;
+  - distingir zero real de consulta invàlida;
+  - no concloure “ús quotidià” a partir del CTILC;
+  - citar el CTILC i l’IEC.
+
+## 14. Definició de fet (MVP)
+
+Proves d’acceptació del producte des d’OpenCode:
+
+1. **Correcció:** davant «Què et sembla “Tinc que anar a casa”?», l’agent cerca a l’Optimot una fitxa sobre l’obligació, la llegeix i proposa **«He d’anar a casa»**. Explica *haver de + infinitiu* i cita la fitxa consultada.
+2. **Comparació:** davant «Què et sona millor: “somriure maliciós” o “somriure de mala fe”?», consulta Optimot, ésAdir i CTILC. Al corpus cerca *somriure* com a nom en totes dues formulacions i examina els contextos. Si cal, precisa el sentit al DIEC. Recomana una formulació segons el matís, distingint la tria del model dels criteris publicats, sense donar per fet cap recompte.
+3. **Alternatives:** davant «Què puc posar en lloc de “maliciós” a “un somriure maliciós”?», consulta Softcatalà i explica quines opcions conserven el sentit i quines el canvien. Cita l’entrada i presenta les alternatives com a suggeriments.
+
+**Estat de la definició de fet:** els tres casos d’acceptació i les eines del
+CTILC ja estan implementats i provats en directe (18/11/2026), amb 83 tests
+sense xarxa i tres proves en directe optatives (`LLENGUA_LIVE=1`). Els pendents
+són l’ampliació de fonts i les eines ajornades.
+
+La part del CTILC es considera llesta quan:
+
+1. `cerca_frase`, `context`, `xifres`, `etiquetes` i `salut` funcionen amb OpenCode.
+2. Una consulta vàlida no retorna 500 ni un fals zero; l’echo es valida.
+3. Els IDs de 64 bits es conserven com a `string`.
+4. Hi ha fixtures i tests que cobreixen `*`, paginació, accents, `<>`, `()`, `formalema` i errors.
+5. Hi ha README, avís legal i citació.
+6. El rate limit i la cache funcionen.
+7. S’ha revisat el cas “tenir foc als ulls” com a test d’acceptació: la resposta ha de ser una fitxa d’evidència, no un “N → és quotidià”.
+
+## 15. Enllaços
+
+- CTILC: <https://ctilc.iec.cat/>
+- BDLex: <https://bdlex.iec.cat/>
+- Contacte IEC: `dcc@iec.cat`
+- Pla inicial: `pla-mcp-ctilc.md`
+- Revisió i correccions: `pla-mcp-ctilc-critiques.md`

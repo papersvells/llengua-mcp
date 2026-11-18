@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='utf-8'?>
+<result>
+<entry dict="DCVB" headword="engrunar" id="DCVBE057199">
+  <form><key val="engrunar"/><orth norm="engrunar" orig="engronar">engrunar</orth></form>
+  <gramGrp><pos norm="VETR">v. tr.</pos></gramGrp>
+  <sense dict="DCVB" entry="DCVBE057199" headword="engrunar" id="DCVBE057199S00001" level="3" n="1" r="I.A.1">
+    <sep><ng>1.</ng></sep>
+    <gramGrp><pos norm="VETR">v. tr.</pos></gramGrp>
+    <def>Esclafar; </def>
+    <def>deformar per efecte d'una pressió violenta; </def>
+    <trans><lang>cast. </lang><tr lang="ES">chafar, aplastar. </tr></trans>
+    <eg><q type="EX">«Li ha caigut una pedra i li ha engrunat un peu» </q><usg type="GEO" u="Maestrat">(Maestr., </usg><usg type="GEO" u="Mallorca">Mall.). </usg></eg>
+    <eg><cit><quote>Si la pedra cau, tot lo engrunarà, </quote><bibl><refbibl>Quar. 1413</refbibl></bibl></cit></eg>
+    <facets><facet name="geo" val="Mallorca|Maestrat"/><facet name="dict" val="DCVB"/></facets>
+  </sense>
+  <sense loc="ETI"><etym>de <cs>enrunar</cs></etym></sense>
+  <sense loc="FON"><form><pron><f1 orig="əŋgruná">əŋgɾuná</f1></pron><usg type="GEO" u="central">(or.)</usg></form></sense>
+  <sense loc="SIN"><vr>Sinòn.:</vr><cs>esclafar;</cs><cs>esmicolar.</cs></sense>
+</entry>
+<entry dict="DIEe" headword="engrunar" id="DIEeE025487">
+  <form><key val="engrunar"/><orth norm="engrunar" orig="engrunar">engrunar</orth></form>
+  <gramGrp><pos norm="VETR">v. tr.</pos></gramGrp>
+  <sense dict="DIEe" entry="DIEeE025487" headword="engrunar" id="DIEeE025487S00001" level="0">
+    <sep><ng>1</ng><cs>1</cs></sep>
+    <gramGrp><usg norm="XLEXCOM">[LC]</usg><pos norm="VETR">v. tr.</pos></gramGrp>
+    <def>Fer engrunes (d'una cosa), convertir-la en engrunes.</def>
+    <eg><q type="EX">Aquests rosegons, engruna'ls, i els donarem a les gallines.</q></eg>
+  </sense>
+</entry>
+</result>

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "llengua": {
+        "type": "local",
+        "command": [
+          "/home/victor/projectes-opencode/corpus-textual/.venv/bin/python",
+          "-m",
+          "llengua_mcp.server"
+        ],
+        "cwd": ".",
+        "environment": {
+          "LLENGUA_USER_AGENT": "llengua-mcp/0.1 (recerca; contacte)",
+          "LLENGUA_DATA_DIR": "/home/victor/projectes-opencode/corpus-textual/data"
+        },
+        "timeout": { "execution": 60000 },
+        "codemode": false,
+        "disabled": false
+      }
+    }
+  }
+}

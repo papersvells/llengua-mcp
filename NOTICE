@@ -1,0 +1,33 @@
+llengua-mcp
+===========
+
+Codi: llicència MIT (vegeu LICENSE).
+
+Aquest projecte no és un producte oficial de l'Institut d'Estudis Catalans
+(IEC), de la Corporació Catalana de Mitjans Audiovisuals (CCMA) ni de
+Softcatalà.
+
+Fonts consultades
+-----------------
+
+- Corpus Textual Informatitzat de la Llengua Catalana (CTILC), IEC.
+  <https://ctilc.iec.cat/>
+- Diccionari de la llengua catalana (DIEC2), IEC. <https://dlc.iec.cat/>
+- Optimot, Departament de Política Lingüística de la Generalitat de Catalunya.
+  <https://aplicacions.llengua.gencat.cat/llc/AppJava/index.html>
+- ésAdir, CCMA. <https://www.esadir.cat/>
+- BDLex, Institut d'Estudis Catalans. <https://bdlex.iec.cat/>
+  Inclou el Diccionari català-valencià-balear (Alcover-Moll) i diverses obres
+  lexicogràfiques dels segles XIX i XX.
+- Diccionari de sinònims de Softcatalà, Jaume Ortolà i col·laboradors.
+  <https://www.softcatala.org/diccionari-de-sinonims/>
+  Dades amb llicència Creative Commons Reconeixement 4.0 (CC BY 4.0).
+  <https://github.com/softcatala/sinonims-cat>
+
+Els textos, definicions, fitxes i concordances pertanyen a les fonts
+respectives. Aquest projecte només en fa consultes puntuals i en cita la
+procedència; no en redistribueix extracts extensos ni obres protegides.
+
+L'ús del CTILC i de la resta de serveis ha de ser cortès: una petició per segon
+i per host, cache local i cap descàrrega massiva. Abans de publicar o integrar
+el servei en un producte, cal contactar amb les fonts corresponents.
