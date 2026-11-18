@@ -7,6 +7,7 @@ from llengua_mcp.adapters import (
     CtilcAdapter,
     DiecAdapter,
     EsadirAdapter,
+    GramatiquesAdapter,
     OiecAdapter,
     OptimotAdapter,
     SoftcatalaAdapter,
@@ -28,6 +29,7 @@ class App:
         self.optimot = OptimotAdapter(self.http)
         self.diec = DiecAdapter(self.http)
         self.esadir = EsadirAdapter(self.http)
+        self.gramatiques = GramatiquesAdapter(self.http)
         self.softcatala = SoftcatalaAdapter(settings)
 
     async def aclose(self) -> None:

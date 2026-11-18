@@ -76,3 +76,17 @@ async def test_live_oiec() -> None:
     assert result["hits"]
     codis = [hit["codi_text"] for hit in result["hits"]]
     assert any(codi and codi.startswith("4.") for codi in codis)
+
+
+@pytest.mark.asyncio
+async def test_live_gramatiques() -> None:
+    app = App(Settings.from_env())
+    try:
+        gbu = await app.gramatiques.cerca("perífrasi verbal", font="gbu")
+        giec = await app.gramatiques.cerca("haver de", font="giec")
+        text = await app.gramatiques.text("28.1", font="gbu")
+    finally:
+        await app.aclose()
+    assert gbu["status"] == "ok" and gbu["hits"]
+    assert giec["status"] == "ok" and giec["hits"]
+    assert text["status"] == "ok" and "perífrasi" in text["content"].lower()

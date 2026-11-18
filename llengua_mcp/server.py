@@ -35,6 +35,9 @@ autoritat diferent i no les confonguis mai:
 - ésAdir: estil de la CCMA, pronunciació i noms propis. No és la norma de l'IEC.
 - OIEC: ortografia normativa (apòstrofs, guionets, accents, dièresi). Cita
   sempre el codi d'apartat i el títol de la secció.
+- Gramàtiques: per explicar una regla gramatical, `gramatica_cerca` i
+  `gramatica_text`. La GBU és la consulta d'ús; la GEIEC, la versió en línia;
+  la GIEC, la descripció exhaustiva. Cita el codi i el títol.
 - CTILC: ús escrit i contextos. Un total positiu només demostra atestació; un
   zero no demostra que una forma no existeixi. No en dedueixis «ús quotidià».
   La dispersió cronològica serveix per dir en quins trams apareix més, amb
@@ -263,6 +266,48 @@ async def oiec_text(codi: str) -> dict[str, Any]:
     """
     app = await get_app()
     return await _call("https://api-oiec.iec.cat", app.oiec.text(codi))
+
+
+@mcp.tool()
+async def gramatica_cerca(
+    paraula: str,
+    font: str = "gbu",
+    coincidencia: str = "contains",
+) -> dict[str, Any]:
+    """Cerca a les gramàtiques de l'IEC: GBU, GEIEC o GIEC.
+
+    Serveix per explicar una regla gramatical: perífrasis, pronoms febles,
+    concordança, subordinades... Retorna fins a cinc apartats amb el codi
+    (`codi_text`), el títol, un fragment que conté la paraula i l'enllaç.
+
+    Args:
+        paraula: Paraula o fenomen gramatical (per exemple «perífrasi verbal»).
+        font: `gbu` (gramàtica bàsica i d'ús, la consulta adequada per a dubtes
+            d'ús), `geiec` (versió en línia) o `giec` (descripció exhaustiva).
+        coincidencia: `contains` (En qualsevol posició) o `exact` (Coincident).
+
+    Per llegir un apartat sencer, passa el codi a `gramatica_text`.
+    """
+    app = await get_app()
+    return await _call(
+        "https://api-gbu.iec.cat/api",
+        app.gramatiques.cerca(paraula, font=font, coincidencia=coincidencia),
+    )
+
+
+@mcp.tool()
+async def gramatica_text(codi: str, font: str = "gbu") -> dict[str, Any]:
+    """Llegeix un apartat d'una gramàtica de l'IEC pel seu codi.
+
+    Usa el `codi_text` retornat per `gramatica_cerca` (per exemple `28.1`).
+    Retorna el text complet de l'apartat, net d'etiquetes, amb l'enllaç a la
+    secció al portal corresponent.
+    """
+    app = await get_app()
+    return await _call(
+        "https://api-gbu.iec.cat/api",
+        app.gramatiques.text(codi, font=font),
+    )
 
 
 @mcp.tool()

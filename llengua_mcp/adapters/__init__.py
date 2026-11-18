@@ -4,6 +4,7 @@ from llengua_mcp.adapters.bdlex import BdlexAdapter
 from llengua_mcp.adapters.ctilc import CtilcAdapter
 from llengua_mcp.adapters.diec import DiecAdapter
 from llengua_mcp.adapters.esadir import EsadirAdapter
+from llengua_mcp.adapters.gramatiques import GramatiquesAdapter
 from llengua_mcp.adapters.oiec import OiecAdapter
 from llengua_mcp.adapters.optimot import OptimotAdapter
 from llengua_mcp.adapters.softcatala import SoftcatalaAdapter
@@ -13,6 +14,7 @@ __all__ = [
     "CtilcAdapter",
     "DiecAdapter",
     "EsadirAdapter",
+    "GramatiquesAdapter",
     "OiecAdapter",
     "OptimotAdapter",
     "SoftcatalaAdapter",
