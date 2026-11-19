@@ -2,7 +2,7 @@
 
 Document de seguiment. Recull què està implementat i verificat, quins límits
 coneixem i què queda per fer. No és un pla tancat: les prioritats poden
-canviar. Data de la darrera actualització: **18/11/2026**.
+canviar. Data de la darrera actualització: **19/11/2026**.
 
 Fonts de veritat per al protocol: `pla-mcp-ctilc-critiques.md` (correccions
 verificades) i, per a l'abast, `AGENTS.md`.
@@ -14,8 +14,13 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 163 passats, 9 omesos (els live).
-- **Tests en directe:** 9, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **Tests sense xarxa:** 163 passats, 12 omesos (els live).
+- **Tests en directe:** 12, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
+  Python 3.11, 3.12 i 3.13 a cada push i pull request.
+  `.github/workflows/live.yml` executa les proves en directe cada dilluns a les
+  06:00 UTC (o manualment des d'Actions), amb un reintent per absorbir talls de
+  xarxa puntuals.
 - **Ruff:** `ruff format` i `ruff check` nets.
 - **Eines MCP:** 23 eines, agrupades per font.
 
@@ -190,7 +195,16 @@ directe amb `somriure` el 18/11/2026.
   consulta concreta.
 - No redistribuir extracts extensos ni obres protegides.
 
-### 2.8 Proves d'ús real (resolt el 18/11/2026)
+### 2.8 ésAdir: el zero de la cerca (resolt el 19/11/2026)
+
+`esadir_consulta("hidrosisme")` retornava `unexpected_response` tot i que la
+pàgina diu «Cap resultat»: el contenidor `#resultats` és buit i no hi ha
+comptador. Ara el parser reconeix el bloc `.noResultat` com un zero explícit
+(`count = 0`), l'adaptador torna `no_results` amb l'avís `zero_results` i
+conserva `suggested_fitxa`; ja no apareix `parse_partial`. Hi ha una fixture
+(`esadir_zero.html`) i tests de parser i d'adaptador.
+
+### 2.9 Proves d'ús real (resolt el 18/11/2026)
 
 Proves fetes amb preguntes reals (les tres d'acceptació i casos límit) per
 detectar problemes que els tests no veuen.

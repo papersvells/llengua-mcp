@@ -20,6 +20,13 @@ def test_esadir_search() -> None:
     assert rest["url"].startswith("https://www.3cat.cat/")
 
 
+def test_esadir_search_zero_results() -> None:
+    parsed = parse_search((FIXTURES / "esadir_zero.html").read_text(encoding="utf-8"))
+    assert parsed["count"] == 0
+    assert parsed["results"] == []
+    assert parsed["warnings"] == []
+
+
 def test_esadir_fitxa() -> None:
     parsed = parse_fitxa((FIXTURES / "esadir_fitxa.html").read_text(encoding="utf-8"))
     assert parsed["found"] is True

@@ -122,6 +122,8 @@ class EsadirAdapter:
         warnings = list(dict.fromkeys(result.warnings + parsed["warnings"]))
         if count and count > len(results):
             warnings.append("truncated")
+        if count == 0:
+            warnings.append("zero_results")
         if condition == "0" and not any(_is_entry_url(item["url"]) for item in ordered):
             warnings.append("no_entry_results")
         status = "ok"
@@ -147,7 +149,9 @@ class EsadirAdapter:
                 "La cerca exacta pot no trobar entrades multiparaula i retornar "
                 "títols de filmoteca o documents del llibre d'estil: si apareix "
                 "`no_entry_results`, obre la fitxa amb `esadir_fitxa(termes)` "
-                "abans de concloure que no hi ha entrada."
+                "abans de concloure que no hi ha entrada. Un `no_results` amb "
+                "`zero_results` és una absència a la cerca, no una prova que la "
+                "forma sigui incorrecta."
             ),
             "source": str(result.url),
             "retrieved_at": _now(),

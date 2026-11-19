@@ -1,5 +1,7 @@
 # llengua — MCP de consultes de llengua catalana
 
+[![CI](https://github.com/papersvells/llengua-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/papersvells/llengua-mcp/actions/workflows/ci.yml)
+
 `llengua` és un servidor MCP local per a OpenCode. Permet plantejar un dubte
 sobre una paraula, una expressió o una frase, consultar fonts amb autoritat
 diferent i obtenir una resposta pràctica i documentada. No revisa documents
@@ -143,9 +145,10 @@ Variables d'entorn:
   incorrecta. Els articles llargs es retallen a `max_senses` (20 per defecte);
   si `senses_truncated` és cert, apuja'l per veure les locucions finals.
 - **ésAdir**: és estil de la CCMA, no la norma de l'IEC. Una cerca sense resultats
-  no demostra que una forma sigui incorrecta. Si apareix `no_entry_results`, la
-  cerca no ha trobat cap fitxa d'entrada (pot retornar títols de filmoteca):
-  obre `suggested_fitxa` amb `esadir_fitxa` abans de concloure res.
+  no demostra que una forma sigui incorrecta. Un `no_results` amb
+  `zero_results` és un zero verificat. Si apareix `no_entry_results`, la cerca
+  no ha trobat cap fitxa d'entrada (pot retornar títols de filmoteca): obre
+  `suggested_fitxa` amb `esadir_fitxa` abans de concloure res.
 - **BDLex**: agrupa diccionaris de períodes i abasts diferents. Cal citar el
   diccionari concret de cada entrada (`dictionary` / `dictionary_label`) i no
   tractar una forma antiga o dialectal com a adequada per a un text formal
@@ -212,9 +215,19 @@ uv pip install --python .venv/bin/python -e ".[dev]"
 .venv/bin/pytest
 ```
 
-Els tests no fan xarxa. Les proves en directe són optatives i no formen part de
-la integració contínua:
+Els tests no fan xarxa i són els que s'executen a cada push. Les proves en
+directe són optatives: el workflow `live.yml` les llança un cop per setmana, i
+també les pots executar a mà:
 
 ```sh
 LLENGUA_LIVE=1 .venv/bin/pytest tests/test_live.py
 ```
+
+### Integració contínua
+
+- `.github/workflows/ci.yml`: `ruff format --check`, `ruff check` i `pytest`
+  sense xarxa a Python 3.11, 3.12 i 3.13, a cada push i pull request.
+- `.github/workflows/live.yml`: les proves en directe, cada dilluns a les 06:00
+  UTC o manualment des de la pestanya Actions, amb un reintent si falla una
+  prova per un tall de xarxa puntual. Un error persistent és un avís que una
+  font ha canviat el format o no respon.

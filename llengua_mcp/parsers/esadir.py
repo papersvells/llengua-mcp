@@ -75,6 +75,12 @@ def parse_search(html: str) -> dict[str, Any]:
         )
 
     warnings: list[str] = []
+    if count is None and not results:
+        # La pàgina sense resultats no porta comptador: el bloc `.noResultat`
+        # amb «Cap resultat» és el senyal explícit de zero.
+        no_result = doc.css_first(".noResultat")
+        if no_result is not None and "cap resultat" in clean_text(no_result.text()).casefold():
+            count = 0
     if count is None:
         warnings.append("parse_partial")
     if count and not results:

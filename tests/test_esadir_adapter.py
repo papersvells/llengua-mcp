@@ -49,6 +49,19 @@ async def test_les_entrades_van_primer() -> None:
 
 
 @pytest.mark.asyncio
+async def test_cap_resultat_es_un_zero_verificat() -> None:
+    client = FakeClient((FIXTURES / "esadir_zero.html").read_text(encoding="utf-8"))
+    result = await EsadirAdapter(client).consulta("hidrosisme")
+    assert result["status"] == "no_results"
+    assert result["result_count"] == 0
+    assert result["results"] == []
+    assert "zero_results" in result["warnings"]
+    assert "parse_partial" not in result["warnings"]
+    assert result["suggested_fitxa"] == "hidrosisme"
+    assert "error" not in result
+
+
+@pytest.mark.asyncio
 async def test_seccio_invalida() -> None:
     with pytest.raises(InvalidQueryError, match="secció"):
         await EsadirAdapter(FakeClient("")).consulta("a gust", seccio="inventada")

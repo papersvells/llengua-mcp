@@ -169,3 +169,52 @@ async def test_live_collocacions() -> None:
     names = next(cat for cat in result["categories"] if cat["categoria"] == "nom")
     assert names["items"]
     assert all(item["freq"] >= 5 for item in names["items"])
+
+
+@pytest.mark.asyncio
+async def test_live_optimot() -> None:
+    app = App(Settings.from_env())
+    try:
+        result = await app.optimot.cerca("tenir que", mode="frase_exacta", limit=5)
+        assert result["status"] == "ok"
+        candidate = next(item for item in result["results"] if "Teniu que" in item["title"])
+        fitxa = await app.optimot.fitxa(candidate["detail_ref"])
+    finally:
+        await app.aclose()
+    assert fitxa["status"] == "ok"
+    assert "Teniu que" in fitxa["title"]
+    text = " ".join(
+        paragraph for section in fitxa["sections"] for paragraph in section["paragraphs"]
+    )
+    assert "haver de" in text.lower()
+
+
+@pytest.mark.asyncio
+async def test_live_diec() -> None:
+    app = App(Settings.from_env())
+    try:
+        result = await app.diec.consulta("maliciós", max_senses=10)
+    finally:
+        await app.aclose()
+    assert result["status"] == "ok"
+    entry = result["entries"][0]
+    assert entry["entry"] == "maliciós"
+    assert entry["senses"]
+    examples = [example for sense in entry["senses"] for example in sense["examples"]]
+    assert any("somriure" in example.lower() for example in examples)
+
+
+@pytest.mark.asyncio
+async def test_live_esadir() -> None:
+    app = App(Settings.from_env())
+    try:
+        search = await app.esadir.consulta("a gust", limit=3)
+        fitxa = await app.esadir.fitxa("a gust")
+    finally:
+        await app.aclose()
+    assert search["status"] == "ok"
+    assert search["results"]
+    assert "no_entry_results" in search["warnings"]
+    assert search["suggested_fitxa"] == "a gust"
+    assert fitxa["status"] == "ok"
+    assert fitxa["definitions"] or fitxa["examples"]

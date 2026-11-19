@@ -269,7 +269,8 @@ Una cerca de concordances del CTILC amb recompte verificat ha de retornar:
 - **Unitaris:** encoder (`*` literal), compilador, `01-03` expandit, `negat+opcional` rebutjat, cursor, IDs com a `string`, eco visible, zero explícit, continuació stale, antònims de sinònims, XML inesperat i `no-store`.
 - **Fixtures:** 50 files, 1.000 files, 0 files, fila mal formada, `<i>`, `&#8203;`, `Forma`, `Lemes`, col·locació, dispersió, fitxa.
 - **Contracte:** VCR/cassettes; CI sense xarxa.
-- **Live:** opcional (`CTILC_LIVE=1`), amb rate limit i data; no a CI.
+- **Live:** opcional (`LLENGUA_LIVE=1`), amb rate limit i data; s'executen al workflow `live.yml`, no a `ci.yml`.
+- **CI:** `.github/workflows/ci.yml` (ruff i `pytest` sense xarxa, Python 3.11–3.13) i `.github/workflows/live.yml` (proves en directe, dilluns).
 - **Drift:** `salut` comprova una consulta de control (`00*lema=somriure&01*cg=adj:-` → 2.136 el 18/11/2026) i l’echo.
 - **Golden tests:** els de `pla-mcp-ctilc-critiques.md`, no els del pla original sense corregir.
 
