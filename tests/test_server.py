@@ -28,6 +28,7 @@ async def test_tools_are_registered() -> None:
         "context",
         "collocacions",
         "dispersio_cronologica",
+        "dispersio_dialectal",
         "filtres_disponibles",
         "obres",
         "xifres",

@@ -45,11 +45,13 @@ autoritat diferent i no les confonguis mai:
   zero no demostra que una forma no existeixi. No en dedueixis «ús quotidià».
   La dispersió cronològica serveix per dir en quins trams apareix més, amb
   ocurrències i taxa per milió; amb pocs testimonis, parla de concentració
-  observada, no de tendència. Les col·locacions indiquen quines paraules hi
-  coapareixen dins d'una finestra de mots; les seves xifres no es poden
-  comparar amb els recomptes de seqüència exacta. Les metadades de les obres
-  (any, gènere, varietat) es consulten amb `obres`; si un cognom dona diversos
-  autors, cal triar-ne un amb `autor_id`.
+  observada, no de tendència. La dispersió dialectal dona la distribució per
+  varietat: compara `per_million`, no els recomptes absoluts, perquè els
+  subcorpus tenen mides molt diferents. Les col·locacions indiquen quines
+  paraules hi coapareixen dins d'una finestra de mots; les seves xifres no es
+  poden comparar amb els recomptes de seqüència exacta. Les metadades de les
+  obres (any, gènere, varietat) es consulten amb `obres`; si un cognom dona
+  diversos autors, cal triar-ne un amb `autor_id`.
 - Softcatalà: sinònims. Són propostes de significat; tria les que encaixen en
   la frase i explica'n el matís.
 
@@ -511,6 +513,28 @@ async def dispersio_cronologica(cursor: str) -> dict[str, Any]:
     return await _call(
         "https://ctilc.iec.cat/scripts/CTILCQDispersionsCron.asp",
         app.ctilc.dispersio_cronologica(cursor),
+    )
+
+
+@mcp.tool()
+async def dispersio_dialectal(cursor: str) -> dict[str, Any]:
+    """Retorna la distribució dialectal d'una cerca del CTILC.
+
+    Passa el `search_cursor` (o el `next_cursor`) d'una cerca concreta. Retorna
+    per varietat les ocurrències de la cerca (`query_hits`), les del corpus
+    (`corpus_hits`), la taxa per milió de paraules (`per_million`) i el
+    percentatge sobre la cerca (`share_of_query`). La varietat és la de l'obra,
+    no la del parlant: el corpus és escrit.
+
+    Per comparar varietats de mides molt diferents, fes servir `per_million`,
+    no els recomptes absoluts. Un zero pot ser una mancança del corpus. Si el
+    patró o els totals no quadren, `data_valid` és fals, `varieties` queda buit
+    i les dades sense validar són a `unvalidated`.
+    """
+    app = await get_app()
+    return await _call(
+        "https://ctilc.iec.cat/scripts/CTILCQDispersionsDial.asp",
+        app.ctilc.dispersio_dialectal(cursor),
     )
 
 

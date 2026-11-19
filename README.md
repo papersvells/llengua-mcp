@@ -18,7 +18,7 @@ sencers ni substitueix un corrector.
 | [BDLex](https://bdlex.iec.cat/) | `bdlex_consulta` | Diccionaris històrics i dialectals (DCVB, DIEC, Fabra...) |
 | [OIEC](https://oiec.iec.cat/) | `oiec_cerca`, `oiec_text` | Ortografia normativa: apòstrofs, guionets, accents |
 | Gramàtiques IEC | `gramatica_cerca`, `gramatica_text` | GBU, GEIEC i GIEC: perífrasis, pronoms, concordança |
-| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos, amb filtres per obra i metadades de les obres |
+| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos, amb filtres, dispersions i metadades de les obres |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) | `cerca_sinonims` | Alternatives lèxiques (dades locals, CC BY 4.0) |
 
 ## Instal·lació
@@ -104,6 +104,8 @@ Variables d'entorn:
   Cada variant es retorna per separat; els totals no se sumen.
 - **Veure en quines èpoques apareix**: cerca i, amb el `search_cursor`,
   `dispersio_cronologica(cursor)`.
+- **Veure en quines varietats apareix**: `dispersio_dialectal(cursor)` dona per
+  varietat `query_hits`, `corpus_hits`, `per_million` i `share_of_query`.
 - **Restringir a un autor, any o varietat**: `cerca_patro(..., filtres={...})`
   amb `autor`, `titol`, `any_min`/`any_max`, `tipus`, `genere`, `varietat` o
   `traduccio`. Per triar autors o títols vàlids, `filtres_disponibles(cursor)`.
@@ -136,6 +138,12 @@ Variables d'entorn:
   `data_valid` és fals, `periods` queda buit i les dades sense validar són a
   `unvalidated`. Amb pocs testimonis, parla de concentració observada. Si la
   cerca tenia filtres, la dispersió no els aplica (`filters_not_applied`).
+- **Dispersió dialectal**: `share_of_query` és el percentatge de les ocurrències
+  de la cerca en cada varietat; `per_million` és la taxa per milió de paraules
+  d'aquella varietat i és la mesura per comparar varietats de mides diferents.
+  No comparis `query_hits` en brut. La varietat és la de l'obra, no la del
+  parlant; un zero pot ser una mancança del corpus. Si `data_valid` és fals,
+  `varieties` queda buit i les dades són a `unvalidated`.
 - **Filtres del CTILC**: amb filtres, `total` és la «Quantitat filtrada» i
   `total_unfiltered` la freqüència sense filtres; `filters_verified` ha de ser
   cert. Si el portal no retorna files, el total pot ser un valor de control
@@ -187,7 +195,7 @@ Variables d'entorn:
 
 - La revisió automàtica de paràgrafs sencers no forma part de l'abast.
 - Les cerques bàsiques del CTILC (`Formes2`, `FormesLema2`), la dispersió
-  dialectal i les col·locacions d'una forma encara no s'exposen: calen fixtures
+  general i les col·locacions d'una forma encara no s'exposen: calen fixtures
   i proves pròpies.
 - `obres` cerca per autor o per títol, no les dues coses alhora. Una cerca molt
   àmplia pot superar el límit de resposta (4 MB per defecte); aleshores retorna

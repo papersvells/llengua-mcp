@@ -128,6 +128,29 @@ async def test_live_dispersio_duna_sola_pagina() -> None:
 
 
 @pytest.mark.asyncio
+async def test_live_dispersio_dialectal() -> None:
+    app = App(Settings.from_env())
+    try:
+        start = await app.ctilc.search_pattern(
+            [
+                PatternElement(type="lema", value="somriure"),
+                PatternElement(type="cg", category="adj"),
+            ],
+            limit=1,
+        )
+        disp = await app.ctilc.dispersio_dialectal(start["search_cursor"])
+    finally:
+        await app.aclose()
+    assert disp["status"] == "ok"
+    assert disp["data_valid"] is True
+    assert disp["unvalidated"] is None
+    assert disp["totals"]["query_hits"] == disp["search_total"]
+    assert len(disp["varieties"]) == 6
+    assert disp["totals"]["corpus_hits"] > 0
+    assert all(item["query_hits"] >= 0 for item in disp["varieties"])
+
+
+@pytest.mark.asyncio
 async def test_live_oiec() -> None:
     app = App(Settings.from_env())
     try:

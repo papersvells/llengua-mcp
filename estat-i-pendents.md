@@ -14,15 +14,15 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 184 passats, 13 omesos (els live).
-- **Tests en directe:** 13, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **Tests sense xarxa:** 189 passats, 14 omesos (els live).
+- **Tests en directe:** 14, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
   `.github/workflows/live.yml` executa les proves en directe cada dilluns a les
   06:00 UTC (o manualment des d'Actions), amb un reintent per absorbir talls de
   xarxa puntuals.
 - **Ruff:** `ruff format` i `ruff check` nets.
-- **Eines MCP:** 24 eines, agrupades per font.
+- **Eines MCP:** 25 eines, agrupades per font.
 
 ### Eines per font
 
@@ -36,7 +36,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 | OIEC | `oiec_cerca`, `oiec_text` | Implementat via `api-oiec.iec.cat` |
 | Gramàtiques | `gramatica_cerca`, `gramatica_text` | Implementat (GBU, GEIEC, GIEC) |
 | Softcatalà | `cerca_sinonims` | Dades locals versionades (CC BY 4.0) |
-| CTILC | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
+| CTILC | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
 
 ### Decisions consolidades
 
@@ -163,7 +163,7 @@ directe amb `somriure` el 18/11/2026.
   d'autors fora del resultat.
 - Cerques bàsiques dedicades amb `Formes2` / `FormesLema2` (ara `cerca` va per
   `Coocur2` amb un sol element).
-- Dispersió dialectal i general.
+- Dispersió general (`CTILCQDispersions.asp`).
 - Obres descarregables (les metadades per autor i títol ja són a `obres`).
 - **Exportació CSV:** `Qjson_concordancesCSV.asp` no està verificat i a les
   proves va retornar 500. No implementar com a eina estable fins a capturar
@@ -258,6 +258,26 @@ retorna any, tipus, gènere, classificació temàtica, traducció i varietat, am
   `limit=3`; `obres(autor="sagarra")` → 5 candidats.
 - `obres_descarregables` (`CTILCCorpus_Descarr.asp`) queda pendent.
 
+### 2.12 Dispersió dialectal del CTILC (resolt el 19/11/2026)
+
+Eina `dispersio_dialectal(cursor)`, amb el mateix cursor que la dispersió
+cronològica. Consulta `CTILCQDispersionsDial.asp` i llegeix el gràfic
+`Proporció`, que porta al tooltip el numerador i el denominador de cada
+varietat.
+
+- Retorna per varietat `query_hits`, `corpus_hits`, `per_million` (derivat dels
+  enters) i `share_of_query`; a més, `index`, `totals`, `peak_absolute` i
+  `peak_relative`.
+- Es validen el patró i la suma de les ocurrències; si no quadren, `data_valid`
+  és fals, `varieties` queda buit i les dades van a `unvalidated`.
+- Comprovat en directe amb `somriure` + adjectiu (2.136 ocurrències): central
+  1.237 (57,91% de la cerca; 13,51 per milió), baleàric 364 (33,82 per milió).
+  El pic relatiu és baleàric encara que el pic absolut sigui central: els
+  subcorpus tenen mides molt diferents.
+- Avís: la varietat és la de l'obra, no la del parlant; el corpus és escrit i un
+  zero pot ser una mancança.
+- Queda pendent la dispersió general (`CTILCQDispersions.asp`).
+
 ---
 
 ## 3. Comandes útils
@@ -326,7 +346,7 @@ PY
 ## 4. Properes passes suggerides
 
 1. Reprendre les eines ajornades del CTILC (2.5): `Formes2`/`FormesLema2`,
-   dispersió dialectal i obres descarregables.
+   dispersió general i obres descarregables.
 2. Revisar Critèria i la cobertura del DDLC a BDLex (2.6) si es volen citar.
 3. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
    fum abans de donar per bona una versió.

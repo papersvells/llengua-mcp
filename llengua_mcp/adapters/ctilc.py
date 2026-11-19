@@ -26,7 +26,11 @@ from llengua_mcp.models import CtilcFilters, CursorPayload, PatternElement
 from llengua_mcp.parsers.collocacions import COLLOCACIONS_URL, parse_collocacions
 from llengua_mcp.parsers.ctilc import parse_ctilc_page, patterns_equivalent
 from llengua_mcp.parsers.dades import parse_dades
-from llengua_mcp.parsers.dispersions import parse_cronologia
+from llengua_mcp.parsers.dispersions import (
+    DIAL_URL,
+    parse_cronologia,
+    parse_dialectal,
+)
 from llengua_mcp.parsers.filtres import (
     EXTRA_PARAMS,
     FILTRES_URL,
@@ -771,6 +775,117 @@ class CtilcAdapter:
                 "message": (
                     "Les dades de la dispersió no s'han pogut validar contra la "
                     "cerca original: el patró o els totals no coincideixen."
+                ),
+                "hint": (
+                    "No presentis la distribució com a vàlida. Torna a executar "
+                    "la cerca i demana la dispersió amb el `search_cursor` nou."
+                ),
+            }
+        return response
+
+    async def dispersio_dialectal(self, cursor: str) -> dict[str, Any]:
+        """Distribució dialectal d'una cerca, vinculada pel seu cursor.
+
+        La varietat és la de l'obra, no la del parlant. La taxa per milió
+        normalitza les diferències de mida dels sis subcorpus; comparar només
+        els recomptes absoluts afavoreix el català central.
+        """
+
+        payload = self.cursors.get(cursor)
+        if payload is None:
+            raise StaleSearchError(
+                "El cursor no existeix o ha caducat.",
+                hint="Torna a executar la cerca original i demana la dispersió.",
+                source=DIAL_URL,
+            )
+
+        params = {
+            "tipusorig": "Coocurrències",
+            "cadlema": payload.pattern_echo,
+            "cadlemacondtxt": payload.pattern_echo,
+            "resultat": payload.resultat or "",
+            "Qlocali": payload.qlocali or str(payload.total),
+            "seccio": "CTILC1",
+        }
+        result = await self.client.get_text(DIAL_URL, params=params, use_cache=False)
+        data = parse_dialectal(result.text)
+
+        warnings: list[str] = list(result.warnings)
+        if not payload.resultat:
+            warnings.append("no_remote_result")
+        if payload.filters:
+            warnings.append("filters_not_applied")
+        if (
+            payload.pattern_echo
+            and data["pattern_echo"]
+            and not patterns_equivalent(data["pattern_echo"], payload.pattern_echo)
+        ):
+            warnings.append("pattern_echo_unexpected")
+        if data["search_total"] is not None and data["search_total"] != payload.total:
+            warnings.append("corpus_updated")
+        if not data["totals_match_search"]:
+            warnings.append("totals_mismatch")
+
+        invalid_reasons = [
+            reason
+            for reason in ("pattern_echo_unexpected", "corpus_updated", "totals_mismatch")
+            if reason in warnings
+        ]
+        data_valid = not invalid_reasons
+
+        if "pattern_echo_unexpected" in warnings:
+            status = "unexpected_response"
+        elif invalid_reasons or "filters_not_applied" in warnings:
+            status = "partial"
+        else:
+            status = "ok"
+
+        response: dict[str, Any] = {
+            "status": status,
+            "query": payload.query,
+            "pattern_echo": data["pattern_echo"] or payload.pattern_echo,
+            "search_total": payload.total,
+            "data_valid": data_valid,
+            "varieties": data["varieties"] if data_valid else [],
+            "totals": data["totals"] if data_valid else None,
+            "index": data["index"] if data_valid else None,
+            "totals_match_search": data["totals_match_search"],
+            "peak_absolute": data["peak_absolute"] if data_valid else None,
+            "peak_relative": data["peak_relative"] if data_valid else None,
+            "unvalidated": None,
+            "warnings": _dedupe(warnings),
+            "note": (
+                "La varietat és la de l'obra, no la del parlant: el CTILC és un "
+                "corpus escrit. `share_of_query` és el percentatge de les "
+                "ocurrències de la cerca en cada varietat; `share_of_corpus` és "
+                "el pes de cada varietat dins del corpus; `per_million` és la "
+                "taxa per milió de paraules d'aquella varietat, derivada dels "
+                "enters del gràfic. Per comparar varietats de mides diferents, "
+                "fes servir `per_million`, no els recomptes absoluts. `index` és "
+                "l'índex de dispersió que calcula el portal. Un zero pot ser una "
+                "mancança del corpus. Si `data_valid` és fals, `varieties` queda "
+                "buit i les dades són a `unvalidated`."
+            ),
+            "source": DIAL_URL,
+            "retrieved_at": datetime.now(UTC)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z"),
+            "citation": _citation(payload.pattern_echo),
+        }
+        if not data_valid:
+            response["unvalidated"] = {
+                "varieties": data["varieties"],
+                "totals": data["totals"],
+                "index": data["index"],
+                "peak_absolute": data["peak_absolute"],
+                "peak_relative": data["peak_relative"],
+            }
+            response["error"] = {
+                "code": invalid_reasons[0],
+                "message": (
+                    "Les dades de la dispersió dialectal no s'han pogut validar "
+                    "contra la cerca original: el patró o els totals no coincideixen."
                 ),
                 "hint": (
                     "No presentis la distribució com a vàlida. Torna a executar "
