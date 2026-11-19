@@ -23,6 +23,7 @@ from llengua_mcp.errors import (
 )
 from llengua_mcp.http import HttpClient
 from llengua_mcp.models import CtilcFilters, CursorPayload, PatternElement
+from llengua_mcp.parsers.basiques import parse_basiques
 from llengua_mcp.parsers.collocacions import COLLOCACIONS_URL, parse_collocacions
 from llengua_mcp.parsers.ctilc import parse_ctilc_page, patterns_equivalent
 from llengua_mcp.parsers.dades import parse_dades
@@ -50,6 +51,9 @@ CRON_URL = f"{BASE}/CTILCQDispersionsCron.asp"
 OBRES_AUT_URL = f"{BASE}/CTILCCorpus_Aut1.asp"
 OBRES_AUT2_URL = f"{BASE}/CTILCCorpus_Aut2.asp"
 OBRES_TITOL_URL = f"{BASE}/CTILCCorpus_Obr2.asp"
+FORMES2_URL = f"{BASE}/CTILCQConc_Formes2.asp"
+FORMESLEMA2_URL = f"{BASE}/CTILCQConc_FormesLema2.asp"
+BASIC_FORMS_LIMIT = 200
 
 CONTROL_TOTAL = 2136
 CONTROL_DATE = "2026-11-18"
@@ -208,6 +212,31 @@ def _resolve_filters(filters: CtilcFilters | None) -> tuple[dict[str, str], dict
         public["traduccio"] = filters.traduccio
 
     return fields, (public or None)
+
+
+_BASIC_MODES = {
+    "coincident": "0",
+    "comenca per": "1",
+    "comencada per": "1",
+    "acaba en": "2",
+    "acabada en": "2",
+    "conte": "3",
+    "en qualsevol posicio": "3",
+}
+
+
+def _basic_mode(mode: str) -> str:
+    key = normalize_key(mode)
+    if key in _BASIC_MODES:
+        return _BASIC_MODES[key]
+    raise InvalidQueryError(
+        f"El mode «{mode}» no és vàlid per a una cerca bàsica.",
+        hint=(
+            "Modes: coincident, comença per, acaba en o conté. Els modes "
+            "negatius (no comença per, no acaba en, que no contingui) no estan "
+            "verificats i no s'exposen."
+        ),
+    )
 
 
 def _filter_tokens(value: str) -> list[str]:
@@ -458,6 +487,183 @@ class CtilcAdapter:
             start=1,
             filters=filter_fields,
             filter_query=filter_query,
+        )
+
+    def _basic_payload(
+        self,
+        *,
+        kind: str,
+        query: str,
+        mode: str,
+        cg: str,
+        data: dict[str, Any],
+        limit: int,
+        offset: int,
+        warnings: list[str],
+        source: str,
+    ) -> dict[str, Any]:
+        total = data["total"]
+        occurrences = data["occurrences"]
+        forms = data["forms"]
+        forms_truncated = len(forms) > BASIC_FORMS_LIMIT
+        if forms_truncated:
+            forms = forms[:BASIC_FORMS_LIMIT]
+            warnings.append("forms_truncated")
+        echo_verified = bool(data["echo"]) and normalize_key(query) in normalize_key(data["echo"])
+        if data["echo"] and not echo_verified:
+            warnings.append("echo_unexpected")
+        if any(item["occurrence_id"] is None for item in occurrences):
+            warnings.append("occurrence_id_missing")
+
+        if total is None:
+            status = "unexpected_response"
+        elif total == 0:
+            status = "no_matches"
+            warnings.append("zero_results")
+        elif not occurrences:
+            status = "unexpected_response"
+            warnings.append("parse_partial")
+        else:
+            status = "ok"
+
+        returned = len(occurrences)
+        has_more = bool(total) and returned > 0 and offset + returned < total
+        retrieved_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        label = "la forma" if kind == "forma" else "el lema"
+        payload: dict[str, Any] = {
+            "status": status,
+            "query": {
+                kind: query,
+                "mode": mode,
+                "cg": cg or None,
+                "limit": limit,
+                "offset": offset,
+            },
+            "echo": data["echo"],
+            "echo_verified": echo_verified,
+            "total": total,
+            "returned": returned,
+            "has_more": has_more,
+            "next_offset": offset + returned if has_more else None,
+            "page": data["page"],
+            "pages": data["pages"],
+            "forms": forms,
+            "forms_truncated": forms_truncated,
+            "occurrences": occurrences,
+            "warnings": _dedupe(warnings + data["warnings"]),
+            "note": (
+                "`total` és la freqüència total de la cerca; `occurrences` és "
+                "només la pàgina demanada i `forms` resumeix les formes del "
+                "resultat amb la categoria i la morfologia (consulta `etiquetes` "
+                "per interpretar els codis). Per continuar, passa `offset`. "
+                "Aquestes pàgines no apliquen els filtres de la consulta "
+                "combinada."
+            ),
+            "source": source,
+            "retrieved_at": retrieved_at,
+            "citation": (
+                f"CTILC (IEC), concordança de {label} «{query}» ({mode}), "
+                f"consulta feta el {_date_label()}."
+            ),
+        }
+        if status == "unexpected_response":
+            payload["error"] = {
+                "code": "unexpected_response",
+                "message": "No s'ha pogut llegir la pàgina de concordança bàsica.",
+                "hint": "El portal pot haver canviat; cal revisar el parser.",
+            }
+        return payload
+
+    async def cerca_forma(
+        self,
+        forma: str,
+        *,
+        mode: str = "coincident",
+        cg: str | None = None,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Concordança bàsica d'una forma, amb les formes agrupades."""
+
+        forma = clean_text(forma)
+        if not forma:
+            raise InvalidQueryError(
+                "Falta la forma.",
+                hint="Indica una forma gràfica, sense espais (per exemple «somriu»).",
+            )
+        if len(forma) > 80:
+            raise InvalidQueryError(
+                "La forma és massa llarga.",
+                hint="Consulta una forma o un truncament curt.",
+            )
+        if offset < 0:
+            raise InvalidQueryError("`offset` ha de ser 0 o més gran.")
+        limit = max(1, min(limit, 50))
+        cg = clean_text(cg) if cg else ""
+        condition = _basic_mode(mode)
+        body = (
+            f"cadforma={quote_plus(forma)}&cadformacond={condition}"
+            f"&cg={quote_plus(cg)}&seccio=CTILC1"
+            f"&iStart={offset + 1}&iOffset={limit}"
+        )
+        result = await self.client.post_text(FORMES2_URL, body)
+        data = parse_basiques(result.text, kind="forma")
+        return self._basic_payload(
+            kind="forma",
+            query=forma,
+            mode=mode,
+            cg=cg,
+            data=data,
+            limit=limit,
+            offset=offset,
+            warnings=list(result.warnings),
+            source=FORMES2_URL,
+        )
+
+    async def cerca_lema(
+        self,
+        lema: str,
+        *,
+        mode: str = "coincident",
+        cg: str | None = None,
+        limit: int = 10,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Concordança bàsica d'un lema, amb les seves formes."""
+
+        lema = clean_text(lema)
+        if not lema:
+            raise InvalidQueryError(
+                "Falta el lema.",
+                hint="Indica un lema (per exemple «somriure»).",
+            )
+        if len(lema) > 80:
+            raise InvalidQueryError(
+                "El lema és massa llarg.",
+                hint="Consulta un lema o un truncament curt.",
+            )
+        if offset < 0:
+            raise InvalidQueryError("`offset` ha de ser 0 o més gran.")
+        limit = max(1, min(limit, 50))
+        cg = clean_text(cg) if cg else ""
+        condition = _basic_mode(mode)
+        body = (
+            f"cadlema={quote_plus(lema)}&cadlemacond={condition}"
+            f"&cg={quote_plus(cg)}&seccio=CTILC1"
+            f"&iStart={offset + 1}&iOffset={limit}"
+        )
+        result = await self.client.post_text(FORMESLEMA2_URL, body)
+        data = parse_basiques(result.text, kind="lema")
+        return self._basic_payload(
+            kind="lema",
+            query=lema,
+            mode=mode,
+            cg=cg,
+            data=data,
+            limit=limit,
+            offset=offset,
+            warnings=list(result.warnings),
+            source=FORMESLEMA2_URL,
         )
 
     async def search_phrase(

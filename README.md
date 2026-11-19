@@ -18,7 +18,7 @@ sencers ni substitueix un corrector.
 | [BDLex](https://bdlex.iec.cat/) | `bdlex_consulta` | Diccionaris històrics i dialectals (DCVB, DIEC, Fabra...) |
 | [OIEC](https://oiec.iec.cat/) | `oiec_cerca`, `oiec_text` | Ortografia normativa: apòstrofs, guionets, accents |
 | Gramàtiques IEC | `gramatica_cerca`, `gramatica_text` | GBU, GEIEC i GIEC: perífrasis, pronoms, concordança |
-| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos, amb filtres, dispersions i metadades de les obres |
+| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos, amb filtres, dispersions, cerques bàsiques i metadades de les obres |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) | `cerca_sinonims` | Alternatives lèxiques (dades locals, CC BY 4.0) |
 
 ## Instal·lació
@@ -102,6 +102,10 @@ Variables d'entorn:
   amb el codi, `gramatica_text("28.1")`.
 - **Comprovar una expressió**: `cerca_frase("tenir foc al ulls", variants=["tenir foc als ulls"])`.
   Cada variant es retorna per separat; els totals no se sumen.
+- **Veure les formes d'un lema i la seva morfologia**: `cerca_lema("somriure")`
+  retorna el desglossament de formes amb categoria i codi morfològic, a més
+  d'una pàgina d'ocurrències. Per cercar una forma per prefix:
+  `cerca_forma("somriu", mode="comença per")`.
 - **Veure en quines èpoques apareix**: cerca i, amb el `search_cursor`,
   `dispersio_cronologica(cursor)`.
 - **Veure en quines varietats apareix**: `dispersio_dialectal(cursor)` dona per
@@ -144,6 +148,11 @@ Variables d'entorn:
   No comparis `query_hits` en brut. La varietat és la de l'obra, no la del
   parlant; un zero pot ser una mancança del corpus. Si `data_valid` és fals,
   `varieties` queda buit i les dades són a `unvalidated`.
+- **Cerques bàsiques**: `cerca_forma` i `cerca_lema` retornen `total`, el
+  desglossament `forms` (lema, categoria, forma i morfologia) i una pàgina
+  d'`occurrences`. `mode` pot ser `coincident`, `comença per`, `acaba en` o
+  `conté`; els modes negatius no s'exposen. Per paginar, passa `offset`.
+  Aquestes pàgines no apliquen els filtres de `cerca`/`cerca_patro`.
 - **Filtres del CTILC**: amb filtres, `total` és la «Quantitat filtrada» i
   `total_unfiltered` la freqüència sense filtres; `filters_verified` ha de ser
   cert. Si el portal no retorna files, el total pot ser un valor de control
@@ -194,9 +203,10 @@ Variables d'entorn:
 ## Límits coneguts
 
 - La revisió automàtica de paràgrafs sencers no forma part de l'abast.
-- Les cerques bàsiques del CTILC (`Formes2`, `FormesLema2`), la dispersió
-  general i les col·locacions d'una forma encara no s'exposen: calen fixtures
-  i proves pròpies.
+- Les cerques bàsiques del CTILC (`Formes2`, `FormesLema2`) no apliquen els
+  filtres de la consulta combinada i els modes negatius (4–6) no estan
+  verificats. La dispersió general i les col·locacions d'una forma encara no
+  s'exposen: calen fixtures i proves pròpies.
 - `obres` cerca per autor o per títol, no les dues coses alhora. Una cerca molt
   àmplia pot superar el límit de resposta (4 MB per defecte); aleshores retorna
   `too_many_results` i cal concretar el títol o l'autor.

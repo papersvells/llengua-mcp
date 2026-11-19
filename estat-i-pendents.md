@@ -14,15 +14,15 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 189 passats, 14 omesos (els live).
-- **Tests en directe:** 14, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **Tests sense xarxa:** 198 passats, 15 omesos (els live).
+- **Tests en directe:** 15, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
   `.github/workflows/live.yml` executa les proves en directe cada dilluns a les
   06:00 UTC (o manualment des d'Actions), amb un reintent per absorbir talls de
   xarxa puntuals.
 - **Ruff:** `ruff format` i `ruff check` nets.
-- **Eines MCP:** 25 eines, agrupades per font.
+- **Eines MCP:** 27 eines, agrupades per font.
 
 ### Eines per font
 
@@ -36,7 +36,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 | OIEC | `oiec_cerca`, `oiec_text` | Implementat via `api-oiec.iec.cat` |
 | Gramàtiques | `gramatica_cerca`, `gramatica_text` | Implementat (GBU, GEIEC, GIEC) |
 | Softcatalà | `cerca_sinonims` | Dades locals versionades (CC BY 4.0) |
-| CTILC | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
+| CTILC | `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
 
 ### Decisions consolidades
 
@@ -161,8 +161,6 @@ directe amb `somriure` el 18/11/2026.
   control i es tracta com a `unexpected_response`, no com una absència.
   Queden fora el `classtem` (taxonomia temàtica) i la validació global
   d'autors fora del resultat.
-- Cerques bàsiques dedicades amb `Formes2` / `FormesLema2` (ara `cerca` va per
-  `Coocur2` amb un sol element).
 - Dispersió general (`CTILCQDispersions.asp`).
 - Obres descarregables (les metadades per autor i títol ja són a `obres`).
 - **Exportació CSV:** `Qjson_concordancesCSV.asp` no està verificat i a les
@@ -278,6 +276,26 @@ varietat.
   zero pot ser una mancança.
 - Queda pendent la dispersió general (`CTILCQDispersions.asp`).
 
+### 2.13 Cerques bàsiques `Formes2` i `FormesLema2` (resolt el 19/11/2026)
+
+Eines `cerca_forma(forma, mode?, cg?, limit?, offset?)` i
+`cerca_lema(lema, mode?, cg?, limit?, offset?)`. Consulten
+`CTILCQConc_Formes2.asp` i `CTILCQConc_FormesLema2.asp` amb `seccio=CTILC1`.
+
+- Retornen `total`, el desglossament `forms` (lema, categoria, forma,
+  morfologia i recompte) i una pàgina d'`occurrences`, amb `page`, `pages`,
+  `has_more` i `next_offset`.
+- Modes verificats: 0 coincident, 1 comença per, 2 acaba en, 3 conté. Els modes
+  4–6 no s'exposen.
+- La paginació és `iStart`/`iOffset` i no necessita el `resultat`; es pot
+  demanar qualsevol pàgina amb `offset`.
+- El panell `formesSelec` té ordres diferents: `form|lema CG|CM` a `Formes2` i
+  `lema CG|form|CM` a `FormesLema2`.
+- Comprovat en directe: `cerca_forma("somriu")` → 2.019 ocurrències i 6 formes;
+  `cerca_forma("somriu", mode="comença per")` → 10.628;
+  `cerca_lema("somriure")` → 14.290 ocurrències i 122 formes.
+- Aquestes pàgines no apliquen els filtres de `cerca`/`cerca_patro`.
+
 ---
 
 ## 3. Comandes útils
@@ -345,8 +363,8 @@ PY
 
 ## 4. Properes passes suggerides
 
-1. Reprendre les eines ajornades del CTILC (2.5): `Formes2`/`FormesLema2`,
-   dispersió general i obres descarregables.
+1. Reprendre les eines ajornades del CTILC (2.5): dispersió general i obres
+   descarregables.
 2. Revisar Critèria i la cobertura del DDLC a BDLex (2.6) si es volen citar.
 3. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
    fum abans de donar per bona una versió.

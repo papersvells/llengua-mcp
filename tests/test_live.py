@@ -151,6 +151,27 @@ async def test_live_dispersio_dialectal() -> None:
 
 
 @pytest.mark.asyncio
+async def test_live_cerca_forma_i_lema() -> None:
+    app = App(Settings.from_env())
+    try:
+        forma = await app.ctilc.cerca_forma("somriu", limit=2)
+        lema = await app.ctilc.cerca_lema("somriure", limit=2)
+    finally:
+        await app.aclose()
+    assert forma["status"] == "ok"
+    assert forma["total"] > 0
+    assert forma["returned"] == 2
+    assert forma["forms"]
+    assert forma["occurrences"][0]["occurrence_id"]
+    assert forma["echo_verified"] is True
+    assert lema["status"] == "ok"
+    assert lema["total"] > 0
+    assert lema["returned"] == 2
+    assert lema["forms"]
+    assert lema["echo_verified"] is True
+
+
+@pytest.mark.asyncio
 async def test_live_oiec() -> None:
     app = App(Settings.from_env())
     try:

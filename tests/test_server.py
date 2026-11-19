@@ -23,6 +23,8 @@ async def test_tools_are_registered() -> None:
         "cerca_sinonims",
         "cerca",
         "cerca_frase",
+        "cerca_forma",
+        "cerca_lema",
         "cerca_patro",
         "continuar_cerca",
         "context",

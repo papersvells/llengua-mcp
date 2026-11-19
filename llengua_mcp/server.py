@@ -49,9 +49,11 @@ autoritat diferent i no les confonguis mai:
   varietat: compara `per_million`, no els recomptes absoluts, perquè els
   subcorpus tenen mides molt diferents. Les col·locacions indiquen quines
   paraules hi coapareixen dins d'una finestra de mots; les seves xifres no es
-  poden comparar amb els recomptes de seqüència exacta. Les metadades de les
-  obres (any, gènere, varietat) es consulten amb `obres`; si un cognom dona
-  diversos autors, cal triar-ne un amb `autor_id`.
+  poden comparar amb els recomptes de seqüència exacta. Per a una forma o un
+  lema, `cerca_forma` i `cerca_lema` donen el desglossament de formes i
+  morfologia; `cerca` dona concordances amb filtres. Les metadades de les obres
+  (any, gènere, varietat) es consulten amb `obres`; si un cognom dona diversos
+  autors, cal triar-ne un amb `autor_id`.
 - Softcatalà: sinònims. Són propostes de significat; tria les que encaixen en
   la frase i explica'n el matís.
 
@@ -449,6 +451,64 @@ async def cerca(
             categoria=categoria,
             limit=limit,
             filters=filtres,
+        ),
+    )
+
+
+@mcp.tool()
+async def cerca_forma(
+    forma: str,
+    mode: str = "coincident",
+    cg: str | None = None,
+    limit: int = 10,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Concordança bàsica d'una forma al CTILC (`Formes2`).
+
+    A diferència de `cerca`, aquesta eina dona el desglossament de les formes
+    trobades amb la categoria i la morfologia, a més d'una pàgina
+    d'ocurrències. `mode` pot ser `coincident`, `comença per`, `acaba en` o
+    `conté`; els modes negatius no estan verificats i no s'exposen. `cg`
+    restringeix per categoria o codi morfològic (per exemple `V` o `V:3PI`).
+    Per continuar, passa `offset`.
+    """
+    app = await get_app()
+    return await _call(
+        "https://ctilc.iec.cat/scripts/CTILCQConc_Formes2.asp",
+        app.ctilc.cerca_forma(
+            forma,
+            mode=mode,
+            cg=cg,
+            limit=limit,
+            offset=offset,
+        ),
+    )
+
+
+@mcp.tool()
+async def cerca_lema(
+    lema: str,
+    mode: str = "coincident",
+    cg: str | None = None,
+    limit: int = 10,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Concordança bàsica d'un lema al CTILC (`FormesLema2`).
+
+    Retorna la freqüència total, les formes del lema amb categoria i morfologia
+    (útil per construir un `formalema`) i una pàgina d'ocurrències. `mode` pot
+    ser `coincident`, `comença per`, `acaba en` o `conté`. `cg` restringeix per
+    categoria o codi morfològic. Per continuar, passa `offset`.
+    """
+    app = await get_app()
+    return await _call(
+        "https://ctilc.iec.cat/scripts/CTILCQConc_FormesLema2.asp",
+        app.ctilc.cerca_lema(
+            lema,
+            mode=mode,
+            cg=cg,
+            limit=limit,
+            offset=offset,
         ),
     )
 
