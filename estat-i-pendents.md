@@ -416,7 +416,8 @@ Les feines obertes es segueixen al repositori:
 
 1. Eines del CTILC obertes: `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)), noms propis ([#5](https://github.com/papersvells/llengua-mcp/issues/5)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)).
 2. Fonts: Critèria ([#7](https://github.com/papersvells/llengua-mcp/issues/7)), sinònims Jané ([#8](https://github.com/papersvells/llengua-mcp/issues/8)) i cobertura del DDLC ([#9](https://github.com/papersvells/llengua-mcp/issues/9)).
-3. Fora del repositori, pendents de decisió: contactar amb `dcc@iec.cat` abans
+3. Acceleració de les respostes: instrumentació, escalfament de l'índex i menys peticions ([#10](https://github.com/papersvells/llengua-mcp/issues/10)).
+4. Fora del repositori, pendents de decisió: contactar amb `dcc@iec.cat` abans
    de publicar (§2.7) i repetir les proves d'ús des d'OpenCode amb dos models.
-4. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
+5. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
    fum abans de donar per bona una versió.
