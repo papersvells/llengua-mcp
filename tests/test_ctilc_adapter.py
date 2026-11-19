@@ -880,3 +880,79 @@ async def test_dispersio_dialectal_total_divergent(tmp_path) -> None:
     assert result["unvalidated"] is not None
     assert "corpus_updated" in result["warnings"]
     assert "totals_mismatch" in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_dispersio_general_validada(tmp_path) -> None:
+    search_page = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    search_page = search_page.replace(
+        "Freqüència total</b>:&nbsp;&nbsp;3", "Freqüència total</b>:&nbsp;&nbsp;2136"
+    )
+    general_page = (FIXTURES / "dispersio_general.html").read_text(encoding="utf-8")
+
+    class SwitchClient:
+        async def post_text(self, url: str, body: str, **kwargs) -> HttpResult:
+            return HttpResult(text=search_page, status=200, url=url)
+
+        async def get_text(self, url: str, **kwargs) -> HttpResult:
+            return HttpResult(text=general_page, status=200, url=url)
+
+    adapter = CtilcAdapter(SwitchClient(), _settings(tmp_path), CursorStore())
+    start = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ],
+        limit=2,
+    )
+    result = await adapter.dispersio_general(start["next_cursor"])
+    assert result["status"] == "ok"
+    assert result["data_valid"] is True
+    assert result["unvalidated"] is None
+    assert result["search_total"] == 2136
+    assert result["totals"] == {"query_hits": 2136, "corpus_hits": 126604218}
+    assert set(result["attributes"]) == {
+        "any",
+        "varietat",
+        "traduccio",
+        "tipus",
+        "genere",
+        "classificacio",
+    }
+    assert len(result["attributes"]["any"]["groups"]) == 10
+    assert result["attributes"]["varietat"]["peak_relative"]["label"] == "Baleàric"
+
+
+@pytest.mark.asyncio
+async def test_dispersio_general_total_divergent(tmp_path) -> None:
+    search_page = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    search_page = search_page.replace(
+        "Freqüència total</b>:&nbsp;&nbsp;3", "Freqüència total</b>:&nbsp;&nbsp;2136"
+    )
+    general_page = (FIXTURES / "dispersio_general.html").read_text(encoding="utf-8")
+    general_page = general_page.replace(
+        "Freqüència total</b>:&nbsp;&nbsp;2136",
+        "Freqüència total</b>:&nbsp;&nbsp;9999",
+    )
+
+    class SwitchClient:
+        async def post_text(self, url: str, body: str, **kwargs) -> HttpResult:
+            return HttpResult(text=search_page, status=200, url=url)
+
+        async def get_text(self, url: str, **kwargs) -> HttpResult:
+            return HttpResult(text=general_page, status=200, url=url)
+
+    adapter = CtilcAdapter(SwitchClient(), _settings(tmp_path), CursorStore())
+    start = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ],
+        limit=2,
+    )
+    result = await adapter.dispersio_general(start["next_cursor"])
+    assert result["status"] == "partial"
+    assert result["data_valid"] is False
+    assert result["attributes"] == {}
+    assert result["unvalidated"] is not None
+    assert "corpus_updated" in result["warnings"]

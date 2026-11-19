@@ -14,15 +14,15 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 198 passats, 15 omesos (els live).
-- **Tests en directe:** 15, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **Tests sense xarxa:** 202 passats, 16 omesos (els live).
+- **Tests en directe:** 16, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
   `.github/workflows/live.yml` executa les proves en directe cada dilluns a les
   06:00 UTC (o manualment des d'Actions), amb un reintent per absorbir talls de
   xarxa puntuals.
 - **Ruff:** `ruff format` i `ruff check` nets.
-- **Eines MCP:** 27 eines, agrupades per font.
+- **Eines MCP:** 28 eines, agrupades per font.
 
 ### Eines per font
 
@@ -36,7 +36,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 | OIEC | `oiec_cerca`, `oiec_text` | Implementat via `api-oiec.iec.cat` |
 | Gramàtiques | `gramatica_cerca`, `gramatica_text` | Implementat (GBU, GEIEC, GIEC) |
 | Softcatalà | `cerca_sinonims` | Dades locals versionades (CC BY 4.0) |
-| CTILC | `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
+| CTILC | `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `dispersio_general`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
 
 ### Decisions consolidades
 
@@ -161,7 +161,6 @@ directe amb `somriure` el 18/11/2026.
   control i es tracta com a `unexpected_response`, no com una absència.
   Queden fora el `classtem` (taxonomia temàtica) i la validació global
   d'autors fora del resultat.
-- Dispersió general (`CTILCQDispersions.asp`).
 - Obres descarregables (les metadades per autor i títol ja són a `obres`).
 - **Exportació CSV:** `Qjson_concordancesCSV.asp` no està verificat i a les
   proves va retornar 500. No implementar com a eina estable fins a capturar
@@ -296,6 +295,28 @@ Eines `cerca_forma(forma, mode?, cg?, limit?, offset?)` i
   `cerca_lema("somriure")` → 14.290 ocurrències i 122 formes.
 - Aquestes pàgines no apliquen els filtres de `cerca`/`cerca_patro`.
 
+### 2.14 Dispersió general del CTILC (resolt el 19/11/2026)
+
+Eina `dispersio_general(cursor)`, amb el mateix cursor que les altres
+dispersions. Consulta `CTILCQDispersions.asp` i llegeix els gràfics
+`Repartiment` (ocurrències de la cerca) i `Total`/`Totals` (corpus) de cada
+atribut.
+
+- Retorna `attributes` amb sis eixos: `any`, `varietat`, `traduccio`, `tipus`,
+  `genere` i `classificacio`. Cada eix té `groups`, `totals`, `index`,
+  `peak_absolute` i `peak_relative`.
+- `genere` cobreix només les obres literàries i `classificacio` les no
+  literàries: els seus totals no han de coincidir amb el total general.
+- Es validen el patró, el total de la cerca i la suma de l'eix `any`; si no
+  quadren, `data_valid` és fals, `attributes` queda buit i les dades van a
+  `unvalidated`.
+- Comprovat en directe amb `somriure` + adjectiu (2.136): `any` 10 trams,
+  `varietat` 6 grups, `traduccio` 2 (1.899 originals / 237 traduccions),
+  `tipus` 2 (1.932 literaris / 204 no literaris), `genere` 4 i `classificacio`
+  10; els índexs de dispersió del portal també es recullen.
+- Nota: `per_million` és la mesura per comparar grups de mides diferents; la
+  varietat, el gènere i el tema són de l'obra, i el corpus és escrit.
+
 ---
 
 ## 3. Comandes útils
@@ -363,8 +384,7 @@ PY
 
 ## 4. Properes passes suggerides
 
-1. Reprendre les eines ajornades del CTILC (2.5): dispersió general i obres
-   descarregables.
+1. Reprendre les eines ajornades del CTILC (2.5): obres descarregables.
 2. Revisar Critèria i la cobertura del DDLC a BDLex (2.6) si es volen citar.
 3. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
    fum abans de donar per bona una versió.

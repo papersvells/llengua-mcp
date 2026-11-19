@@ -29,8 +29,10 @@ from llengua_mcp.parsers.ctilc import parse_ctilc_page, patterns_equivalent
 from llengua_mcp.parsers.dades import parse_dades
 from llengua_mcp.parsers.dispersions import (
     DIAL_URL,
+    GENERAL_URL,
     parse_cronologia,
     parse_dialectal,
+    parse_general,
 )
 from llengua_mcp.parsers.filtres import (
     EXTRA_PARAMS,
@@ -1091,6 +1093,114 @@ class CtilcAdapter:
                 "code": invalid_reasons[0],
                 "message": (
                     "Les dades de la dispersió dialectal no s'han pogut validar "
+                    "contra la cerca original: el patró o els totals no coincideixen."
+                ),
+                "hint": (
+                    "No presentis la distribució com a vàlida. Torna a executar "
+                    "la cerca i demana la dispersió amb el `search_cursor` nou."
+                ),
+            }
+        return response
+
+    async def dispersio_general(self, cursor: str) -> dict[str, Any]:
+        """Dispersió d'una cerca per any, varietat, traducció, tipus, gènere i tema.
+
+        Cada atribut té el seu propi total: `genere` cobreix només les obres
+        literàries i `classificacio` les no literàries. Les dades es validen
+        contra el patró i el total de la cerca original.
+        """
+
+        payload = self.cursors.get(cursor)
+        if payload is None:
+            raise StaleSearchError(
+                "El cursor no existeix o ha caducat.",
+                hint="Torna a executar la cerca original i demana la dispersió.",
+                source=GENERAL_URL,
+            )
+
+        params = {
+            "tipusorig": "Coocurrències",
+            "cadlema": payload.pattern_echo,
+            "cadlemacondtxt": payload.pattern_echo,
+            "resultat": payload.resultat or "",
+            "Qlocali": payload.qlocali or str(payload.total),
+            "seccio": "CTILC1",
+        }
+        result = await self.client.get_text(GENERAL_URL, params=params, use_cache=False)
+        data = parse_general(result.text)
+
+        warnings: list[str] = list(result.warnings)
+        if not payload.resultat:
+            warnings.append("no_remote_result")
+        if payload.filters:
+            warnings.append("filters_not_applied")
+        if (
+            payload.pattern_echo
+            and data["pattern_echo"]
+            and not patterns_equivalent(data["pattern_echo"], payload.pattern_echo)
+        ):
+            warnings.append("pattern_echo_unexpected")
+        if data["search_total"] is not None and data["search_total"] != payload.total:
+            warnings.append("corpus_updated")
+        if not data["totals_match_search"]:
+            warnings.append("totals_mismatch")
+        warnings.extend(data["warnings"])
+
+        invalid_reasons = [
+            reason
+            for reason in (
+                "pattern_echo_unexpected",
+                "corpus_updated",
+                "totals_mismatch",
+                "parse_partial",
+            )
+            if reason in warnings
+        ]
+        data_valid = not invalid_reasons
+
+        if "pattern_echo_unexpected" in warnings:
+            status = "unexpected_response"
+        elif invalid_reasons or "filters_not_applied" in warnings:
+            status = "partial"
+        else:
+            status = "ok"
+
+        response: dict[str, Any] = {
+            "status": status,
+            "query": payload.query,
+            "pattern_echo": data["pattern_echo"] or payload.pattern_echo,
+            "search_total": payload.total,
+            "data_valid": data_valid,
+            "attributes": data["attributes"] if data_valid else {},
+            "totals": data["totals"] if data_valid else None,
+            "totals_match_search": data["totals_match_search"],
+            "unvalidated": None,
+            "warnings": _dedupe(warnings),
+            "note": (
+                "Cada atribut té el seu propi total: `genere` cobreix només les "
+                "obres literàries i `classificacio` les no literàries. "
+                "`share_of_query` és el percentatge dins de l'atribut; "
+                "`per_million` normalitza per la mida del grup i és la mesura "
+                "per comparar grups de mides diferents. La varietat, el gènere i "
+                "el tema són de l'obra; el corpus és escrit. Si `data_valid` és "
+                "fals, `attributes` queda buit i les dades són a `unvalidated`."
+            ),
+            "source": GENERAL_URL,
+            "retrieved_at": datetime.now(UTC)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z"),
+            "citation": _citation(payload.pattern_echo),
+        }
+        if not data_valid:
+            response["unvalidated"] = {
+                "attributes": data["attributes"],
+                "totals": data["totals"],
+            }
+            response["error"] = {
+                "code": invalid_reasons[0],
+                "message": (
+                    "Les dades de la dispersió general no s'han pogut validar "
                     "contra la cerca original: el patró o els totals no coincideixen."
                 ),
                 "hint": (

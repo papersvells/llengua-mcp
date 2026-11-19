@@ -22,10 +22,11 @@ import re
 from typing import Any
 
 from llengua_mcp.errors import UnexpectedResponseError
-from llengua_mcp.text import strip_tags
+from llengua_mcp.text import clean_text, normalize_key, strip_tags
 
 CRON_URL = "https://ctilc.iec.cat/scripts/CTILCQDispersionsCron.asp"
 DIAL_URL = "https://ctilc.iec.cat/scripts/CTILCQDispersionsDial.asp"
+GENERAL_URL = "https://ctilc.iec.cat/scripts/CTILCQDispersions.asp"
 
 _ROW_RE = re.compile(
     r",\['(?P<label>\d{4}-\d{4})'\s*,\s*(?P<percent>[\d.,]+)\s*,\s*'(?P<tooltip>[^']*)'"
@@ -238,4 +239,179 @@ def parse_dialectal(html: str) -> dict[str, Any]:
     }
 
 
-__all__ = ["CRON_URL", "DIAL_URL", "parse_cronologia", "parse_dialectal"]
+_GENERAL_AXES = {
+    "grup cronologic": "any",
+    "varietat": "varietat",
+    "traduccio": "traduccio",
+    "tipus": "tipus",
+    "genere literari": "genere",
+    "classificacio tematica": "classificacio",
+}
+_GENERAL_INDEX_KEYS = {
+    "any de publicacio": "any",
+    "varietat": "varietat",
+    "original/traduccio": "traduccio",
+    "tipus": "tipus",
+    "genere literari": "genere",
+    "classificacio tematica (no literari": "classificacio",
+}
+_GENERAL_HEADER_RE = re.compile(
+    r"Coocurrències\s*:\s*(?P<pattern>.*?)\s*Freqüència total\s*:\s*(?P<total>[\d.,]+)",
+    re.DOTALL,
+)
+_GENERAL_INDEX_RE = re.compile(
+    r"(Any de publicació|Varietat|Original/Traducció|Tipus|Gènere literari|"
+    r"Classificació temàtica \(no literari\))\s*Índex de dispersió:\s*([\d.,]+)"
+)
+_GENERAL_ROW_RE = re.compile(r"\['(?P<label>[^']+)'\s*,\s*(?P<value>-?[\d.]+(?:[eE][+-]?\d+)?)")
+
+
+def _axis_groups(query_rows: dict[str, str], corpus_rows: dict[str, str]) -> dict[str, Any]:
+    query_keyed = {normalize_key(label): (label, value) for label, value in query_rows.items()}
+    corpus_keyed = {normalize_key(label): (label, value) for label, value in corpus_rows.items()}
+    keys = list(corpus_keyed) + [key for key in query_keyed if key not in corpus_keyed]
+
+    groups: list[dict[str, Any]] = []
+    for key in keys:
+        query_label, query_value = query_keyed.get(key, (corpus_keyed.get(key, ("", "0"))[0], "0"))
+        corpus_label, corpus_value = corpus_keyed.get(key, (query_label, "0"))
+        query_hits = int(float(query_value))
+        corpus_hits = int(float(corpus_value))
+        groups.append(
+            {
+                "label": corpus_label or query_label,
+                "query_hits": query_hits,
+                "corpus_hits": corpus_hits,
+            }
+        )
+
+    query_total = sum(group["query_hits"] for group in groups)
+    corpus_total = sum(group["corpus_hits"] for group in groups)
+    for group in groups:
+        group["per_million"] = (
+            round(group["query_hits"] / group["corpus_hits"] * 1_000_000, 2)
+            if group["corpus_hits"]
+            else None
+        )
+        group["share_of_query"] = (
+            round(group["query_hits"] / query_total * 100, 2) if query_total else None
+        )
+        group["share_of_corpus"] = (
+            round(group["corpus_hits"] / corpus_total * 100, 2) if corpus_total else None
+        )
+
+    by_hits = max(groups, key=lambda item: item["query_hits"])
+    by_rate = max(
+        (group for group in groups if group["per_million"] is not None),
+        key=lambda item: item["per_million"],
+        default=None,
+    )
+    return {
+        "groups": groups,
+        "totals": {"query_hits": query_total, "corpus_hits": corpus_total},
+        "peak_absolute": {
+            "label": by_hits["label"],
+            "query_hits": by_hits["query_hits"],
+        },
+        "peak_relative": (
+            {"label": by_rate["label"], "per_million": by_rate["per_million"]}
+            if by_rate is not None
+            else None
+        ),
+    }
+
+
+def parse_general(html: str) -> dict[str, Any]:
+    """Dispersió general per any, varietat, traducció, tipus, gènere i tema."""
+
+    charts: dict[str, dict[str, dict[str, str]]] = {}
+    for match in re.finditer(r"var chartData\s*=\s*\[", html):
+        start = match.start()
+        end = html.find("];", start)
+        block = html[start : end if end > 0 else len(html)]
+        header = re.search(r"\['([^']+)'\s*,\s*'([^']+)'", block)
+        if header is None:
+            continue
+        axis = _GENERAL_AXES.get(normalize_key(header.group(1)))
+        if axis is None:
+            continue
+        rows: dict[str, str] = {}
+        for row in _GENERAL_ROW_RE.finditer(block):
+            rows[row.group("label")] = row.group("value")
+        charts.setdefault(axis, {})[header.group(2)] = rows
+
+    if not charts:
+        raise UnexpectedResponseError(
+            "La pàgina de dispersió general no conté les dades del gràfic.",
+            hint="El format de CTILCQDispersions.asp pot haver canviat.",
+            source=GENERAL_URL,
+        )
+
+    text = strip_tags(html)
+    header = _GENERAL_HEADER_RE.search(text)
+    pattern_echo = clean_text(header.group("pattern")) if header else ""
+    search_total = _int(header.group("total")) if header else None
+
+    indices: dict[str, float | None] = {}
+    for match in _GENERAL_INDEX_RE.finditer(text):
+        axis = _GENERAL_INDEX_KEYS.get(normalize_key(match.group(1)))
+        if axis:
+            indices[axis] = float(match.group(2).replace(",", "."))
+    for axis in _GENERAL_AXES.values():
+        indices.setdefault(axis, None)
+
+    attributes: dict[str, Any] = {}
+    warnings: list[str] = []
+    for axis in _GENERAL_AXES.values():
+        data = charts.get(axis, {})
+        query_rows = data.get("Repartiment")
+        corpus_rows = data.get("Totals") or data.get("Total")
+        if not query_rows or not corpus_rows:
+            warnings.append("parse_partial")
+            continue
+        attributes[axis] = _axis_groups(query_rows, corpus_rows)
+        attributes[axis]["index"] = indices.get(axis)
+
+    if "any" not in attributes:
+        warnings.append("parse_partial")
+    totals = attributes.get("any", {}).get("totals") if "any" in attributes else None
+    totals_match_search = bool(
+        search_total is not None and totals is not None and totals["query_hits"] == search_total
+    )
+
+    type_groups = {
+        normalize_key(group["label"]): group
+        for group in attributes.get("tipus", {}).get("groups", [])
+    }
+    literary = type_groups.get("literari")
+    non_literary = type_groups.get("no literari")
+    genere_total = attributes.get("genere", {}).get("totals", {}).get("query_hits")
+    classificacio_total = attributes.get("classificacio", {}).get("totals", {}).get("query_hits")
+    if literary and genere_total is not None and genere_total != literary["query_hits"]:
+        warnings.append("attribute_totals_mismatch")
+    if (
+        non_literary
+        and classificacio_total is not None
+        and classificacio_total != non_literary["query_hits"]
+    ):
+        warnings.append("attribute_totals_mismatch")
+
+    return {
+        "attributes": attributes,
+        "pattern_echo": pattern_echo,
+        "search_total": search_total,
+        "totals": totals,
+        "totals_match_search": totals_match_search,
+        "warnings": list(dict.fromkeys(warnings)),
+        "source": GENERAL_URL,
+    }
+
+
+__all__ = [
+    "CRON_URL",
+    "DIAL_URL",
+    "GENERAL_URL",
+    "parse_cronologia",
+    "parse_dialectal",
+    "parse_general",
+]

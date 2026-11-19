@@ -18,7 +18,7 @@ sencers ni substitueix un corrector.
 | [BDLex](https://bdlex.iec.cat/) | `bdlex_consulta` | Diccionaris històrics i dialectals (DCVB, DIEC, Fabra...) |
 | [OIEC](https://oiec.iec.cat/) | `oiec_cerca`, `oiec_text` | Ortografia normativa: apòstrofs, guionets, accents |
 | Gramàtiques IEC | `gramatica_cerca`, `gramatica_text` | GBU, GEIEC i GIEC: perífrasis, pronoms, concordança |
-| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos, amb filtres, dispersions, cerques bàsiques i metadades de les obres |
+| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `dispersio_general`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos, amb filtres, dispersions, cerques bàsiques i metadades de les obres |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) | `cerca_sinonims` | Alternatives lèxiques (dades locals, CC BY 4.0) |
 
 ## Instal·lació
@@ -110,6 +110,9 @@ Variables d'entorn:
   `dispersio_cronologica(cursor)`.
 - **Veure en quines varietats apareix**: `dispersio_dialectal(cursor)` dona per
   varietat `query_hits`, `corpus_hits`, `per_million` i `share_of_query`.
+- **Creuar tots els atributs**: `dispersio_general(cursor)` dona la distribució
+  per any, varietat, traducció, tipus, gènere literari i classificació temàtica
+  en una sola consulta.
 - **Restringir a un autor, any o varietat**: `cerca_patro(..., filtres={...})`
   amb `autor`, `titol`, `any_min`/`any_max`, `tipus`, `genere`, `varietat` o
   `traduccio`. Per triar autors o títols vàlids, `filtres_disponibles(cursor)`.
@@ -148,6 +151,11 @@ Variables d'entorn:
   No comparis `query_hits` en brut. La varietat és la de l'obra, no la del
   parlant; un zero pot ser una mancança del corpus. Si `data_valid` és fals,
   `varieties` queda buit i les dades són a `unvalidated`.
+- **Dispersió general**: `attributes` conté sis eixos (`any`, `varietat`,
+  `traduccio`, `tipus`, `genere`, `classificacio`), cadascun amb `groups`,
+  `totals`, `index` i pics. `genere` cobreix només les obres literàries i
+  `classificacio` les no literàries: els seus totals no sumen el total general.
+  Compara amb `per_million`, no amb `query_hits`.
 - **Cerques bàsiques**: `cerca_forma` i `cerca_lema` retornen `total`, el
   desglossament `forms` (lema, categoria, forma i morfologia) i una pàgina
   d'`occurrences`. `mode` pot ser `coincident`, `comença per`, `acaba en` o
@@ -205,8 +213,8 @@ Variables d'entorn:
 - La revisió automàtica de paràgrafs sencers no forma part de l'abast.
 - Les cerques bàsiques del CTILC (`Formes2`, `FormesLema2`) no apliquen els
   filtres de la consulta combinada i els modes negatius (4–6) no estan
-  verificats. La dispersió general i les col·locacions d'una forma encara no
-  s'exposen: calen fixtures i proves pròpies.
+  verificats. Les col·locacions d'una forma encara no s'exposen: calen fixtures
+  i proves pròpies.
 - `obres` cerca per autor o per títol, no les dues coses alhora. Una cerca molt
   àmplia pot superar el límit de resposta (4 MB per defecte); aleshores retorna
   `too_many_results` i cal concretar el títol o l'autor.

@@ -172,6 +172,36 @@ async def test_live_cerca_forma_i_lema() -> None:
 
 
 @pytest.mark.asyncio
+async def test_live_dispersio_general() -> None:
+    app = App(Settings.from_env())
+    try:
+        start = await app.ctilc.search_pattern(
+            [
+                PatternElement(type="lema", value="somriure"),
+                PatternElement(type="cg", category="adj"),
+            ],
+            limit=1,
+        )
+        disp = await app.ctilc.dispersio_general(start["search_cursor"])
+    finally:
+        await app.aclose()
+    assert disp["status"] == "ok"
+    assert disp["data_valid"] is True
+    assert disp["unvalidated"] is None
+    assert disp["totals"]["query_hits"] == disp["search_total"]
+    assert set(disp["attributes"]) == {
+        "any",
+        "varietat",
+        "traduccio",
+        "tipus",
+        "genere",
+        "classificacio",
+    }
+    assert len(disp["attributes"]["any"]["groups"]) == 10
+    assert disp["attributes"]["tipus"]["totals"]["query_hits"] == disp["search_total"]
+
+
+@pytest.mark.asyncio
 async def test_live_oiec() -> None:
     app = App(Settings.from_env())
     try:

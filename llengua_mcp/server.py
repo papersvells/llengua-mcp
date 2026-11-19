@@ -47,7 +47,9 @@ autoritat diferent i no les confonguis mai:
   ocurrències i taxa per milió; amb pocs testimonis, parla de concentració
   observada, no de tendència. La dispersió dialectal dona la distribució per
   varietat: compara `per_million`, no els recomptes absoluts, perquè els
-  subcorpus tenen mides molt diferents. Les col·locacions indiquen quines
+  subcorpus tenen mides molt diferents. La dispersió general creua any,
+  varietat, traducció, tipus, gènere i tema; `genere` i `classificacio` tenen
+  totals propis i no sumen el total general. Les col·locacions indiquen quines
   paraules hi coapareixen dins d'una finestra de mots; les seves xifres no es
   poden comparar amb els recomptes de seqüència exacta. Per a una forma o un
   lema, `cerca_forma` i `cerca_lema` donen el desglossament de formes i
@@ -595,6 +597,28 @@ async def dispersio_dialectal(cursor: str) -> dict[str, Any]:
     return await _call(
         "https://ctilc.iec.cat/scripts/CTILCQDispersionsDial.asp",
         app.ctilc.dispersio_dialectal(cursor),
+    )
+
+
+@mcp.tool()
+async def dispersio_general(cursor: str) -> dict[str, Any]:
+    """Retorna la dispersió general d'una cerca del CTILC.
+
+    Passa el `search_cursor` (o el `next_cursor`) d'una cerca concreta. Retorna
+    la distribució per any, varietat, traducció, tipus, gènere literari i
+    classificació temàtica, amb `query_hits`, `corpus_hits`, `per_million` i
+    `share_of_query` per grup.
+
+    Cada atribut té el seu propi total: `genere` cobreix només les obres
+    literàries i `classificacio` les no literàries. Per comparar grups de mides
+    diferents, fes servir `per_million`, no els recomptes absoluts. Si el patró
+    o els totals no quadren, `data_valid` és fals, `attributes` queda buit i les
+    dades sense validar són a `unvalidated`.
+    """
+    app = await get_app()
+    return await _call(
+        "https://ctilc.iec.cat/scripts/CTILCQDispersions.asp",
+        app.ctilc.dispersio_general(cursor),
     )
 
 

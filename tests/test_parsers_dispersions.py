@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from llengua_mcp.errors import UnexpectedResponseError
-from llengua_mcp.parsers.dispersions import parse_cronologia, parse_dialectal
+from llengua_mcp.parsers.dispersions import parse_cronologia, parse_dialectal, parse_general
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -89,3 +89,42 @@ def test_dialectal_sense_tooltip_es_error() -> None:
     )
     with pytest.raises(UnexpectedResponseError):
         parse_dialectal(html)
+
+
+def test_parse_general() -> None:
+    data = parse_general((FIXTURES / "dispersio_general.html").read_text(encoding="utf-8"))
+    assert data["pattern_echo"] == "somriure adj:-"
+    assert data["search_total"] == 2136
+    assert data["totals"] == {"query_hits": 2136, "corpus_hits": 126604218}
+    assert data["totals_match_search"] is True
+    assert data["warnings"] == []
+    assert set(data["attributes"]) == {
+        "any",
+        "varietat",
+        "traduccio",
+        "tipus",
+        "genere",
+        "classificacio",
+    }
+
+    any_axis = data["attributes"]["any"]
+    assert any_axis["index"] == 0.875092
+    assert len(any_axis["groups"]) == 10
+    assert any_axis["groups"][0]["query_hits"] == 45
+    assert any_axis["groups"][0]["per_million"] == 3.46
+    assert any_axis["peak_absolute"] == {"label": "2021-2022", "query_hits": 307}
+
+    varietat = data["attributes"]["varietat"]
+    assert len(varietat["groups"]) == 6
+    algueres = next(group for group in varietat["groups"] if group["label"] == "Alguerès")
+    assert algueres["query_hits"] == 0
+    assert varietat["peak_relative"]["label"] == "Baleàric"
+
+    assert data["attributes"]["genere"]["totals"]["query_hits"] == 1932
+    assert data["attributes"]["classificacio"]["totals"]["query_hits"] == 204
+    assert data["attributes"]["classificacio"]["index"] == 0.726303
+
+
+def test_general_sense_grafic_es_error() -> None:
+    with pytest.raises(UnexpectedResponseError):
+        parse_general("<html><body>error intern</body></html>")

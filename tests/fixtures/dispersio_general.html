@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ca">
+
+<body>
+	<center>
+		<table class="tableFILTREStop">
+			<tr>
+				<td><b>Coocurrències</b>:&nbsp;&nbsp;somriure adj:-</td>
+				<td><b>Freqüència total</b>:&nbsp;&nbsp;2136</td>
+			</tr>
+			<tr>
+				<td colspan="2"><b>Atributs</b>:&nbsp;&nbsp;any, traducció, varietat, tipus,
+					gènere literari, classificació temàtica</td>
+			</tr>
+		</table>
+	</center>
+	<p>Any de publicació Índex de dispersió: 0.875092 Varietat Índex de dispersió:
+		0.869372 Original/Traducció Índex de dispersió: 0.994274 Tipus Índex de
+		dispersió: 0.376126 Gènere literari Índex de dispersió: 0.832373
+		Classificació temàtica (no literari) Índex de dispersió: 0.726303</p>
+	<script>
+		var chartData = [['Grup cronològic', 'Proporció', { role: 'tooltip' }]
+			, ['1832-1913', 3.46123014580701E-06, 'x', llistacolorsAny['1832-1913']]
+		];
+
+		var chartData = [['Grup cronològic', 'Repartiment', { role: 'tooltip' }]
+			, ['1832-1913', 45, 'x', llistacolorsAny['1832-1913']]
+			, ['1914-1933', 174, 'x', llistacolorsAny['1914-1933']]
+			, ['1934-1958', 275, 'x', llistacolorsAny['1934-1958']]
+			, ['1959-1973', 150, 'x', llistacolorsAny['1959-1973']]
+			, ['1974-1988', 132, 'x', llistacolorsAny['1974-1988']]
+			, ['1989-1998', 235, 'x', llistacolorsAny['1989-1998']]
+			, ['1999-2008', 255, 'x', llistacolorsAny['1999-2008']]
+			, ['2009-2018', 273, 'x', llistacolorsAny['2009-2018']]
+			, ['2019-2020', 290, 'x', llistacolorsAny['2019-2020']]
+			, ['2021-2022', 307, 'x', llistacolorsAny['2021-2022']]
+		];
+
+		var chartData = [['Grup cronològic', 'Total', { role: 'tooltip' }]
+			, ['1832-1913', 13001158, 'x', llistacolorsAny['1832-1913']]
+			, ['1914-1933', 13530740, 'x', llistacolorsAny['1914-1933']]
+			, ['1934-1958', 13773554, 'x', llistacolorsAny['1934-1958']]
+			, ['1959-1973', 10570524, 'x', llistacolorsAny['1959-1973']]
+			, ['1974-1988', 12580021, 'x', llistacolorsAny['1974-1988']]
+			, ['1989-1998', 12439031, 'x', llistacolorsAny['1989-1998']]
+			, ['1999-2008', 12326242, 'x', llistacolorsAny['1999-2008']]
+			, ['2009-2018', 12593467, 'x', llistacolorsAny['2009-2018']]
+			, ['2019-2020', 13056496, 'x', llistacolorsAny['2019-2020']]
+			, ['2021-2022', 12732985, 'x', llistacolorsAny['2021-2022']]
+		];
+
+		var chartData = [['Varietat', 'Repartiment', { role: 'tooltip' }]
+			, ['Baleàric', 364, 'x', llistacolorsVar['baleàric']]
+			, ['Central', 1237, 'x', llistacolorsVar['central']]
+			, ['Nord-occidental', 174, 'x', llistacolorsVar['nord-occidental']]
+			, ['Septentrional', 46, 'x', llistacolorsVar['septentrional']]
+			, ['Valencià', 315, 'x', llistacolorsVar['valencià']]
+		];
+
+		var chartData = [['Varietat', 'Totals', { role: 'tooltip' }]
+			, ['Alguerès', 145494, 'x', llistacolorsVar['alguerès']]
+			, ['Baleàric', 10763296, 'x', llistacolorsVar['baleàric']]
+			, ['Central', 91587052, 'x', llistacolorsVar['central']]
+			, ['Nord-occidental', 9504794, 'x', llistacolorsVar['nord-occidental']]
+			, ['Septentrional', 1469291, 'x', llistacolorsVar['septentrional']]
+			, ['Valencià', 13134291, 'x', llistacolorsVar['valencià']]
+		];
+
+		var chartData = [['Traducció', 'Repartiment', { role: 'tooltip' }]
+			, ['Original', 1899, 'x', llistacolorsTrad['Original']]
+			, ['Traducció', 237, 'x', llistacolorsTrad['Traducció']]
+		];
+
+		var chartData = [['Traducció', 'Totals', { role: 'tooltip' }]
+			, ['Original', 110167424, 'x', llistacolorsTrad['Original']]
+			, ['Traducció', 16436794, 'x', llistacolorsTrad['Traducció']]
+		];
+
+		var chartData = [['Tipus', 'Repartiment', { role: 'tooltip' }]
+			, ['Literari', 1932, 'x', llistacolorsTipus['Literari']]
+			, ['No literari', 204, 'x', llistacolorsTipus['No literari']]
+		];
+
+		var chartData = [['Tipus', 'Totals', { role: 'tooltip' }]
+			, ['Literari', 53972977, 'x', llistacolorsTipus['Literari']]
+			, ['No literari', 72631241, 'x', llistacolorsTipus['No literari']]
+		];
+
+		var chartData = [['Gènere literari', 'Repartiment', { role: 'tooltip' }]
+			, ['Assaig', 100, 'x', llistacolorsGen['Assaig']]
+			, ['Narrativa', 1567, 'x', llistacolorsGen['Narrativa']]
+			, ['Poesia', 150, 'x', llistacolorsGen['Poesia']]
+			, ['Teatre', 115, 'x', llistacolorsGen['Teatre']]
+		];
+
+		var chartData = [['Gènere literari', 'Totals', { role: 'tooltip' }]
+			, ['Assaig', 7808273, 'x', llistacolorsGen['Assaig']]
+			, ['Narrativa', 33847333, 'x', llistacolorsGen['Narrativa']]
+			, ['Poesia', 4518937, 'x', llistacolorsGen['Poesia']]
+			, ['Teatre', 7798434, 'x', llistacolorsGen['Teatre']]
+		];
+
+		var chartData = [['Classificació temàtica', 'Repartiment', { role: 'tooltip' }]
+			, ['Correspondència', 3, 'x', llistacolorsClas['Correspondència']]
+			, ['Filosofia', 16, 'x', llistacolorsClas['Filosofia']]
+			, ['Religió i Teologia', 21, 'x', llistacolorsClas['Religió i Teologia']]
+			, ['Ciències Socials', 29, 'x', llistacolorsClas['Ciències Socials']]
+			, ['Premsa', 45, 'x', llistacolorsClas['Premsa']]
+			, ['Ciències Pures i Naturals', 8, 'x', llistacolorsClas['Ciències Pures i Naturals']]
+			, ['Ciències Aplicades', 7, 'x', llistacolorsClas['Ciències Aplicades']]
+			, ['Belles Arts. Oci. Esports. Jocs', 34, 'x', llistacolorsClas['Belles Arts']]
+			, ['Llengua i Literatura', 15, 'x', llistacolorsClas['Llengua i Literatura']]
+			, ['Història i Geografia. Biografia', 26, 'x', llistacolorsClas['Història i Geografia']]
+		];
+
+		var chartData = [['Classificació temàtica', 'Totals', { role: 'tooltip' }]
+			, ['Correspondència', 204431, 'x', llistacolorsClas['Correspondència']]
+			, ['Filosofia', 5153294, 'x', llistacolorsClas['Filosofia']]
+			, ['Religió i Teologia', 6188369, 'x', llistacolorsClas['Religió i Teologia']]
+			, ['Ciències Socials', 13135670, 'x', llistacolorsClas['Ciències Socials']]
+			, ['Premsa', 8595316, 'x', llistacolorsClas['Premsa']]
+			, ['Ciències Pures i Naturals', 5782597, 'x', llistacolorsClas['Ciències Pures i Naturals']]
+			, ['Ciències Aplicades', 10804900, 'x', llistacolorsClas['Ciències Aplicades']]
+			, ['Belles Arts. Oci. Esports. Jocs', 7073472, 'x', llistacolorsClas['Belles Arts']]
+			, ['Llengua i Literatura', 6548662, 'x', llistacolorsClas['Llengua i Literatura']]
+			, ['Història i Geografia. Biografia', 9144530, 'x', llistacolorsClas['Història i Geografia']]
+		];
+	</script>
+</body>
+
+</html>
