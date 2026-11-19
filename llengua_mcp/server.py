@@ -661,6 +661,44 @@ async def collocacions(
 
 
 @mcp.tool()
+async def collocacions_forma(
+    forma: str,
+    radi: int = 3,
+    freq_min: int = 5,
+    limit: int = 5,
+) -> dict[str, Any]:
+    """Col·locacions d'una forma concreta al CTILC, agrupades per categoria.
+
+    Serveix per separar lectures que el lema barreja: el lema «somriure» ajunta
+    el nom i el verb, mentre que amb «somriures» o «somrigué» s'aïlla una sola
+    forma. Cada item porta, a més del lema, la `info_mutua` (informació mútua,
+    el criteri d'ordenació del portal), el `freq` de coaparició, la `distancia`
+    mitjana, la `varianca` i la `freq_lema`. Cal que `forma_echo_verified`
+    sigui cert: si és fals, les dades no són de la forma demanada.
+
+    Args:
+        forma: Una sola forma, sense espais (per exemple «somriures»).
+        radi: Finestra de coaparició en mots a cada costat (0-5, per defecte 3).
+        freq_min: Freqüència mínima de coaparició (per defecte 5).
+        limit: Màxim de lemes per categoria (1-10).
+
+    Important: les xifres són coaparicions dins d'una finestra, no adjacència,
+    i no es poden comparar amb els totals de `cerca_frase` o `cerca_patro`. La
+    informació mútua amb freqüències baixes és inestable.
+    """
+    app = await get_app()
+    return await _call(
+        "https://ctilc.iec.cat/scripts/CTILCQCol_FormesAgrup2.asp",
+        app.ctilc.collocacions_forma(
+            forma,
+            radi=radi,
+            freq_min=freq_min,
+            limit=limit,
+        ),
+    )
+
+
+@mcp.tool()
 async def filtres_disponibles(
     cursor: str,
     tipus: str = "autors",

@@ -263,6 +263,21 @@ async def test_live_collocacions() -> None:
 
 
 @pytest.mark.asyncio
+async def test_live_collocacions_forma() -> None:
+    app = App(Settings.from_env())
+    try:
+        result = await app.ctilc.collocacions_forma("somriures", limit=3)
+    finally:
+        await app.aclose()
+    assert result["status"] == "ok"
+    assert result["forma_echo_verified"] is True
+    assert result["total"] > 0
+    names = next(cat for cat in result["categories"] if cat["categoria"] == "adjectiu")
+    assert names["items"]
+    assert all("info_mutua" in item for item in names["items"])
+
+
+@pytest.mark.asyncio
 async def test_live_optimot() -> None:
     app = App(Settings.from_env())
     try:

@@ -14,15 +14,15 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 202 passats, 16 omesos (els live).
-- **Tests en directe:** 16, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **Tests sense xarxa:** 209 passats, 17 omesos (els live).
+- **Tests en directe:** 17, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
   `.github/workflows/live.yml` executa les proves en directe cada dilluns a les
   06:00 UTC (o manualment des d'Actions), amb un reintent per absorbir talls de
   xarxa puntuals.
 - **Ruff:** `ruff format` i `ruff check` nets.
-- **Eines MCP:** 28 eines, agrupades per font.
+- **Eines MCP:** 29 eines, agrupades per font.
 
 ### Eines per font
 
@@ -36,7 +36,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 | OIEC | `oiec_cerca`, `oiec_text` | Implementat via `api-oiec.iec.cat` |
 | Gramàtiques | `gramatica_cerca`, `gramatica_text` | Implementat (GBU, GEIEC, GIEC) |
 | Softcatalà | `cerca_sinonims` | Dades locals versionades (CC BY 4.0) |
-| CTILC | `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `dispersio_general`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
+| CTILC | `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `dispersio_general`, `collocacions`, `collocacions_forma`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
 
 ### Decisions consolidades
 
@@ -72,6 +72,10 @@ Expectatives datades, no llindars eterns:
   aprofitables, **18** de puntuació descartades, **17** categories i **84**
   noms propis a `altres`; top noms: llavi 235, ull 167, home 119; top verbs:
   va 2192, fer 760. Amb `limit=8` es retornen 8 verbs.
+- `collocacions_forma("somriures")` → **80** col·locacions, **69**
+  aprofitables, **11** de puntuació i **15** categories; top adjectius: forçat
+  6 (MI 11,59), irònic 5 (11,27), amable 9 (10,53). Un `zzzz` dona el missatge
+  explícit sense comptador (`zero_without_counter`).
 - Gramàtiques: GIEC `8.3.3` → «La posició dels pronoms febles», amb l'enllaç
   `https://giec.iec.cat/textgramatica/codi/8.3.3`; GBU codi `28` (només títol)
   → error accionable.
@@ -94,10 +98,11 @@ Expectatives datades, no llindars eterns:
 
 ## 2. Pendents
 
-### 2.1 Collocacions del CTILC (resolt el 18/11/2026)
+### 2.1 Collocacions del CTILC (resolt el 18–19/11/2026)
 
 Implementat a `adapters/ctilc.py` i `parsers/collocacions.py`; verificat en
-directe amb `somriure` el 18/11/2026.
+directe amb `somriure` (lema) el 18/11/2026 i amb `somriures` (forma) el
+19/11/2026.
 
 - **Límit intern de 5: resolt.** El parser desa totes les files (la pàgina en
   porta 1.159) i l'adaptador retalla a `limit` (1-10). La resposta indica
@@ -111,9 +116,16 @@ directe amb `somriure` el 18/11/2026.
   `excluded_rows` 18 (puntuació) i avís `partial_rows`, explicat a `note`.
 - **Apartat ALTRES: resolt.** Els 84 noms propis es retornen a `altres`; les 18
   files de puntuació es descarten.
-- **Pendent:** col·locacions d'una forma (`CTILCQCol_FormesAgrup2.asp`); només
-  hi ha col·locacions de lema. Issue
-  [#3](https://github.com/papersvells/llengua-mcp/issues/3).
+- **Col·locacions d'una forma: resolt el 19/11/2026.** Eina
+  `collocacions_forma` sobre `CTILCQCol_FormesAgrup2.asp` (`cadforma`). La
+  pàgina té sis columnes per fila (informació mútua, freqüència de coaparició,
+  distància mitjana, variància i freqüència del lema) en lloc de dues; el
+  parser detecta el format i n'extreu les mètriques. Comprovat amb `somriures`:
+  **80** col·locacions, **69** aprofitables, **11** de puntuació, **15**
+  categories; adjectius forçat 6 (MI 11,59), irònic 5 (11,27) i amable 9
+  (10,53), que el lema `somriure` no aïllava. Sense resultats, el portal només
+  dona un missatge sense comptador: es retorna `unexpected_response` amb
+  `zero_without_counter`, no una absència verificada.
 
 ### 2.2 Gramàtiques (GBU, GEIEC, GIEC) (resolt el 18/11/2026)
 
@@ -402,7 +414,7 @@ PY
 
 Les feines obertes es segueixen al repositori:
 
-1. Eines del CTILC obertes: col·locacions per forma ([#3](https://github.com/papersvells/llengua-mcp/issues/3)), `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)), noms propis ([#5](https://github.com/papersvells/llengua-mcp/issues/5)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)).
+1. Eines del CTILC obertes: `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)), noms propis ([#5](https://github.com/papersvells/llengua-mcp/issues/5)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)).
 2. Fonts: Critèria ([#7](https://github.com/papersvells/llengua-mcp/issues/7)), sinònims Jané ([#8](https://github.com/papersvells/llengua-mcp/issues/8)) i cobertura del DDLC ([#9](https://github.com/papersvells/llengua-mcp/issues/9)).
 3. Fora del repositori, pendents de decisió: contactar amb `dcc@iec.cat` abans
    de publicar (§2.7) i repetir les proves d'ús des d'OpenCode amb dos models.

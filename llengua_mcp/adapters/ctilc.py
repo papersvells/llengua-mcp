@@ -24,7 +24,11 @@ from llengua_mcp.errors import (
 from llengua_mcp.http import HttpClient
 from llengua_mcp.models import CtilcFilters, CursorPayload, PatternElement
 from llengua_mcp.parsers.basiques import parse_basiques
-from llengua_mcp.parsers.collocacions import COLLOCACIONS_URL, parse_collocacions
+from llengua_mcp.parsers.collocacions import (
+    COLLOCACIONS_FORMA_URL,
+    COLLOCACIONS_URL,
+    parse_collocacions,
+)
 from llengua_mcp.parsers.ctilc import parse_ctilc_page, patterns_equivalent
 from llengua_mcp.parsers.dades import parse_dades
 from llengua_mcp.parsers.dispersions import (
@@ -1218,90 +1222,185 @@ class CtilcAdapter:
         freq_min: int = 5,
         limit: int = 5,
     ) -> dict[str, Any]:
-        """Col·locacions d'un lema, agrupades per categoria gramatical.
+        """Col·locacions d'un lema, agrupades per categoria gramatical."""
 
-        Les xifres són freqüències de coaparició dins d'una finestra de ±`radi`
-        mots (0-5), no d'adjacència: no es barregen amb els recomptes de
-        `cerca_frase` ni de `cerca_patro`.
+        return await self._collocacions(
+            lema,
+            tipus="lema",
+            radi=radi,
+            freq_min=freq_min,
+            limit=limit,
+        )
+
+    async def collocacions_forma(
+        self,
+        forma: str,
+        *,
+        radi: int = 3,
+        freq_min: int = 5,
+        limit: int = 5,
+    ) -> dict[str, Any]:
+        """Col·locacions d'una forma concreta, agrupades per categoria.
+
+        A diferència del lema, la pàgina de formes dona la informació mútua,
+        la freqüència de coaparició, la distància mitjana, la variància i la
+        freqüència del lema.
         """
 
-        term = clean_text(lema)
+        return await self._collocacions(
+            forma,
+            tipus="forma",
+            radi=radi,
+            freq_min=freq_min,
+            limit=limit,
+        )
+
+    async def _collocacions(
+        self,
+        term_raw: str,
+        *,
+        tipus: str,
+        radi: int,
+        freq_min: int,
+        limit: int,
+    ) -> dict[str, Any]:
+        """Implementació comuna de les col·locacions de lema i de forma.
+
+        Les xifres són freqüències de coaparició dins d'una finestra de
+        ±`radi` mots (0-5), no d'adjacència: no es barregen amb els recomptes
+        de `cerca_frase` ni de `cerca_patro`.
+        """
+
+        term = clean_text(term_raw)
+        label = "lema" if tipus == "lema" else "forma"
         if not term:
             raise InvalidQueryError(
-                "Falta el lema.",
-                hint="Escriu el lema de què vols les col·locacions.",
+                f"Falta el {label}.",
+                hint=f"Escriu el {label} de què vols les col·locacions.",
             )
         if len(term) > 60 or re.search(r"\s", term):
             raise InvalidQueryError(
-                f"«{term}» no és un lema vàlid.",
-                hint="Indica un sol lema, sense espais.",
+                f"«{term}» no és un {label} vàlid.",
+                hint=f"Indica un sol {label}, sense espais.",
             )
         radi = max(0, min(radi, 5))
         freq_min = max(1, min(freq_min, 100))
         limit = max(1, min(limit, 10))
 
+        if tipus == "lema":
+            url = COLLOCACIONS_URL
+            param = "cadlema"
+            cond = "cadlemacond"
+        else:
+            url = COLLOCACIONS_FORMA_URL
+            param = "cadforma"
+            cond = "cadformacond"
         body = (
-            f"seccio=CTILC1&cadlema={quote(term, safe='')}"
-            f"&cadlemacond=0&freqMin={freq_min}&radiE={radi}&radiD={radi}"
+            f"seccio=CTILC1&{param}={quote(term, safe='')}"
+            f"&{cond}=0&freqMin={freq_min}&radiE={radi}&radiD={radi}"
         )
         try:
-            result = await self.client.post_text(COLLOCACIONS_URL, body)
+            result = await self.client.post_text(url, body)
         except UpstreamError as exc:
             if "supera el límit de mida" not in exc.message:
                 raise
             raise UpstreamError(
                 f"La pàgina de col·locacions de «{term}» és massa gran per descarregar-la.",
                 hint=(
-                    f"El lema «{term}» és molt freqüent. Apuja `freq_min` "
+                    f"El {label} «{term}» és molt freqüent. Apuja `freq_min` "
                     f"(ara {freq_min}) o consulta'n un de més específic."
                 ),
-                source=COLLOCACIONS_URL,
+                source=url,
             ) from exc
         data = parse_collocacions(result.text)
 
         warnings = list(result.warnings)
-        lema_echo = data["lema_echo"]
-        echo_verified = _lema_matches(term, lema_echo)
         retrieved_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-        citation = f"CTILC (IEC), col·locacions del lema {term}, consulta feta el {_date_label()}."
+        if tipus == "lema":
+            citation = (
+                f"CTILC (IEC), col·locacions del lema {term}, consulta feta el {_date_label()}."
+            )
+        else:
+            citation = (
+                f"CTILC (IEC), col·locacions de la forma {term}, consulta feta el {_date_label()}."
+            )
         note = (
             "Les xifres són freqüències de coaparició dins d'una finestra de "
             f"±{radi} mots, amb un mínim de {freq_min} coaparicions. No són "
             "recomptes d'adjacència ni de patró: no es poden comparar directament "
             "amb els totals de `cerca_frase` o `cerca_patro`."
         )
+        if tipus == "forma":
+            note = (
+                f"{note} Cada item porta `info_mutua` (informació mútua, el criteri "
+                "d'ordenació del portal), `freq` (freqüència de coaparició), "
+                "`distancia` mitjana, `varianca` i `freq_lema`. Amb freqüències "
+                "baixes la informació mútua és inestable."
+            )
+
+        echo_key = "lema_echo" if tipus == "lema" else "forma_echo"
+        verified_key = "lema_echo_verified" if tipus == "lema" else "forma_echo_verified"
         common = {
-            "query": {"lema": term, "radi": radi, "freq_min": freq_min},
-            "lema": term,
-            "lema_echo": lema_echo,
+            "query": {label: term, "radi": radi, "freq_min": freq_min},
+            label: term,
+            echo_key: data["echo"],
             "total": data["total"],
             "counted_rows": data["counted_rows"],
             "excluded_rows": data["excluded_rows"],
         }
 
-        if not echo_verified:
+        if data["status"] == "empty":
             return {
                 "status": "unexpected_response",
                 **common,
-                "lema_echo_verified": False,
+                verified_key: False,
                 "returned_categories": 0,
                 "returned_items": 0,
                 "categories": [],
                 "altres": {"rows": 0, "items": []},
-                "warnings": _dedupe(warnings + ["lema_echo_unexpected"]),
+                "warnings": _dedupe(warnings + ["zero_without_counter"]),
                 "error": {
-                    "code": "lema_echo_unexpected",
+                    "code": "zero_without_counter",
                     "message": (
-                        f"El servidor ha retornat col·locacions de «{lema_echo}» "
+                        f"El portal diu que no hi ha cap {label} que compleixi "
+                        "aquestes condicions, però no dona cap comptador."
+                    ),
+                    "hint": (
+                        f"No es pot presentar com una absència verificada. "
+                        f"Comprova el {label}, els accents i la grafia, o prova "
+                        f"un altre {label}."
+                    ),
+                },
+                "note": note,
+                "source": url,
+                "retrieved_at": retrieved_at,
+                "citation": citation,
+            }
+
+        echo_verified = _lema_matches(term, data["echo"])
+        if not echo_verified:
+            return {
+                "status": "unexpected_response",
+                **common,
+                verified_key: False,
+                "returned_categories": 0,
+                "returned_items": 0,
+                "categories": [],
+                "altres": {"rows": 0, "items": []},
+                "warnings": _dedupe(warnings + [f"{label}_echo_unexpected"]),
+                "error": {
+                    "code": f"{label}_echo_unexpected",
+                    "message": (
+                        f"El servidor ha retornat col·locacions de «{data['echo']}» "
                         f"en lloc de «{term}»."
                     ),
                     "hint": (
                         "No es poden presentar aquestes dades com a col·locacions "
-                        "del lema demanat. Torna a provar la consulta."
+                        f"del {label} demanat. Torna a provar la consulta."
                     ),
                 },
                 "note": note,
-                "source": COLLOCACIONS_URL,
+                "source": url,
                 "retrieved_at": retrieved_at,
                 "citation": citation,
             }
@@ -1328,14 +1427,14 @@ class CtilcAdapter:
         return {
             "status": "ok",
             **common,
-            "lema_echo_verified": True,
+            verified_key: True,
             "returned_categories": len(categories),
             "returned_items": returned_items,
             "categories": categories,
             "altres": {"rows": data["altres"]["rows"], "items": altres_items},
             "warnings": _dedupe(warnings),
             "note": f"{note} {rows_note}",
-            "source": COLLOCACIONS_URL,
+            "source": url,
             "retrieved_at": retrieved_at,
             "citation": citation,
         }

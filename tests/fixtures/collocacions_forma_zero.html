@@ -1,0 +1,169 @@
+
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" >
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" type="text/css" href="../estilsCTILC.css">
+<style>
+@media all and (max-width: 768px), only screen and (-webkit-min-device-pixel-ratio: 2) and (max-width: 1024px), only screen and (min--moz-device-pixel-ratio: 2) and (max-width: 1024px), only screen and (-o-min-device-pixel-ratio: 2/1) and (max-width: 1024px), only screen and (min-device-pixel-ratio: 2) and (max-width: 1024px), only screen and (min-resolution: 192dpi) and (max-width: 1024px), only screen and (min-resolution: 2dppx) and (max-width: 1024px) {
+	#taulaCOL { width: 100% !important; }
+}
+</style>
+<title>Corpus textual informatitzat de la llengua catalana</title>
+<script language="JavaScript">
+function SubmitFormConc(iOption,s,t) {
+// hem de mantenir el nom de la funció amb Conc perquè es crida des del filtre de formatria
+	if (iOption == 0) {
+		return false; }
+	else {
+		document.fConc.submit(); }
+}
+function SubmitFormConcordances(iOption,querytxt,forma,cadformacondtxt,cg,cm,radiE,radiD,MI,O11,mean_d,var_d,C1,seccio) {
+	if (iOption == 0) {
+		return false; }
+	else {
+		document.getElementById("querytxt").value = querytxt;
+		document.getElementById("lema").value = forma;				// aquests 2 noms de camps mantenen el nom "lema" pq fem servir el mateix script que la consulta de lemes per recuperar les concordances
+		document.getElementById("cadlemacondtxtc").value = cadformacondtxt;
+		document.getElementById("cat").value = cg;
+		document.getElementById("cmorf").value = cm;
+		document.getElementById("secc").value = seccio;
+		document.getElementById("radiEc").value = radiE;
+		document.getElementById("radiDc").value = radiD;
+		document.getElementById("MI").value = MI;
+		document.getElementById("O11").value = O11;
+		document.getElementById("mean_d").value = mean_d;
+		document.getElementById("var_d").value = var_d;
+		document.getElementById("C1").value = C1;
+		document.getElementById("tipusconc").value = 0;
+		document.getElementById("iStart").value = 1;
+		document.getElementById("iOffset").value = 50;
+		document.fConcordances.submit(); }
+}
+function ordena(col) {
+	document.getElementById('n_ord').value = col;
+	if (document.getElementById('ord'+col).value == "asc")
+		document.getElementById('ord'+col).value = "desc";
+	else
+		document.getElementById('ord'+col).value = "asc";
+	document.fConc.submit();
+}
+function principal(iOption) {
+	if (iOption == 0) {
+		return false; }
+	else {
+		document.fprinc.submit(); }
+}
+</script>
+</head>
+
+<body>
+<script src="float-panel.js"></script>    <!-- per a la fletxa de link a TOP -->
+<script src="jquery-3.3.1.min.js"></script>
+<script src="indexscript.js"></script>
+<div id="menuini" style="position: relative">
+	<div id="csscap">
+		<table border="0" width="100%" cellpadding="5" cellspacing="0">
+	<tr>
+		<td width="33%" align="left"><a href="http://www.iec.cat" target="_blank"><img id="logoiec" src="../img/logoIEC2.png" height="50" border="0"></a></td>
+		<td width="34%" style="text-align: center;">
+			<span style="color: #FF0000;">C</span>orpus <span style="color: #FF0000;">t</span>extual <span style="color: #FF0000;">i</span>nformatitzat de la <span style="color: #FF0000;">l</span>lengua <span style="color: #FF0000;">c</span>atalana<br>
+			<span id="csscapRaf">Iniciat el 1985 per Joaquim Rafel i Fontanals</span><br>
+		</td>
+		<td width="33%">&nbsp;</td>
+	</tr>
+</table><br>
+
+	</div>
+
+	<div id="cssmenu" class="noimprimir">
+	<ul>
+		<li class="has-sub"><a href="#">El corpus</a>
+			<ul>
+				<li class="is-sub"><a href="IniPresentacio.asp" onClick="tancamenu()">Presentació</a></li>
+				<li class="is-sub"><a href="CTILCQDadesNum.asp" onClick="tancamenu()">El corpus en xifres</a></li>
+				<li class="has-sub"><a href="#">Obres del corpus</a>
+					<ul>
+						<li class="is-sub"><a href="CTILCCorpus_Aut1.asp" onClick="tancamenu()">Consulta per autor</a></li>
+						<li class="is-sub"><a href="CTILCCorpus_Obr1.asp" onClick="tancamenu()">Consulta per títol</a></li>
+						<li class="is-sub"><a href="CTILCCorpus_ObrParam.asp" onClick="tancamenu()">Consulta per paràmetres</a></li>
+						<li class="is-sub"><a href="CTILCCorpus_Descarr.asp" onClick="tancamenu()">Obres descarregables</a></li>
+					</ul>
+				</li>
+				<li class="is-sub"><a href="IniCredits.asp" onClick="tancamenu()">Crèdits</a></li>
+			</ul>
+		</li>
+		<li class="active has-sub"><a href="#">Consulta bàsica</a>
+			<ul>
+				<li class="is-sub"><a href="CTILCQConc_FormesLema1.asp" onClick="tancamenu()">Lema</a></li>
+				<li class="is-sub"><a href="CTILCQConc_Formes1.asp" onClick="tancamenu()">Forma</a></li>
+				<li class="is-sub"><a href="CTILCQConc_NomsPropis1.asp" onClick="tancamenu()">Nom propi</a></li>
+			</ul>
+		</li>
+		<li class="has-sub"><a href="#">Consulta complexa</a>
+			<ul>
+				<li class="is-sub"><a href="CTILCQConc_Coocur0.asp" onClick="tancamenu()">Combinacions</a></li>
+				<li class="is-sub"><a href="CTILCQCol_LemesAgrup1.asp" onClick="tancamenu()">Col·locacions d'un lema</a></li>
+				<li class="is-sub"><a href="CTILCQCol_FormesAgrup1.asp" onClick="tancamenu()">Col·locacions d'una forma</a></li>
+			</ul>
+		</li>
+		<li style="float: right;"><a href="mailto:dcc@iec.cat?subject=Pàgina web CTILC" onClick="tancamenu()">Contacte</a></li>
+	</ul>
+	</div>
+	<hr style="display: block; margin-top: 0.5em; margin-bottom: 0.5em; margin-left: 25px; margin-right: 25px; border-style: solid; border-width: 1px; border-color: #FA5858; clear: both;">
+</div>
+<BR>
+<div id="backtop">&#9650;</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+	const currentUrl = window.location.pathname;
+	// treu active de tots els has-sub de primer nivell
+	document.querySelectorAll("#cssmenu > ul > li.has-sub")
+		.forEach(li => li.classList.remove("active"));
+	const links = document.querySelectorAll("#cssmenu a[href]");
+	links.forEach(link => {
+		if (link.getAttribute("href") && currentUrl.includes(link.getAttribute("href"))) {
+			const topLevelLi = link.closest("#cssmenu > ul > li.has-sub");
+			if (topLevelLi) {
+				topLevelLi.classList.add("active");
+			}
+		}
+	});
+});
+</script>
+
+<form ACTION="CTILCQCol_FormesAgrup1.asp" METHOD="post" name="fprinc" onSubmit="return principal(0)">
+		<input type="hidden" name="cadformap" id="cadformap" value="zzzz">
+		<input type="hidden" name="cadformacondp" id="cadformacondp" value="0">
+		<input type="hidden" name="cgp" id="cgp" value="">
+		<input type="hidden" name="cmp" id="cmp" value="">
+		<input type="hidden" name="radiEp" id="radiEp" value="3">
+		<input type="hidden" name="radiDp" id="radiDp" value="3">
+		<input type="hidden" name="freqMinp" id="freqMinp" value="5">
+		<input type="hidden" name="secciop" id="secciop" value="CTILC1">
+</form>
+
+		<table width = "100%" cellspacing = "0" cellpadding = "0">
+		<tr><td width="33%">&nbsp;</td>
+			<td width="33%"><div CLASS="titol">COL·LOCACIONS D'UNA FORMA</div></td>
+			<td width="33%"><table width = "100%" cellspacing = "0" cellpadding = "0">
+				<tr><td>&nbsp;</td>
+					<td class="TDlinkbotoVermell" width="100px"><a class="linkbotoVermell_noprint" href="JavaScript:void(0)" onClick="principal(1); return false" target="_self" onmouseover="window.status=''; return true">Enrere</a></td>
+					<td class="TDlinkbotoVermell" width="100px"><a class="linkbotoVermell_noprint" href="CTILCQCol_FormesAgrup1.asp" target="_self" onmouseover="window.status=''; return true">Nova consulta</a></td>
+				</tr>
+				</table>
+			</td>
+		</tr>
+		<tr><td width="33%">&nbsp;</td>
+			<td width="33%"><div CLASS="subtitol"></div></td>
+			<td width="33%">&nbsp;</td>
+		</tr>
+		</table>
+		<br><br><br><center><DIV CLASS='tvermell'>No hi ha cap forma que compleixi aquestes condicions</DIV></center>
+
+
+</body>
+</html>

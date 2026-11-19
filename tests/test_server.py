@@ -29,6 +29,7 @@ async def test_tools_are_registered() -> None:
         "continuar_cerca",
         "context",
         "collocacions",
+        "collocacions_forma",
         "dispersio_cronologica",
         "dispersio_dialectal",
         "dispersio_general",

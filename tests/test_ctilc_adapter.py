@@ -509,9 +509,11 @@ class CollocacionsClient:
     def __init__(self, html: str) -> None:
         self.html = html
         self.bodies: list[str] = []
+        self.urls: list[str] = []
 
     async def post_text(self, url: str, body: str, **kwargs) -> HttpResult:
         self.bodies.append(body)
+        self.urls.append(url)
         return HttpResult(text=self.html, status=200, url=url)
 
     async def get_text(self, url: str, **kwargs) -> HttpResult:
@@ -620,6 +622,70 @@ async def test_collocacions_massa_gran_es_accioable(tmp_path) -> None:
         await adapter.collocacions("altre", freq_min=5)
     assert "freq_min" in info.value.hint
     assert "altre" in info.value.message
+
+
+@pytest.mark.asyncio
+async def test_collocacions_forma_construeix_el_cos_i_retorna_metriques(tmp_path) -> None:
+    html = (FIXTURES / "collocacions_forma_somriures.html").read_text(encoding="utf-8")
+    client = CollocacionsClient(html)
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+    result = await adapter.collocacions_forma("somriures", radi=2, freq_min=10, limit=2)
+    assert result["status"] == "ok"
+    assert result["forma"] == "somriures"
+    assert result["forma_echo"] == "somriures"
+    assert result["forma_echo_verified"] is True
+    assert result["total"] == 80
+    assert result["query"]["radi"] == 2
+    body = client.bodies[0]
+    assert "cadforma=somriures" in body
+    assert "cadforma" in body
+    assert "cadlema" not in body
+    assert client.urls[0].endswith("CTILCQCol_FormesAgrup2.asp")
+    category = next(cat for cat in result["categories"] if cat["codi"] == "S")
+    item = category["items"][0]
+    assert {"info_mutua", "freq", "distancia", "varianca", "freq_lema"} <= set(item)
+    assert item["info_mutua"] > 0
+
+
+@pytest.mark.asyncio
+async def test_collocacions_forma_limita_per_categoria(tmp_path) -> None:
+    html = (FIXTURES / "collocacions_forma_somriures.html").read_text(encoding="utf-8")
+    adapter = CtilcAdapter(CollocacionsClient(html), _settings(tmp_path), CursorStore())
+    result = await adapter.collocacions_forma("somriures", limit=1)
+    for category in result["categories"]:
+        assert len(category["items"]) == 1
+    assert "collocations_truncated" in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_collocacions_forma_eco_divergent(tmp_path) -> None:
+    html = (FIXTURES / "collocacions_forma_somriures.html").read_text(encoding="utf-8")
+    adapter = CtilcAdapter(CollocacionsClient(html), _settings(tmp_path), CursorStore())
+    result = await adapter.collocacions_forma("somrigué")
+    assert result["status"] == "unexpected_response"
+    assert result["forma_echo"] == "somriures"
+    assert result["forma_echo_verified"] is False
+    assert result["categories"] == []
+    assert "forma_echo_unexpected" in result["warnings"]
+    assert result["error"]["code"] == "forma_echo_unexpected"
+
+
+@pytest.mark.asyncio
+async def test_collocacions_forma_sense_comptador(tmp_path) -> None:
+    html = (FIXTURES / "collocacions_forma_zero.html").read_text(encoding="utf-8")
+    adapter = CtilcAdapter(CollocacionsClient(html), _settings(tmp_path), CursorStore())
+    result = await adapter.collocacions_forma("zzzz")
+    assert result["status"] == "unexpected_response"
+    assert result["forma_echo_verified"] is False
+    assert "zero_without_counter" in result["warnings"]
+    assert result["error"]["code"] == "zero_without_counter"
+
+
+@pytest.mark.asyncio
+async def test_collocacions_forma_rebutja_forma_amb_espais(tmp_path) -> None:
+    adapter = CtilcAdapter(CollocacionsClient(""), _settings(tmp_path), CursorStore())
+    with pytest.raises(InvalidQueryError):
+        await adapter.collocacions_forma("somriure burleta")
 
 
 @pytest.mark.asyncio

@@ -18,7 +18,7 @@ sencers ni substitueix un corrector.
 | [BDLex](https://bdlex.iec.cat/) | `bdlex_consulta` | Diccionaris històrics i dialectals (DCVB, DIEC, Fabra...) |
 | [OIEC](https://oiec.iec.cat/) | `oiec_cerca`, `oiec_text` | Ortografia normativa: apòstrofs, guionets, accents |
 | Gramàtiques IEC | `gramatica_cerca`, `gramatica_text` | GBU, GEIEC i GIEC: perífrasis, pronoms, concordança |
-| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `dispersio_general`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos, amb filtres, dispersions, cerques bàsiques i metadades de les obres |
+| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `dispersio_general`, `collocacions`, `collocacions_forma`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos, amb filtres, dispersions, cerques bàsiques i metadades de les obres |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) | `cerca_sinonims` | Alternatives lèxiques (dades locals, CC BY 4.0) |
 
 ## Instal·lació
@@ -117,7 +117,10 @@ Variables d'entorn:
   amb `autor`, `titol`, `any_min`/`any_max`, `tipus`, `genere`, `varietat` o
   `traduccio`. Per triar autors o títols vàlids, `filtres_disponibles(cursor)`.
 - **Saber quines paraules hi van a prop**: `collocacions("somriure")` — quins
-  noms, adjectius o verbs hi coapareixen dins d'una finestra de ±3 mots.
+  noms, adjectius o verbs hi coapareixen dins d'una finestra de ±3 mots. Amb
+  `collocacions_forma("somriures")` s'aïlla una forma i el lema no barreja el
+  nom i el verb; cada resultat porta la informació mútua, la freqüència de
+  coaparició, la distància mitjana i la variància.
 - **Consultar les obres d'un autor o d'un títol**: `obres(autor="Sagarra")`;
   si hi ha diversos autors, la resposta dona els candidats i cal triar-ne un
   amb `autor_id`. `obres(titol="vida")` retorna any, tipus, gènere,
