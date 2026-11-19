@@ -155,6 +155,23 @@ async def test_live_gramatiques() -> None:
 
 
 @pytest.mark.asyncio
+async def test_live_obres() -> None:
+    app = App(Settings.from_env())
+    try:
+        author = await app.ctilc.obres(autor="Sagarra, Xavier")
+        title = await app.ctilc.obres(titol="vida", limit=2)
+    finally:
+        await app.aclose()
+    assert author["status"] == "ok"
+    assert author["works"]
+    assert author["echo_verified"] is True
+    assert title["status"] == "ok"
+    assert title["total"] > 2
+    assert title["returned"] == 2
+    assert title["echo_verified"] is True
+
+
+@pytest.mark.asyncio
 async def test_live_collocacions() -> None:
     app = App(Settings.from_env())
     try:

@@ -18,7 +18,7 @@ sencers ni substitueix un corrector.
 | [BDLex](https://bdlex.iec.cat/) | `bdlex_consulta` | Diccionaris històrics i dialectals (DCVB, DIEC, Fabra...) |
 | [OIEC](https://oiec.iec.cat/) | `oiec_cerca`, `oiec_text` | Ortografia normativa: apòstrofs, guionets, accents |
 | Gramàtiques IEC | `gramatica_cerca`, `gramatica_text` | GBU, GEIEC i GIEC: perífrasis, pronoms, concordança |
-| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `filtres_disponibles`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos, amb filtres per obra |
+| [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos, amb filtres per obra i metadades de les obres |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) | `cerca_sinonims` | Alternatives lèxiques (dades locals, CC BY 4.0) |
 
 ## Instal·lació
@@ -109,11 +109,16 @@ Variables d'entorn:
   `traduccio`. Per triar autors o títols vàlids, `filtres_disponibles(cursor)`.
 - **Saber quines paraules hi van a prop**: `collocacions("somriure")` — quins
   noms, adjectius o verbs hi coapareixen dins d'una finestra de ±3 mots.
+- **Consultar les obres d'un autor o d'un títol**: `obres(autor="Sagarra")`;
+  si hi ha diversos autors, la resposta dona els candidats i cal triar-ne un
+  amb `autor_id`. `obres(titol="vida")` retorna any, tipus, gènere,
+  classificació, traducció i varietat.
 
 ## Com interpretar els resultats
 
 - **`status`**: `ok`, `no_matches` / `no_results`, `partial`, `invalid_query`,
-  `upstream_error`, `unexpected_response`, `stale_search` o `unavailable`.
+  `upstream_error`, `unexpected_response`, `stale_search`, `ambiguous_author`,
+  `too_many_results` o `unavailable`.
   Un error no es converteix mai en `total: 0`.
 - **CTILC**: `echo_verified` exigeix que coincideixin els camps enviats i el
   patró visible. Un zero només és `no_matches` si la pàgina en dona el comptador
@@ -167,6 +172,10 @@ Variables d'entorn:
   aprofitables. `rows` de cada categoria és el nombre disponible abans de
   retallar-lo a `limit`, i `altres` recull els noms propis sense categoria. Cal
   que `lema_echo_verified` sigui cert abans de fer servir les dades.
+- **Obres**: `total` és el nombre d'obres que dona el portal i `returned` la
+  pàgina; `has_more` i `next_offset` serveixen per continuar. Si el `status` és
+  `ambiguous_author`, la llista `authors` porta els candidats i cal repetir la
+  consulta amb `autor_id`. `translation` indica una obra traduïda.
 - **Sinònims**: són propostes de significat. Cada grup indica `relation`
   (`synonym` o `antonym`); un antònim no es presenta mai com a sinònim. Amb
   `context`, els grups que hi coincideixen (etiqueta de sentit o formes que hi
@@ -180,6 +189,9 @@ Variables d'entorn:
 - Les cerques bàsiques del CTILC (`Formes2`, `FormesLema2`), la dispersió
   dialectal i les col·locacions d'una forma encara no s'exposen: calen fixtures
   i proves pròpies.
+- `obres` cerca per autor o per títol, no les dues coses alhora. Una cerca molt
+  àmplia pot superar el límit de resposta (4 MB per defecte); aleshores retorna
+  `too_many_results` i cal concretar el títol o l'autor.
 - L'exportació CSV del CTILC no s'implementa: l'endpoint no s'ha pogut verificar.
 - El Corpus de consultes de l'IEC es llegeix amb el nonce de la pàgina i
   l'endpoint AJAX de wpDataTables. Si el portal canvia el nonce o la taula,

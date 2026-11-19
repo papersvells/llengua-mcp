@@ -18,9 +18,9 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
 
 ## 2. Estat actual
 
-- Fase: **MVP complet; en ampliació**. El paquet `llengua_mcp` i els tests existeixen, i les 23 eines estan disponibles per a OpenCode amb `opencode.jsonc`.
+- Fase: **MVP complet; en ampliació**. El paquet `llengua_mcp` i els tests existeixen, i les 24 eines estan disponibles per a OpenCode amb `opencode.jsonc`.
 - Implementat i provat en directe el 18/11/2026:
-  - CTILC: `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `filtres_disponibles`, `xifres`, `etiquetes`, `salut`.
+  - CTILC: `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut`.
   - Optimot: `optimot_cerca`, `optimot_fitxa`.
   - Corpus de consultes de l'IEC: `consultes_iec` (1.176 respostes curades; nonce + AJAX de wpDataTables, `table_id=7`).
   - DIEC: `diec_consulta`.
@@ -37,7 +37,7 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
   Els temes són Fonètica, Lèxic, Morfologia, Onomàstica, Ortografia, Sintaxi i
   Altres. El filtre de pregunta és `columns[4][search][value]`.
 - **Critèria: WordPress** amb contingut en PDFs descarregables; l'API REST no publica els posts (0 elements). Poc valor cercable per a l'MCP.
-- Pendents: cerques bàsiques del CTILC (`Formes2`/`FormesLema2`), dispersió dialectal i general, obres i exportació.
+- Pendents: cerques bàsiques del CTILC (`Formes2`/`FormesLema2`), dispersió dialectal i general, obres descarregables i exportació.
 - Documents de referència:
   - `pla-mcp-ctilc.md` — pla inicial. És útil com a mapa del protocol, però **conté errors** i no s’ha d’implementar literalment.
   - `pla-mcp-ctilc-critiques.md` — revisió crítica amb verificació en directe, errors, correccions, golden tests i propostes. **És la font de veritat** quan els dos documents discrepin.
@@ -179,10 +179,11 @@ Aquestes regles estan verificades i no s’han de “simplificar” sense tornar
 18. **La continuació no barreja cerques.** Si el total o el patró canvien respecte del cursor, `continuar_cerca` retorna `stale_search` i descarta les files noves.
 19. **`strquery` és un canal CQL intern**, però no una API general. Permet reexecutar el CQL compilat; els rangs i el CQL simplificat no funcionen. No exposar-lo sense validació i advertències.
 20. **Els filtres canvien el total i l’eco.** Amb filtres, `Freqüència total` continua sent el total sense filtrar, i la xifra vàlida és `Quantitat filtrada`. Els camps `*Selec` (`autSelec`, `anySelec`, `varSelec`…) s’han de comparar amb els enviats. Si el resultat filtrat no té files, el portal pot retornar `1` com a valor de control: és `unexpected_response`, no una absència.
+21. **Les obres tenen pàgines pròpies.** `CTILCCorpus_Aut1.asp` llista autors (`select#autorL`), `Aut2.asp` retorna les obres d’un autor i `Obr2.asp` cerca per títol. La taula no es pagina i una cerca massa àmplia pot superar el límit de 4 MB: cal retornar `too_many_results` amb una pista accionable, no un error genèric.
 
 ## 8. Eines MCP
 
-Eines de consulta disponibles (23):
+Eines de consulta disponibles (24):
 
 - `optimot_cerca` i `optimot_fitxa` — primera prioritat per verificar correccions; distingir candidats de fitxes llegides. Els resultats s’ordenen per coincidència amb la consulta; si el mode és poc precís, `suggested_mode` proposa una cerca alternativa.
 - `consultes_iec` — respostes curades del Corpus de consultes de l'IEC. Serveix per trobar una pregunta semblant i veure com l'ha resolta l'IEC; retorna la pregunta, la resposta neta, el tema i els enllaços a la font. Cal citar la consulta i enllaçar la font; no substitueix la norma.
@@ -203,6 +204,7 @@ Prioritat dins l’adaptador CTILC:
 - `dispersio_cronologica(cursor)` — distribució per trams. Accepta el `search_cursor` de qualsevol cerca vàlida (o el `next_cursor`); si el patró o els totals no quadren, `data_valid` és fals, `periods` queda buit i les dades crues van a `unvalidated`.
 - `collocacions(lema, radi?, freq_min?, limit?)` — coaparicions dins d'una finestra de ±radi mots (0-5), agrupades per categoria gramatical. Els resultats són a `CTILCQCol_LemesAgrup2.asp` (POST amb `cadlema`, `radiE`/`radiD`, `freqMin`); la pàgina conté totes les files. Les de puntuació de l'apartat ALTRES es descarten (`excluded_rows`) i els noms propis es retornen a part, a `altres`. Cal validar `lema_echo_verified` abans de fer servir les dades.
 - `filtres_disponibles(cursor, tipus?, limit?, offset?)` — autors o títols d’un resultat concret, amb recompte. Serveix per triar valors vàlids abans de filtrar.
+- `obres(autor?, titol?, autor_id?, limit?, offset?)` — metadades de les obres per autor o per títol (any, tipus, gènere, classificació, traducció i varietat). Si un cognom dona diversos autors, retorna `ambiguous_author` i cal continuar amb `autor_id`.
 - `xifres()` — mida i cobertura del corpus.
 - `etiquetes()` — categories i codis morfològics llegibles.
 - `salut()` — comprova que el lloc respon i que l’echo de control és correcte. No crea ni esborra cursors.
@@ -217,7 +219,7 @@ retornar un total de control (1): és `unexpected_response` amb
 
 Posteriors:
 
-- `obres` i `obres_descarregables`;
+- `obres_descarregables`;
 - `exportar` (només si es verifica).
 
 ### Esquema de sortida mínim
@@ -341,11 +343,12 @@ Proves d’acceptació del producte des d’OpenCode:
 3. **Alternatives:** davant «Què puc posar en lloc de “maliciós” a “un somriure maliciós”?», consulta Softcatalà i explica quines opcions conserven el sentit i quines el canvien. Cita l’entrada i presenta les alternatives com a suggeriments.
 
 **Estat de la definició de fet:** els tres casos d’acceptació i les eines del
-CTILC ja estan implementats i provats en directe (18/11/2026), amb 163 tests
-sense xarxa i nou proves en directe optatives (`LLENGUA_LIVE=1`). Hi ha 23
-eines, incloent-hi el Corpus de consultes de l’IEC i els filtres del CTILC.
-Els pendents són l’ampliació de fonts (Critèria, DDLC) i les eines ajornades
-del CTILC (`Formes2`/`FormesLema2`, dispersió dialectal, obres, exportació).
+CTILC ja estan implementats i provats en directe (18–19/11/2026), amb 184 tests
+sense xarxa i tretze proves en directe optatives (`LLENGUA_LIVE=1`). Hi ha 24
+eines, incloent-hi el Corpus de consultes de l’IEC, els filtres i les obres del
+CTILC. Els pendents són l’ampliació de fonts (Critèria, DDLC) i les eines
+ajornades del CTILC (`Formes2`/`FormesLema2`, dispersió dialectal, obres
+descarregables, exportació).
 
 La part del CTILC es considera llesta quan:
 

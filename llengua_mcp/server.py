@@ -47,7 +47,9 @@ autoritat diferent i no les confonguis mai:
   ocurrències i taxa per milió; amb pocs testimonis, parla de concentració
   observada, no de tendència. Les col·locacions indiquen quines paraules hi
   coapareixen dins d'una finestra de mots; les seves xifres no es poden
-  comparar amb els recomptes de seqüència exacta.
+  comparar amb els recomptes de seqüència exacta. Les metadades de les obres
+  (any, gènere, varietat) es consulten amb `obres`; si un cognom dona diversos
+  autors, cal triar-ne un amb `autor_id`.
 - Softcatalà: sinònims. Són propostes de significat; tria les que encaixen en
   la frase i explica'n el matís.
 
@@ -576,6 +578,45 @@ async def filtres_disponibles(
         app.ctilc.filtres_disponibles(
             cursor,
             tipus=tipus,
+            limit=limit,
+            offset=offset,
+        ),
+    )
+
+
+@mcp.tool()
+async def obres(
+    autor: str | None = None,
+    titol: str | None = None,
+    autor_id: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Consulta les obres del CTILC per autor o per títol.
+
+    Retorna les metadades de cada obra: autor, títol, any, tipus, gènere,
+    classificació temàtica, traducció i varietat. Serveix per citar una obra
+    amb propietat i per comprovar els valors dels filtres.
+
+    Si la cerca per autor retorna més d'un candidat, la resposta té
+    `status: "ambiguous_author"` i una llista `authors`; torna a cridar l'eina
+    amb `autor_id` per triar-ne un. `autor` i `titol` no es poden combinar.
+
+    Args:
+        autor: Cognom o començament del cognom (per exemple «Sagarra»).
+        titol: Títol sencer o un fragment (per exemple «vida»).
+        autor_id: Identificador d'autor retornat per una resposta amb diversos
+            candidats.
+        limit: Nombre màxim d'obres (1-100).
+        offset: Posició inicial; usa `next_offset`.
+    """
+    app = await get_app()
+    return await _call(
+        "https://ctilc.iec.cat/scripts/CTILCCorpus_Aut1.asp",
+        app.ctilc.obres(
+            autor=autor,
+            titol=titol,
+            autor_id=autor_id,
             limit=limit,
             offset=offset,
         ),

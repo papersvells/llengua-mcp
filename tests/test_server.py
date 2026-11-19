@@ -29,6 +29,7 @@ async def test_tools_are_registered() -> None:
         "collocacions",
         "dispersio_cronologica",
         "filtres_disponibles",
+        "obres",
         "xifres",
         "etiquetes",
         "salut",

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, quote_plus
 
 from llengua_mcp.compiler import (
     compile_pattern,
@@ -34,6 +34,7 @@ from llengua_mcp.parsers.filtres import (
     parse_filter_values,
 )
 from llengua_mcp.parsers.fitxa import parse_fitxa
+from llengua_mcp.parsers.obres import parse_authors, parse_works
 from llengua_mcp.tagset import tagset_payload
 from llengua_mcp.text import clean_text, normalize_key
 
@@ -42,6 +43,9 @@ COOCUR_URL = f"{BASE}/CTILCQConc_Coocur2.asp"
 FITXA_URL = f"{BASE}/CTILCQFitxaLocalitzacio.asp"
 DADES_URL = f"{BASE}/CTILCQDadesNum.asp"
 CRON_URL = f"{BASE}/CTILCQDispersionsCron.asp"
+OBRES_AUT_URL = f"{BASE}/CTILCCorpus_Aut1.asp"
+OBRES_AUT2_URL = f"{BASE}/CTILCCorpus_Aut2.asp"
+OBRES_TITOL_URL = f"{BASE}/CTILCCorpus_Obr2.asp"
 
 CONTROL_TOTAL = 2136
 CONTROL_DATE = "2026-11-18"
@@ -970,6 +974,267 @@ class CtilcAdapter:
                 f"CTILC (IEC), filtres de {tipus} per a una consulta feta el {_date_label()}."
             ),
         }
+
+    def _obres_payload(
+        self,
+        *,
+        status: str,
+        query: dict[str, Any],
+        total: int | None,
+        works: list[dict[str, Any]],
+        offset: int,
+        limit: int,
+        note: str,
+        source: str,
+        retrieved_at: str,
+        authors: list[dict[str, str]] | None = None,
+        echo_verified: bool = True,
+        warnings: list[str] | None = None,
+        error: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        page = works[offset : offset + limit]
+        has_more = bool(works) and total is not None and offset + len(page) < total
+        parts = []
+        if query.get("autor"):
+            parts.append(f"autor «{query['autor']}»")
+        if query.get("titol"):
+            parts.append(f"títol «{query['titol']}»")
+        if query.get("autor_id"):
+            parts.append(f"autor_id {query['autor_id']}")
+        detail = ", ".join(parts) or "consulta"
+        payload: dict[str, Any] = {
+            "status": status,
+            "query": query,
+            "total": total,
+            "returned": len(page),
+            "has_more": has_more,
+            "next_offset": offset + len(page) if has_more else None,
+            "works": page,
+            "echo_verified": echo_verified,
+            "warnings": _dedupe(warnings or []),
+            "note": note,
+            "source": source,
+            "retrieved_at": retrieved_at,
+            "citation": (f"CTILC (IEC), obres ({detail}), consulta feta el {_date_label()}."),
+        }
+        if authors:
+            payload["authors"] = authors
+        if error:
+            payload["error"] = error
+        return payload
+
+    async def obres(
+        self,
+        *,
+        autor: str | None = None,
+        titol: str | None = None,
+        autor_id: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """Metadades de les obres del corpus, per autor o per títol."""
+
+        autor = clean_text(autor) if autor else ""
+        titol = clean_text(titol) if titol else ""
+        autor_id = clean_text(autor_id) if autor_id else ""
+        if not autor and not titol and not autor_id:
+            raise InvalidQueryError(
+                "Cal un autor, un títol o un `autor_id`.",
+                hint=(
+                    "Indica `autor` (cognom), `titol` (fragment) o l'`autor_id` "
+                    "retornat quan hi ha més d'un autor."
+                ),
+                source=OBRES_AUT_URL,
+            )
+        if autor and titol:
+            raise InvalidQueryError(
+                "La consulta per autor i la consulta per títol són cerques diferents.",
+                hint="Fes una sola cerca: `autor` o `titol`.",
+                source=OBRES_AUT_URL,
+            )
+        if offset < 0:
+            raise InvalidQueryError("`offset` ha de ser 0 o més gran.")
+        limit = max(1, min(limit, 100))
+
+        retrieved_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+        query = {
+            "autor": autor or None,
+            "titol": titol or None,
+            "autor_id": autor_id or None,
+        }
+        warnings: list[str] = []
+        authors: list[dict[str, str]] = []
+        echo_verified = True
+        selected_name: str | None = None
+
+        def too_many(source_url: str) -> dict[str, Any]:
+            return self._obres_payload(
+                status="too_many_results",
+                query=query,
+                total=None,
+                works=[],
+                offset=offset,
+                limit=limit,
+                echo_verified=echo_verified,
+                warnings=warnings + ["response_too_large"],
+                note=(
+                    "La llista d'obres és massa gran per tornar-la sencera. "
+                    "Indica un títol més específic o consulta per autor."
+                ),
+                source=source_url,
+                retrieved_at=retrieved_at,
+                error={
+                    "code": "too_many_results",
+                    "message": "La resposta del CTILC supera el límit de mida.",
+                    "hint": "Concreta més el títol o consulta per autor.",
+                },
+            )
+
+        if autor and not autor_id:
+            body = f"autor={quote_plus(autor)}"
+            result = await self.client.post_text(OBRES_AUT_URL, body, cache_ttl=86400)
+            parsed = parse_authors(result.text)
+            warnings.extend(result.warnings + parsed["warnings"])
+            authors = parsed["authors"]
+            echo_verified = normalize_key(parsed["echo"]) == normalize_key(autor)
+            if not echo_verified:
+                warnings.append("echo_unexpected")
+            if not authors:
+                if parsed["explicit_zero"]:
+                    return self._obres_payload(
+                        status="no_matches",
+                        query=query,
+                        total=0,
+                        works=[],
+                        offset=offset,
+                        limit=limit,
+                        echo_verified=echo_verified,
+                        warnings=warnings + ["zero_results"],
+                        note=(
+                            "No hi ha cap autor que comenci pel text indicat. "
+                            "Prova un cognom més curt o una altra grafia."
+                        ),
+                        source=OBRES_AUT_URL,
+                        retrieved_at=retrieved_at,
+                    )
+                return self._obres_payload(
+                    status="unexpected_response",
+                    query=query,
+                    total=None,
+                    works=[],
+                    offset=offset,
+                    limit=limit,
+                    echo_verified=echo_verified,
+                    warnings=warnings,
+                    note="La pàgina d'autors no té el format esperat.",
+                    source=OBRES_AUT_URL,
+                    retrieved_at=retrieved_at,
+                    error={
+                        "code": "unexpected_response",
+                        "message": "No s'ha pogut llegir la llista d'autors.",
+                        "hint": "El portal pot haver canviat; cal revisar el parser.",
+                    },
+                )
+            if len(authors) > 1:
+                exact = [
+                    item for item in authors if normalize_key(item["name"]) == normalize_key(autor)
+                ]
+                if len(exact) != 1:
+                    return self._obres_payload(
+                        status="ambiguous_author",
+                        query=query,
+                        total=None,
+                        works=[],
+                        offset=0,
+                        limit=limit,
+                        authors=authors,
+                        echo_verified=echo_verified,
+                        warnings=warnings + ["author_candidates"],
+                        note=(
+                            "Hi ha més d'un autor que coincideix. Torna a cridar "
+                            "`obres` amb `autor_id` (o escriu el nom complet)."
+                        ),
+                        source=OBRES_AUT_URL,
+                        retrieved_at=retrieved_at,
+                    )
+                selected_name = exact[0]["name"]
+                autor_id = exact[0]["id"]
+            else:
+                selected_name = authors[0]["name"]
+                autor_id = authors[0]["id"]
+
+        if autor_id:
+            try:
+                result = await self.client.post_text(
+                    OBRES_AUT2_URL, f"autorL={quote_plus(autor_id)}"
+                )
+            except UpstreamError as exc:
+                if "supera el límit" in exc.message:
+                    return too_many(OBRES_AUT2_URL)
+                raise
+            parsed = parse_works(result.text)
+            warnings.extend(result.warnings + parsed["warnings"])
+            if selected_name and parsed["works"]:
+                needle = normalize_key(selected_name)
+                names = [normalize_key(work.get("author") or "") for work in parsed["works"]]
+                if not any(needle in name or name in needle for name in names):
+                    warnings.append("author_echo_unexpected")
+            source = OBRES_AUT2_URL
+        else:
+            try:
+                result = await self.client.post_text(OBRES_TITOL_URL, f"obra={quote_plus(titol)}")
+            except UpstreamError as exc:
+                if "supera el límit" in exc.message:
+                    return too_many(OBRES_TITOL_URL)
+                raise
+            parsed = parse_works(result.text)
+            warnings.extend(result.warnings + parsed["warnings"])
+            echo_verified = normalize_key(parsed["echo"]) == normalize_key(titol)
+            if not echo_verified:
+                warnings.append("echo_unexpected")
+            source = OBRES_TITOL_URL
+
+        total = parsed["total"]
+        if total is None:
+            return self._obres_payload(
+                status="unexpected_response",
+                query=query,
+                total=None,
+                works=[],
+                offset=offset,
+                limit=limit,
+                echo_verified=echo_verified,
+                warnings=warnings,
+                note="La pàgina d'obres no té el format esperat.",
+                source=source,
+                retrieved_at=retrieved_at,
+                error={
+                    "code": "unexpected_response",
+                    "message": "No s'ha pogut llegir la llista d'obres.",
+                    "hint": "El portal pot haver canviat; cal revisar el parser.",
+                },
+            )
+
+        status = "ok" if total > 0 else "no_matches"
+        if status == "no_matches":
+            warnings.append("zero_results")
+        return self._obres_payload(
+            status=status,
+            query=query,
+            total=total,
+            works=parsed["works"],
+            offset=offset,
+            limit=limit,
+            echo_verified=echo_verified,
+            warnings=warnings,
+            note=(
+                "Metadades de les obres del corpus. `translation` indica una obra "
+                "traduïda; `classification` és la classificació temàtica de les "
+                "obres no literàries. Els resultats es paginen amb `offset`."
+            ),
+            source=source,
+            retrieved_at=retrieved_at,
+        )
 
     async def context(self, occurrence_id: str, *, obra: str | None = None) -> dict[str, Any]:
         if not occurrence_id.isdigit():

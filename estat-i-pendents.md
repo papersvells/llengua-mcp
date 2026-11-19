@@ -14,15 +14,15 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 163 passats, 12 omesos (els live).
-- **Tests en directe:** 12, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **Tests sense xarxa:** 184 passats, 13 omesos (els live).
+- **Tests en directe:** 13, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
   `.github/workflows/live.yml` executa les proves en directe cada dilluns a les
   06:00 UTC (o manualment des d'Actions), amb un reintent per absorbir talls de
   xarxa puntuals.
 - **Ruff:** `ruff format` i `ruff check` nets.
-- **Eines MCP:** 23 eines, agrupades per font.
+- **Eines MCP:** 24 eines, agrupades per font.
 
 ### Eines per font
 
@@ -36,7 +36,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 | OIEC | `oiec_cerca`, `oiec_text` | Implementat via `api-oiec.iec.cat` |
 | Gramàtiques | `gramatica_cerca`, `gramatica_text` | Implementat (GBU, GEIEC, GIEC) |
 | Softcatalà | `cerca_sinonims` | Dades locals versionades (CC BY 4.0) |
-| CTILC | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `filtres_disponibles`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
+| CTILC | `cerca`, `cerca_frase`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `collocacions`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
 
 ### Decisions consolidades
 
@@ -164,7 +164,7 @@ directe amb `somriure` el 18/11/2026.
 - Cerques bàsiques dedicades amb `Formes2` / `FormesLema2` (ara `cerca` va per
   `Coocur2` amb un sol element).
 - Dispersió dialectal i general.
-- Obres i obres descarregables.
+- Obres descarregables (les metadades per autor i títol ja són a `obres`).
 - **Exportació CSV:** `Qjson_concordancesCSV.asp` no està verificat i a les
   proves va retornar 500. No implementar com a eina estable fins a capturar
   una exportació real.
@@ -242,6 +242,22 @@ detectar problemes que els tests no veuen.
   `low_relevance`/`many_results` i `suggested_mode: "frase_exacta"`. Un
   `frase_exacta` sense resultats proposa `fitxes`.
 
+### 2.11 Obres del CTILC (resolt el 19/11/2026)
+
+Eina `obres(autor?, titol?, autor_id?, limit?, offset?)`. Consulta
+`CTILCCorpus_Aut1.asp`/`Aut2.asp` (autor) i `CTILCCorpus_Obr2.asp` (títol) i
+retorna any, tipus, gènere, classificació temàtica, traducció i varietat, amb
+`total`, paginació i `echo_verified`.
+
+- Si un cognom dona més d'un autor, retorna `ambiguous_author` amb `authors` i
+  cal continuar amb `autor_id`; un nom exacte es tria sol.
+- La llista no es pagina al portal i una cerca massa àmplia pot superar el
+  límit de 4 MB: es retorna `too_many_results` amb una pista, no un error.
+- Comprovat en directe: `obres(autor="Sagarra, Xavier")` → 1 obra (Diari de
+  Barcelona, 1992); `obres(titol="vida")` → 65 obres, 3 retornades amb
+  `limit=3`; `obres(autor="sagarra")` → 5 candidats.
+- `obres_descarregables` (`CTILCCorpus_Descarr.asp`) queda pendent.
+
 ---
 
 ## 3. Comandes útils
@@ -310,7 +326,7 @@ PY
 ## 4. Properes passes suggerides
 
 1. Reprendre les eines ajornades del CTILC (2.5): `Formes2`/`FormesLema2`,
-   dispersió dialectal i obres.
+   dispersió dialectal i obres descarregables.
 2. Revisar Critèria i la cobertura del DDLC a BDLex (2.6) si es volen citar.
 3. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
    fum abans de donar per bona una versió.
