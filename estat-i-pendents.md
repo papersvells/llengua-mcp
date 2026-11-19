@@ -167,10 +167,11 @@ directe amb `somriure` el 18/11/2026.
   farà cap eina de descàrrega d'obres: l'MCP no baixa textos sencers. Les
   metadades per autor i títol ja són a `obres` i el context d'una ocurrència a
   `context`.
-- **Exportació CSV:** `Qjson_concordancesCSV.asp` no està verificat i a les
-  proves va retornar 500. No implementar com a eina estable fins a capturar
-  una exportació real. Issue
-  [#2](https://github.com/papersvells/llengua-mcp/issues/2).
+- **Exportació CSV: descartada (issue #2 tancada el 19/11/2026).** L'únic
+  valor seria extreure moltes files de cop, que és extracció massiva del corpus
+  i queda fora d'abast. Per citar i llegir contextos n'hi ha prou amb les
+  ocurrències, el total, el cursor i la data que ja retorna la cerca. A més,
+  `Qjson_concordancesCSV.asp` no està verificat (500 a totes les variants).
 - **Cerca de noms propis:** `CTILCQConc_NomsPropis2.asp` és una cerca bàsica
   independent que encara no té eina. Issue
   [#5](https://github.com/papersvells/llengua-mcp/issues/5).
@@ -401,7 +402,7 @@ PY
 
 Les feines obertes es segueixen al repositori:
 
-1. Eines del CTILC obertes: exportació ([#2](https://github.com/papersvells/llengua-mcp/issues/2)), col·locacions per forma ([#3](https://github.com/papersvells/llengua-mcp/issues/3)), `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)), noms propis ([#5](https://github.com/papersvells/llengua-mcp/issues/5)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)).
+1. Eines del CTILC obertes: col·locacions per forma ([#3](https://github.com/papersvells/llengua-mcp/issues/3)), `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)), noms propis ([#5](https://github.com/papersvells/llengua-mcp/issues/5)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)).
 2. Fonts: Critèria ([#7](https://github.com/papersvells/llengua-mcp/issues/7)), sinònims Jané ([#8](https://github.com/papersvells/llengua-mcp/issues/8)) i cobertura del DDLC ([#9](https://github.com/papersvells/llengua-mcp/issues/9)).
 3. Fora del repositori, pendents de decisió: contactar amb `dcc@iec.cat` abans
    de publicar (§2.7) i repetir les proves d'ús des d'OpenCode amb dos models.

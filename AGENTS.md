@@ -37,8 +37,9 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
   Els temes són Fonètica, Lèxic, Morfologia, Onomàstica, Ortografia, Sintaxi i
   Altres. El filtre de pregunta és `columns[4][search][value]`.
 - **Critèria: WordPress** amb contingut en PDFs descarregables; l'API REST no publica els posts (0 elements). Poc valor cercable per a l'MCP.
-- Pendent: exportació (vegeu les issues del repositori). Les obres
-  descarregables queden fora d'abast: l'MCP no descarrega textos sencers.
+- Pendent: les eines de les issues obertes del CTILC (col·locacions per forma,
+  noms propis, `classtem`). L'exportació CSV i les obres descarregables queden
+  fora d'abast: l'MCP no fa extracció massiva ni descarrega textos sencers.
 - Documents de referència:
   - `pla-mcp-ctilc.md` — pla inicial. És útil com a mapa del protocol, però **conté errors** i no s’ha d’implementar literalment.
   - `pla-mcp-ctilc-critiques.md` — revisió crítica amb verificació en directe, errors, correccions, golden tests i propostes. **És la font de veritat** quan els dos documents discrepin.
@@ -174,7 +175,7 @@ Aquestes regles estan verificades i no s’han de “simplificar” sense tornar
 12. **Els nuclis poden contenir etiquetes i espais d’amplada zero.** Netejar `<...>`, `&nbsp;`, `\u200b`, `\xa0` i col·lapsar espais.
 13. **Col·locacions:** els resultats són a `CTILCQCol_LemesAgrup2.asp` / `FormesAgrup2.asp`, no a `Agrup1`. Calen `radiE`, `radiD` i `freqMin`; el resultat s’agrupa per categoria gramatical.
 14. **Fitxa de localització:** `CTILCQFitxaLocalitzacio.asp` és una fitxa d’una ocurrència, no d’una obra. El paràmetre `obra` de la URL **no** és l’ID canònic; cal llegir `Id. obra` de la pàgina.
-15. **CSV:** `Qjson_concordancesCSV.asp` no està verificat; a les proves va retornar 500. No implementar-lo com a tool estable fins a capturar una exportació real del navegador.
+15. **CSV:** `Qjson_concordancesCSV.asp` no està verificat; a les proves va retornar 500. Descartat: l'exportació massiva queda fora d'abast.
 16. **Un zero només és una absència verificada** si la pàgina dona un comptador explícit `0` i el missatge reconegut de cap coincidència. Un missatge de zero sense comptador, o un total il·legible, és `unexpected_response`, no `no_matches`.
 17. **L'eco visible també es valida.** Els camps ocults `formdata` han de coincidir amb la consulta enviada i el patró visible ha de ser equivalent; si no, el resultat no es presenta com una absència.
 18. **La continuació no barreja cerques.** Si el total o el patró canvien respecte del cursor, `continuar_cerca` retorna `stale_search` i descarta les files noves.
@@ -227,8 +228,8 @@ retornar un total de control (1): és `unexpected_response` amb
 
 Posteriors:
 
-- `exportar` (només si es verifica). Les obres descarregables queden fora
-  d'abast: l'MCP no descarrega obres.
+- Cap eina d'exportació ni de descàrrega: l'exportació CSV i les obres
+  descarregables queden fora d'abast.
 
 ### Esquema de sortida mínim
 
@@ -355,8 +356,8 @@ CTILC ja estan implementats i provats en directe (18–19/11/2026), amb 202 test
 sense xarxa i setze proves en directe optatives (`LLENGUA_LIVE=1`). Hi ha 28
 eines, incloent-hi el Corpus de consultes de l’IEC, els filtres, les obres, les
 dispersions i les cerques bàsiques del CTILC. Els pendents són l’ampliació de
-fonts (Critèria, DDLC) i l’exportació del CTILC; les obres descarregables queden
-fora d’abast.
+fonts (Critèria, DDLC); l'exportació CSV i les obres descarregables queden fora
+d'abast.
 
 La part del CTILC es considera llesta quan:
 

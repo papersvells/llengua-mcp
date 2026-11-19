@@ -218,7 +218,9 @@ Variables d'entorn:
 - `obres` cerca per autor o per títol, no les dues coses alhora. Una cerca molt
   àmplia pot superar el límit de resposta (4 MB per defecte); aleshores retorna
   `too_many_results` i cal concretar el títol o l'autor.
-- L'exportació CSV del CTILC no s'implementa: l'endpoint no s'ha pogut verificar.
+- L'exportació CSV del CTILC no s'implementa: extreure moltes files de cop és
+  extracció massiva del corpus i queda fora d'abast. Per citar contextos, les
+  cerques ja retornen les ocurrències amb el total, el cursor i la data.
 - El Corpus de consultes de l'IEC es llegeix amb el nonce de la pàgina i
   l'endpoint AJAX de wpDataTables. Si el portal canvia el nonce o la taula,
   l'eina retorna un error accionable; no se'n fan descàrregues massives.
