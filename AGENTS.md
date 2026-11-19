@@ -184,14 +184,14 @@ Aquestes regles estan verificades i no s’han de “simplificar” sense tornar
 
 Eines de consulta disponibles (23):
 
-- `optimot_cerca` i `optimot_fitxa` — primera prioritat per verificar correccions; distingir candidats de fitxes llegides.
+- `optimot_cerca` i `optimot_fitxa` — primera prioritat per verificar correccions; distingir candidats de fitxes llegides. Els resultats s’ordenen per coincidència amb la consulta; si el mode és poc precís, `suggested_mode` proposa una cerca alternativa.
 - `consultes_iec` — respostes curades del Corpus de consultes de l'IEC. Serveix per trobar una pregunta semblant i veure com l'ha resolta l'IEC; retorna la pregunta, la resposta neta, el tema i els enllaços a la font. Cal citar la consulta i enllaçar la font; no substitueix la norma.
 - `diec_consulta` — recuperar l’article i identificar l’accepció que justifica la resposta. Els articles llargs es retallen a `max_senses`; si `senses_truncated` és cert, apuja’l per veure les locucions del final.
 - `esadir_consulta` i `esadir_fitxa` — descobrir i llegir entrades d’estil. Si `esadir_consulta` retorna `no_entry_results`, cal obrir `suggested_fitxa` amb `esadir_fitxa` abans de concloure que no hi ha entrada.
 - `bdlex_consulta` — diccionaris històrics i dialectals, amb cerca per entrada, definició, exemple o text lliure. Usa el motor intern de BDLex, que no és una API pública documentada; si canvia, caldrà actualitzar el parser.
 - `oiec_cerca` i `oiec_text` — ortografia normativa: cerca per paraula i lectura d'apartats pel codi. L'API (`api-oiec.iec.cat`) és JSON net i sense autenticació.
 - `gramatica_cerca` i `gramatica_text` — regles gramaticals a la GBU, la GEIEC i la GIEC. La GIEC fa servir el patró de l'OIEC (`cercadic/{mode}` amb la paraula codificada dues vegades); la GBU i la GEIEC, `search_text`/`text_by_cody`.
-- `cerca_sinonims` — trobar alternatives a un mot o una expressió. Si l’usuari dona context, el model selecciona dues o tres opcions pertinents, quan n’hi hagi, i explica el matís de cadascuna. Pot comprovar-ne el sentit al DIEC i la combinació al CTILC.
+- `cerca_sinonims` — trobar alternatives a un mot o una expressió. Si l’usuari dona context, les agrupacions que hi coincideixen (etiqueta de sentit o formes) es retornen primer; el model selecciona dues o tres opcions pertinents, quan n’hi hagi, i explica el matís de cadascuna. Pot comprovar-ne el sentit al DIEC i la combinació al CTILC.
 
 Prioritat dins l’adaptador CTILC:
 

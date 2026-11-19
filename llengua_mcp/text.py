@@ -47,5 +47,15 @@ def normalize_key(value: str) -> str:
     return _WHITESPACE.sub(" ", text)
 
 
+def contains_words(haystack: str, needle: str) -> bool:
+    """Comprova si una paraula o una frase apareix com a paraules senceres."""
+
+    hay = normalize_key(haystack)
+    needle_key = normalize_key(needle)
+    if not hay or not needle_key:
+        return False
+    return re.search(rf"(?<!\w){re.escape(needle_key)}(?!\w)", hay) is not None
+
+
 def split_alternatives(value: str) -> list[str]:
     return [part.strip() for part in value.split("|") if part.strip()]

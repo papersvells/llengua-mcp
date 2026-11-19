@@ -107,9 +107,11 @@ async def optimot_cerca(
 
     Retorna candidats amb títol, font original, fragment i `detail_ref`. Per
     llegir una fitxa, passa el `detail_ref` a `optimot_fitxa`. El recompte de
-    resultats no és una freqüència d'ús. Per a una expressió concreta (per
-    exemple «tenir que»), prova el mode `frase_exacta`; per a un fenomen, cerca
-    amb `fitxes` paraules com «perífrasi d'obligació» o «haver de».
+    resultats no és una freqüència d'ús. Els resultats s'ordenen per coincidència
+    amb la consulta (`relevance`); si el mode és poc precís, la resposta inclou
+    `suggested_mode` amb una cerca alternativa. Per a una expressió concreta
+    (per exemple «tenir que»), prova el mode `frase_exacta`; per a un fenomen,
+    cerca amb `fitxes` paraules com «perífrasi d'obligació» o «haver de».
     """
     app = await get_app()
     return await _call(
@@ -374,7 +376,9 @@ async def cerca_sinonims(
 
     Cerca la paraula o la locució sencera. Si no hi ha entrada per a una
     expressió, no en busca els components per separat, perquè els sinònims
-    d'una part no equivalen als de l'expressió. Si dones un `context`, el model
+    d'una part no equivalen als de l'expressió. Si dones un `context`, les
+    agrupacions que hi coincideixen (etiqueta de sentit o formes que hi surten)
+    es retornen primer; el diccionari no porta definicions, així que el model
     ha de triar les opcions que hi encaixen i explicar-ne el matís.
     """
     app = await get_app()

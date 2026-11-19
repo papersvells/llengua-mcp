@@ -226,6 +226,22 @@ detectar problemes que els tests no veuen.
   o el servidor després de canviar el codi; ho hem documentat al README. Les
   correccions s'han verificat amb l'`App` directa i amb els tests en directe.
 
+### 2.10 Sinònims i Optimot (resolt el 19/11/2026)
+
+- **`cerca_sinonims` ja fa servir el `context`.** Abans l'acceptava i només el
+  tornava com a `context_note`. Ara les agrupacions amb una etiqueta de sentit
+  que apareix al context (`(cel)`, `(color)`) o amb una forma que hi surt es
+  retornen primer; cada grup porta `context_score` i `context_match`, i la
+  resposta indica `context_ranked` i `context_matches`. Si cap grup no hi
+  coincideix, l'avís és `context_no_match`: el diccionari no porta definicions
+  i no sempre es pot desambiguar.
+- **`optimot_cerca` ordena i avisa.** Els resultats s'ordenen per coincidència
+  amb la consulta (`relevance`: `title`, `snippet`, `tokens` o `none`). Si la
+  consulta és multiparaula i el mode `fitxes`/`basica` no hi troba cap
+  coincidència, o el portal retorna més de 200 documents, s'afegeixen
+  `low_relevance`/`many_results` i `suggested_mode: "frase_exacta"`. Un
+  `frase_exacta` sense resultats proposa `fitxes`.
+
 ---
 
 ## 3. Comandes útils

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from llengua_mcp.text import clean_text, normalize_key
+from llengua_mcp.text import clean_text, contains_words, normalize_key
 
 
 def test_clean_text_repairs_inline_tag_spacing() -> None:
@@ -14,3 +14,10 @@ def test_clean_text_removes_zero_width_and_nbsp() -> None:
 
 def test_normalize_key() -> None:
     assert normalize_key("  Maliciós ") == "malicios"
+
+
+def test_contains_words() -> None:
+    assert contains_words("El cel és clar", "cel")
+    assert not contains_words("Un excel·lent vestit", "cel")
+    assert contains_words("No és acceptable tenir que + infinitiu", "tenir que")
+    assert not contains_words("important", "tant")

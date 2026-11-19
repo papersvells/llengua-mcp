@@ -22,7 +22,11 @@ class SoftcatalaAdapter:
         limit: int = 15,
     ) -> dict[str, Any]:
         paraula = clean_text(paraula)
-        result = self.index.lookup(paraula, limit=max(1, min(limit, 50)))
+        result = self.index.lookup(
+            paraula,
+            context=clean_text(context) if context else None,
+            limit=max(1, min(limit, 50)),
+        )
         payload: dict[str, Any] = {
             **result,
             "query": {"paraula": paraula, "context": clean_text(context) if context else None},
@@ -37,9 +41,12 @@ class SoftcatalaAdapter:
                 + f": {paraula}"
             ),
             "context_note": (
-                "Els sinònims són propostes de significat. Si hi ha un context, "
-                "cal triar les opcions que hi encaixen i explicar-ne el matís; "
-                "no totes són intercanviables."
+                "Els sinònims són propostes de significat. Amb context, es "
+                "prioricen les agrupacions que hi coincideixen (etiqueta de "
+                "sentit o formes que hi apareixen); si no n'hi ha cap, l'avís és "
+                "`context_no_match`. El diccionari no porta definicions: cal "
+                "triar les opcions que hi encaixen i explicar-ne el matís; no "
+                "totes són intercanviables."
             )
             if context
             else (

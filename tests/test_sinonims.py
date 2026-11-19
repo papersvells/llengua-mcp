@@ -56,3 +56,56 @@ def test_antonym_is_not_offered_as_synonym(tmp_path) -> None:
     assert group["relation"] == "synonym"
     assert {item["form"] for item in group["synonyms"]} == {"ras", "clar"}
     assert [item["form"] for item in group["antonyms"]] == ["ennuvolat"]
+
+
+def test_context_prioritza_l_etiqueta_de_sentit(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text(
+        "-adj (cel): ras, serè, clar\n-adj (color): alegre, viu, clar\n-adj: net, clar\n",
+        encoding="utf-8",
+    )
+    index = SinonimsIndex(tmp_path)
+    result = index.lookup("clar", context="El cel és clar")
+    assert result["status"] == "ok"
+    assert result["context_ranked"] is True
+    assert result["context_matches"] == 1
+    first = result["groups"][0]
+    assert first["context"] == "cel"
+    assert first["context_score"] == 2
+    assert first["context_match"] == ["etiqueta"]
+    assert "context_no_match" not in result["warnings"]
+
+
+def test_context_sense_coincidencia_ho_avisa(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text(
+        "-adj (cel): ras, serè, clar\n-adj (color): alegre, viu, clar\n",
+        encoding="utf-8",
+    )
+    index = SinonimsIndex(tmp_path)
+    result = index.lookup("clar", context="Una cosa qualsevol")
+    assert result["context_matches"] == 0
+    assert "context_no_match" in result["warnings"]
+    assert all(group["context_score"] == 0 for group in result["groups"])
+
+
+def test_context_pot_coincidir_amb_una_forma(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text(
+        "-v: anar darrere, esperar\n-v: desitjar, esperar\n",
+        encoding="utf-8",
+    )
+    index = SinonimsIndex(tmp_path)
+    result = index.lookup("esperar", context="Va anar darrere d'ell")
+    first = result["groups"][0]
+    assert first["context_score"] == 2
+    assert first["context_match"] == ["forma"]
+    assert {item["form"] for item in first["synonyms"]} == {"anar darrere"}
+
+
+def test_context_no_confon_una_etiqueta_amb_un_tros_de_mot(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text(
+        "-adj (cel): ras, clar\n-adj (color): viu, clar\n",
+        encoding="utf-8",
+    )
+    index = SinonimsIndex(tmp_path)
+    result = index.lookup("clar", context="Un excel·lent vestit")
+    assert result["context_matches"] == 0
+    assert "context_no_match" in result["warnings"]

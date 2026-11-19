@@ -137,7 +137,10 @@ Variables d'entorn:
   (1): no es presenta com una absència. Un valor de filtre inventat pot donar
   aquest cas; comprova'l amb `filtres_disponibles`.
 - **Optimot**: el nombre de resultats és un recompte de documents del portal, no
-  una freqüència d'ús. Cal obrir la fitxa abans de citar-ne el criteri.
+  una freqüència d'ús. Cal obrir la fitxa abans de citar-ne el criteri. Els
+  resultats s'ordenen per coincidència amb la consulta (`relevance`) i, si el
+  mode és poc precís, `suggested_mode` proposa una alternativa (per exemple,
+  `frase_exacta`).
 - **Consultes de l'IEC**: són respostes curades, no la norma. Cita la consulta i
   enllaça la font que citen (GIEC, DIEC, Optimot). `camp="pregunta"` limita la
   cerca al títol de la consulta i sol ser més precís que la cerca global.
@@ -165,8 +168,11 @@ Variables d'entorn:
   retallar-lo a `limit`, i `altres` recull els noms propis sense categoria. Cal
   que `lema_echo_verified` sigui cert abans de fer servir les dades.
 - **Sinònims**: són propostes de significat. Cada grup indica `relation`
-  (`synonym` o `antonym`); un antònim no es presenta mai com a sinònim. Cal
-  triar les opcions segons la frase i explicar-ne el matís.
+  (`synonym` o `antonym`); un antònim no es presenta mai com a sinònim. Amb
+  `context`, els grups que hi coincideixen (etiqueta de sentit o formes que hi
+  surten) es retornen primer; `context_no_match` vol dir que no s'ha pogut
+  prioritzar cap grup. Cal triar les opcions segons la frase i explicar-ne el
+  matís.
 
 ## Límits coneguts
 

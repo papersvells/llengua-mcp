@@ -8,10 +8,11 @@ from typing import Any
 from llengua_mcp.errors import InvalidQueryError, UnexpectedResponseError
 from llengua_mcp.http import HttpClient
 from llengua_mcp.parsers.optimot import decode_ref, parse_detail, parse_search
-from llengua_mcp.text import clean_text
+from llengua_mcp.text import clean_text, contains_words, normalize_key
 
 BASE_URL = "https://aplicacions.llengua.gencat.cat/llc/AppJava/index.html"
 SOURCE = BASE_URL
+MANY_RESULTS = 200
 
 MODES = {
     "fitxes": "cerca.fitxes",
@@ -24,6 +25,29 @@ MODES = {
 
 def _now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _relevance(query: str, item: dict[str, Any]) -> tuple[int, str]:
+    """Ordena un resultat segons com hi apareix la consulta.
+
+    El portal no dona una puntuació de rellevància: com a màxim, podem
+    comprovar si la frase és al títol, al fragment o si hi són totes les
+    paraules. És un senyal per ordenar, no una mesura de qualitat.
+    """
+
+    query_key = normalize_key(query)
+    if not query_key:
+        return 0, "none"
+    title = item.get("title") or ""
+    snippet = item.get("snippet") or ""
+    if contains_words(title, query_key):
+        return 3, "title"
+    if contains_words(snippet, query_key):
+        return 2, "snippet"
+    tokens = query_key.split()
+    if len(tokens) > 1 and all(contains_words(f"{title} {snippet}", token) for token in tokens):
+        return 1, "tokens"
+    return 0, "none"
 
 
 class OptimotAdapter:
@@ -64,7 +88,16 @@ class OptimotAdapter:
         parsed = parse_search(result.text)
 
         count = parsed["count"]
-        results = parsed["results"][: max(1, limit)]
+        scored = []
+        for index, item in enumerate(parsed["results"]):
+            score, label = _relevance(consulta, item)
+            item["relevance"] = label
+            scored.append((score, index, item))
+        # Ordenació estable: primer els resultats que contenen la consulta.
+        scored.sort(key=lambda entry: (-entry[0], entry[1]))
+        max_score = scored[0][0] if scored else 0
+        results = [item for _, _, item in scored][: max(1, limit)]
+
         status = "ok"
         error = None
         if count is None and not results:
@@ -93,6 +126,20 @@ class OptimotAdapter:
             warnings.append("truncated")
         if result.warnings:
             warnings.extend(result.warnings)
+        multiword = len(normalize_key(consulta).split()) > 1
+        if count is not None and count > MANY_RESULTS:
+            warnings.append("many_results")
+        if multiword and results and max_score == 0:
+            warnings.append("low_relevance")
+        suggested_mode = None
+        if mode == "frase_exacta" and count == 0:
+            suggested_mode = "fitxes"
+        elif (
+            mode in {"fitxes", "basica"}
+            and multiword
+            and ((count is not None and count > MANY_RESULTS) or max_score == 0)
+        ):
+            suggested_mode = "frase_exacta"
 
         payload: dict[str, Any] = {
             "status": status,
@@ -104,7 +151,10 @@ class OptimotAdapter:
             "warnings": list(dict.fromkeys(warnings)),
             "note": (
                 "El nombre de resultats és un recompte de documents del portal, "
-                "no una freqüència d'ús ni un recompte d'ocurrències."
+                "no una freqüència d'ús ni un recompte d'ocurrències. Els "
+                "resultats s'ordenen per coincidència amb la consulta "
+                "(`relevance`); si el mode no és prou precís, `suggested_mode` "
+                "proposa una alternativa."
             ),
             "source": str(result.url),
             "retrieved_at": _now(),
@@ -116,6 +166,8 @@ class OptimotAdapter:
         }
         if error:
             payload["error"] = error
+        if suggested_mode:
+            payload["suggested_mode"] = suggested_mode
         return payload
 
     async def fitxa(self, ref: str) -> dict[str, Any]:

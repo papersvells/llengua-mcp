@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from llengua_mcp.errors import DataUnavailableError
-from llengua_mcp.text import clean_text, normalize_key
+from llengua_mcp.text import clean_text, contains_words, normalize_key
 
 DATA_FILE = "sinonims.txt"
 META_FILE = "sinonims.meta.json"
@@ -122,7 +122,44 @@ class SinonimsIndex:
                 self.meta = {}
         self._loaded = True
 
-    def lookup(self, term: str, *, limit: int = 15) -> dict[str, Any]:
+    @staticmethod
+    def _context_score(
+        group: SynonymGroup,
+        key: str,
+        context_key: str,
+        context_tokens: set[str],
+    ) -> tuple[int, list[str]]:
+        """Puntua una agrupació segons el context donat.
+
+        Les etiquetes de sentit (``(cel)``, ``(color)``) i les formes que
+        apareixen literalment al context són els senyals disponibles: el
+        diccionari no porta definicions, així que no es pot desambiguar més.
+        """
+
+        if not context_key:
+            return 0, []
+        score = 0
+        reasons: list[str] = []
+        label = normalize_key(group.context)
+        if label and set(label.split()) & context_tokens:
+            score += 2
+            reasons.append("etiqueta")
+        for item in group.synonyms + group.antonyms:
+            item_key = normalize_key(item.form)
+            if not item_key or item_key == key:
+                continue
+            if " " in item_key:
+                if contains_words(context_key, item_key):
+                    score += 2
+                    reasons.append("forma")
+                    break
+            elif item_key in context_tokens:
+                score += 1
+                reasons.append("forma")
+                break
+        return score, reasons
+
+    def lookup(self, term: str, *, context: str | None = None, limit: int = 15) -> dict[str, Any]:
         self.load()
         key = normalize_key(term)
         group_indexes = self._index.get(key, [])
@@ -139,11 +176,25 @@ class SinonimsIndex:
                 ),
             }
 
+        context_key = normalize_key(context) if context else ""
+        context_tokens = set(context_key.split()) if context_key else set()
+        ordered: list[tuple[int, int, int, list[str]]] = []
+        for order, index in enumerate(group_indexes):
+            group = self.groups[index]
+            score, reasons = self._context_score(group, key, context_key, context_tokens)
+            ordered.append((score, order, index, reasons))
+        # Ordenació estable: primer les agrupacions que encaixen amb el context,
+        # després les que ja venien abans.
+        ordered.sort(key=lambda entry: (-entry[0], entry[1]))
+
         seen: set[str] = set()
         groups: list[dict[str, Any]] = []
         count = 0
         truncated = False
-        for index in group_indexes:
+        matched_groups = 0
+        for score, _, index, reasons in ordered:
+            if score > 0:
+                matched_groups += 1
             group = self.groups[index]
             term_is_antonym = any(normalize_key(item.form) == key for item in group.antonyms)
             if term_is_antonym:
@@ -161,15 +212,17 @@ class SinonimsIndex:
                     opposites.append(item.payload())
                     count += 1
                 if opposites:
-                    groups.append(
-                        {
-                            "pos": group.pos,
-                            "context": group.context,
-                            "relation": "antonym",
-                            "synonyms": [],
-                            "antonyms": opposites,
-                        }
-                    )
+                    payload = {
+                        "pos": group.pos,
+                        "context": group.context,
+                        "relation": "antonym",
+                        "synonyms": [],
+                        "antonyms": opposites,
+                        "context_score": score,
+                    }
+                    if reasons:
+                        payload["context_match"] = reasons
+                    groups.append(payload)
                 continue
 
             synonyms = []
@@ -187,26 +240,32 @@ class SinonimsIndex:
                 item.payload() for item in group.antonyms if normalize_key(item.form) != key
             ]
             if synonyms or antonyms:
-                groups.append(
-                    {
-                        "pos": group.pos,
-                        "context": group.context,
-                        "relation": "synonym",
-                        "synonyms": synonyms,
-                        "antonyms": antonyms,
-                    }
-                )
+                payload = {
+                    "pos": group.pos,
+                    "context": group.context,
+                    "relation": "synonym",
+                    "synonyms": synonyms,
+                    "antonyms": antonyms,
+                    "context_score": score,
+                }
+                if reasons:
+                    payload["context_match"] = reasons
+                groups.append(payload)
             if truncated:
                 break
 
         warnings: list[str] = []
         if truncated:
             warnings.append("truncated")
+        if context_key and matched_groups == 0:
+            warnings.append("context_no_match")
         return {
             "status": "ok",
             "entry": clean_text(term),
             "groups": groups,
             "warnings": warnings,
+            "context_ranked": bool(context_key),
+            "context_matches": matched_groups,
             "license": LICENSE,
             "source": SOURCE_URL,
             "data_version": self.meta,
