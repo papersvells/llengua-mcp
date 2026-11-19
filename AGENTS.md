@@ -37,7 +37,8 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
   Els temes són Fonètica, Lèxic, Morfologia, Onomàstica, Ortografia, Sintaxi i
   Altres. El filtre de pregunta és `columns[4][search][value]`.
 - **Critèria: WordPress** amb contingut en PDFs descarregables; l'API REST no publica els posts (0 elements). Poc valor cercable per a l'MCP.
-- Pendents: obres descarregables i exportació (vegeu les issues del repositori).
+- Pendent: exportació (vegeu les issues del repositori). Les obres
+  descarregables queden fora d'abast: l'MCP no descarrega textos sencers.
 - Documents de referència:
   - `pla-mcp-ctilc.md` — pla inicial. És útil com a mapa del protocol, però **conté errors** i no s’ha d’implementar literalment.
   - `pla-mcp-ctilc-critiques.md` — revisió crítica amb verificació en directe, errors, correccions, golden tests i propostes. **És la font de veritat** quan els dos documents discrepin.
@@ -226,8 +227,8 @@ retornar un total de control (1): és `unexpected_response` amb
 
 Posteriors:
 
-- `obres_descarregables`;
-- `exportar` (només si es verifica).
+- `exportar` (només si es verifica). Les obres descarregables queden fora
+  d'abast: l'MCP no descarrega obres.
 
 ### Esquema de sortida mínim
 
@@ -354,8 +355,8 @@ CTILC ja estan implementats i provats en directe (18–19/11/2026), amb 202 test
 sense xarxa i setze proves en directe optatives (`LLENGUA_LIVE=1`). Hi ha 28
 eines, incloent-hi el Corpus de consultes de l’IEC, els filtres, les obres, les
 dispersions i les cerques bàsiques del CTILC. Els pendents són l’ampliació de
-fonts (Critèria, DDLC) i les eines ajornades del CTILC (obres descarregables,
-exportació).
+fonts (Critèria, DDLC) i l’exportació del CTILC; les obres descarregables queden
+fora d’abast.
 
 La part del CTILC es considera llesta quan:
 

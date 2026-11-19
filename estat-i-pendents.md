@@ -163,8 +163,10 @@ directe amb `somriure` el 18/11/2026.
   Queden fora el `classtem` (taxonomia temàtica) i la validació global
   d'autors fora del resultat. Issue
   [#4](https://github.com/papersvells/llengua-mcp/issues/4).
-- Obres descarregables (les metadades per autor i títol ja són a `obres`).
-  Issue [#1](https://github.com/papersvells/llengua-mcp/issues/1).
+- **Obres descarregables: descartat (issue #1 tancada el 19/11/2026).** No es
+  farà cap eina de descàrrega d'obres: l'MCP no baixa textos sencers. Les
+  metadades per autor i títol ja són a `obres` i el context d'una ocurrència a
+  `context`.
 - **Exportació CSV:** `Qjson_concordancesCSV.asp` no està verificat i a les
   proves va retornar 500. No implementar com a eina estable fins a capturar
   una exportació real. Issue
@@ -263,7 +265,9 @@ retorna any, tipus, gènere, classificació temàtica, traducció i varietat, am
 - Comprovat en directe: `obres(autor="Sagarra, Xavier")` → 1 obra (Diari de
   Barcelona, 1992); `obres(titol="vida")` → 65 obres, 3 retornades amb
   `limit=3`; `obres(autor="sagarra")` → 5 candidats.
-- `obres_descarregables` (`CTILCCorpus_Descarr.asp`) queda pendent.
+- `obres_descarregables` (`CTILCCorpus_Descarr.asp`): **descartat** el
+  19/11/2026. No es descarregaran obres des de l'MCP; l'eina `obres` dona les
+  metadades.
 
 ### 2.12 Dispersió dialectal del CTILC (resolt el 19/11/2026)
 
@@ -397,7 +401,7 @@ PY
 
 Les feines obertes es segueixen al repositori:
 
-1. Eines del CTILC ajornades ([#1](https://github.com/papersvells/llengua-mcp/issues/1)), exportació ([#2](https://github.com/papersvells/llengua-mcp/issues/2)), col·locacions per forma ([#3](https://github.com/papersvells/llengua-mcp/issues/3)), `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)), noms propis ([#5](https://github.com/papersvells/llengua-mcp/issues/5)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)).
+1. Eines del CTILC obertes: exportació ([#2](https://github.com/papersvells/llengua-mcp/issues/2)), col·locacions per forma ([#3](https://github.com/papersvells/llengua-mcp/issues/3)), `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)), noms propis ([#5](https://github.com/papersvells/llengua-mcp/issues/5)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)).
 2. Fonts: Critèria ([#7](https://github.com/papersvells/llengua-mcp/issues/7)), sinònims Jané ([#8](https://github.com/papersvells/llengua-mcp/issues/8)) i cobertura del DDLC ([#9](https://github.com/papersvells/llengua-mcp/issues/9)).
 3. Fora del repositori, pendents de decisió: contactar amb `dcc@iec.cat` abans
    de publicar (§2.7) i repetir les proves d'ús des d'OpenCode amb dos models.
