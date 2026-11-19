@@ -37,7 +37,7 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
   Els temes són Fonètica, Lèxic, Morfologia, Onomàstica, Ortografia, Sintaxi i
   Altres. El filtre de pregunta és `columns[4][search][value]`.
 - **Critèria: WordPress** amb contingut en PDFs descarregables; l'API REST no publica els posts (0 elements). Poc valor cercable per a l'MCP.
-- Pendents: obres descarregables i exportació.
+- Pendents: obres descarregables i exportació (vegeu les issues del repositori).
 - Documents de referència:
   - `pla-mcp-ctilc.md` — pla inicial. És útil com a mapa del protocol, però **conté errors** i no s’ha d’implementar literalment.
   - `pla-mcp-ctilc-critiques.md` — revisió crítica amb verificació en directe, errors, correccions, golden tests i propostes. **És la font de veritat** quan els dos documents discrepin.

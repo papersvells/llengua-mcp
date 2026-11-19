@@ -112,7 +112,8 @@ directe amb `somriure` el 18/11/2026.
 - **Apartat ALTRES: resolt.** Els 84 noms propis es retornen a `altres`; les 18
   files de puntuació es descarten.
 - **Pendent:** col·locacions d'una forma (`CTILCQCol_FormesAgrup2.asp`); només
-  hi ha col·locacions de lema.
+  hi ha col·locacions de lema. Issue
+  [#3](https://github.com/papersvells/llengua-mcp/issues/3).
 
 ### 2.2 Gramàtiques (GBU, GEIEC, GIEC) (resolt el 18/11/2026)
 
@@ -160,11 +161,17 @@ directe amb `somriure` el 18/11/2026.
   filtres; si no hi ha files, el portal pot retornar `1` com a valor de
   control i es tracta com a `unexpected_response`, no com una absència.
   Queden fora el `classtem` (taxonomia temàtica) i la validació global
-  d'autors fora del resultat.
+  d'autors fora del resultat. Issue
+  [#4](https://github.com/papersvells/llengua-mcp/issues/4).
 - Obres descarregables (les metadades per autor i títol ja són a `obres`).
+  Issue [#1](https://github.com/papersvells/llengua-mcp/issues/1).
 - **Exportació CSV:** `Qjson_concordancesCSV.asp` no està verificat i a les
   proves va retornar 500. No implementar com a eina estable fins a capturar
-  una exportació real.
+  una exportació real. Issue
+  [#2](https://github.com/papersvells/llengua-mcp/issues/2).
+- **Cerca de noms propis:** `CTILCQConc_NomsPropis2.asp` és una cerca bàsica
+  independent que encara no té eina. Issue
+  [#5](https://github.com/papersvells/llengua-mcp/issues/5).
 
 ### 2.6 Fonts encara no integrades
 
@@ -177,11 +184,14 @@ directe amb `somriure` el 18/11/2026.
   feia servir `table_id=1` (la portada) en lloc de `7`.
 - **Critèria.** Només explorat parcialment. L'API REST `/wp-json/wp/v2/types`
   respon; no hi ha evidència que no tingui contingut cercable. Cal revisar-ho
-  abans de descartar-ho.
+  abans de descartar-ho. Issue
+  [#7](https://github.com/papersvells/llengua-mcp/issues/7).
 - **Sinònims Jané.** No implementat. Revisar si aporta alguna cosa respecte de
-  Softcatalà.
+  Softcatalà. Issue
+  [#8](https://github.com/papersvells/llengua-mcp/issues/8).
 - **Cobertura del DDLC a BDLex.** Afirmada en converses anteriors sense
-  verificació específica; comprovar-ho si es vol citar.
+  verificació específica; comprovar-ho si es vol citar. Issue
+  [#9](https://github.com/papersvells/llengua-mcp/issues/9).
 
 ### 2.7 Legal i publicació
 
@@ -285,7 +295,8 @@ Eines `cerca_forma(forma, mode?, cg?, limit?, offset?)` i
   morfologia i recompte) i una pàgina d'`occurrences`, amb `page`, `pages`,
   `has_more` i `next_offset`.
 - Modes verificats: 0 coincident, 1 comença per, 2 acaba en, 3 conté. Els modes
-  4–6 no s'exposen.
+  4–6 no s'exposen i retornen 0 al portal. Issue
+  [#6](https://github.com/papersvells/llengua-mcp/issues/6).
 - La paginació és `iStart`/`iOffset` i no necessita el `resultat`; es pot
   demanar qualsevol pàgina amb `offset`.
 - El panell `formesSelec` té ordres diferents: `form|lema CG|CM` a `Formes2` i
@@ -384,7 +395,11 @@ PY
 
 ## 4. Properes passes suggerides
 
-1. Reprendre les eines ajornades del CTILC (2.5): obres descarregables.
-2. Revisar Critèria i la cobertura del DDLC a BDLex (2.6) si es volen citar.
-3. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
+Les feines obertes es segueixen al repositori:
+
+1. Eines del CTILC ajornades ([#1](https://github.com/papersvells/llengua-mcp/issues/1)), exportació ([#2](https://github.com/papersvells/llengua-mcp/issues/2)), col·locacions per forma ([#3](https://github.com/papersvells/llengua-mcp/issues/3)), `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)), noms propis ([#5](https://github.com/papersvells/llengua-mcp/issues/5)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)).
+2. Fonts: Critèria ([#7](https://github.com/papersvells/llengua-mcp/issues/7)), sinònims Jané ([#8](https://github.com/papersvells/llengua-mcp/issues/8)) i cobertura del DDLC ([#9](https://github.com/papersvells/llengua-mcp/issues/9)).
+3. Fora del repositori, pendents de decisió: contactar amb `dcc@iec.cat` abans
+   de publicar (§2.7) i repetir les proves d'ús des d'OpenCode amb dos models.
+4. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
    fum abans de donar per bona una versió.
