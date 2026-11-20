@@ -18,7 +18,7 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
 
 ## 2. Estat actual
 
-- Fase: **MVP complet; en ampliació**. El paquet `llengua_mcp` i els tests existeixen, i les 29 eines estan disponibles per a OpenCode amb `opencode.jsonc`.
+- Fase: **MVP complet; en ampliació**. El paquet `llengua_mcp` i els tests existeixen, i les 30 eines estan disponibles per a OpenCode amb `opencode.jsonc`.
 - Implementat i provat en directe el 18/11/2026:
   - CTILC: `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `dispersio_general`, `collocacions`, `collocacions_forma`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut`.
   - Optimot: `optimot_cerca`, `optimot_fitxa`.
@@ -29,6 +29,8 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
   - OIEC: `oiec_cerca`, `oiec_text` (ortografia normativa, via `api-oiec.iec.cat`).
   - Gramàtiques: `gramatica_cerca`, `gramatica_text` (GBU, GEIEC i GIEC, amb APIs JSON equivalents).
   - Softcatalà: `cerca_sinonims` amb dades locals versionades.
+  - Jané: `jane_cerca` (implementat el 20/11/2026; nonce + AJAX de wpDataTables,
+    taules 1, 4 i 5 per a lema, general i funció sintàctica).
 - **Corpus de consultes lingüístiques de l’IEC: implementat el 18/11/2026.**
   La pàgina `/cerca-general/` porta un nonce (`wdtNonceFrontendServerSide_7`)
   que cal enviar a `admin-ajax.php?action=get_wdtable&table_id=7`. Amb el nonce
@@ -97,12 +99,10 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
 | [OIEC](https://oiec.iec.cat/) | Per regles d’ortografia (apòstrofs, guionets, accents, dièresis) que afecten molts mots. Citar el codi i el títol de l’apartat. |
 | [GBU](https://gbu.iec.cat/inici), [GEIEC](https://geiec.iec.cat/inici) i [GIEC](https://giec.iec.cat/) | Per explicar una regla gramatical. La GBU és la consulta d’ús; la GEIEC, la versió en línia; la GIEC, la descripció especialitzada. |
 | [Diccionari de sinònims de Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) | Per trobar alternatives. Cercar primer la paraula o locució sencera; si no hi ha entrada per a *de mala fe*, no donar sinònims de *fe* com si fossin de la locució. Prioritzar una còpia local versionada de les dades amb [atribució i llicència CC BY 4.0](https://www.softcatala.org/diccionari-de-sinonims/credits/). |
+| [Diccionari de sinònims d'Albert Jané](https://sinonims.iec.cat/) | Per triar entre sentits: les accepcions numerades (`1.`, `2.`) separen significats i ajuden quan Softcatalà no desambigua. `mode="general"` cerca dins les llistes de sinònims; `mode="funcio"`, per funció sintàctica. Llicència CC BY-NC-ND 3.0: ús no comercial, entrades sense transformar i atribució a Albert Jané i a l'IEC; no barrejar amb les dades de Softcatalà. |
 
-**Fonts addicionals previstes** (útils per respondre dubtes, encara no implementades):
-
-| Font | Quan i com s'ha d'utilitzar |
-|---|---|
-| Diccionari de sinònims de Jané | Pendent d'avaluació ([#8](https://github.com/papersvells/llengua-mcp/issues/8) oberta): comparar cobertura i llicència amb el diccionari de Softcatalà (CC BY 4.0) abans d'integrar res. |
+**Fonts addicionals previstes:** cap ara mateix. Les decisions obertes es
+segueixen al repositori (issues).
 
 **Criteris específics del corpus:**
 
@@ -193,7 +193,7 @@ Aquestes regles estan verificades i no s’han de “simplificar” sense tornar
 
 ## 8. Eines MCP
 
-Eines de consulta disponibles (29):
+Eines de consulta disponibles (30):
 
 - `optimot_cerca` i `optimot_fitxa` — primera prioritat per verificar correccions; distingir candidats de fitxes llegides. Els resultats s’ordenen per coincidència amb la consulta; si el mode és poc precís, `suggested_mode` proposa una cerca alternativa.
 - `consultes_iec` — respostes curades del Corpus de consultes de l'IEC. Serveix per trobar una pregunta semblant i veure com l'ha resolta l'IEC; retorna la pregunta, la resposta neta, el tema i els enllaços a la font. Cal citar la consulta i enllaçar la font; no substitueix la norma.
@@ -203,6 +203,7 @@ Eines de consulta disponibles (29):
 - `oiec_cerca` i `oiec_text` — ortografia normativa: cerca per paraula i lectura d'apartats pel codi. L'API (`api-oiec.iec.cat`) és JSON net i sense autenticació.
 - `gramatica_cerca` i `gramatica_text` — regles gramaticals a la GBU, la GEIEC i la GIEC. La GIEC fa servir el patró de l'OIEC (`cercadic/{mode}` amb la paraula codificada dues vegades); la GBU i la GEIEC, `search_text`/`text_by_cody`.
 - `cerca_sinonims` — trobar alternatives a un mot o una expressió. Si l’usuari dona context, les agrupacions que hi coincideixen (etiqueta de sentit o formes) es retornen primer; el model selecciona dues o tres opcions pertinents, quan n’hi hagi, i explica el matís de cadascuna. Pot comprovar-ne el sentit al DIEC i la combinació al CTILC.
+- `jane_cerca` — diccionari de sinònims d'Albert Jané (IEC), amb accepcions numerades. `mode="lema"` cerca pel començament del lema; `mode="general"`, el mot també dins les llistes de sinònims; `mode="funcio"`, per funció sintàctica (cal `funcio`). Retorna femenins, notes d'ús i enllaços a DIEC, DDLC, CTILC, BDLex, DCVB, CiT i TERMCAT. Complementa Softcatalà; les dades no s'han de fusionar.
 
 Prioritat dins l’adaptador CTILC:
 
@@ -358,8 +359,8 @@ Proves d’acceptació del producte des d’OpenCode:
 3. **Alternatives:** davant «Què puc posar en lloc de “maliciós” a “un somriure maliciós”?», consulta Softcatalà i explica quines opcions conserven el sentit i quines el canvien. Cita l’entrada i presenta les alternatives com a suggeriments.
 
 **Estat de la definició de fet:** els tres casos d’acceptació i les eines del
-CTILC ja estan implementats i provats en directe (18–19/11/2026), amb 209 tests
-sense xarxa i disset proves en directe optatives (`LLENGUA_LIVE=1`). Hi ha 29
+CTILC ja estan implementats i provats en directe (18–19/11/2026), amb 224 tests
+sense xarxa i divuit proves en directe optatives (`LLENGUA_LIVE=1`). Hi ha 30
 eines, incloent-hi el Corpus de consultes de l’IEC, els filtres, les obres, les
 dispersions i les cerques bàsiques del CTILC. Els pendents són l’ampliació de
 fonts (DDLC); l'exportació CSV i les obres descarregables queden fora

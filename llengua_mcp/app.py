@@ -9,6 +9,7 @@ from llengua_mcp.adapters import (
     DiecAdapter,
     EsadirAdapter,
     GramatiquesAdapter,
+    JaneAdapter,
     OiecAdapter,
     OptimotAdapter,
     SoftcatalaAdapter,
@@ -32,6 +33,7 @@ class App:
         self.diec = DiecAdapter(self.http)
         self.esadir = EsadirAdapter(self.http)
         self.gramatiques = GramatiquesAdapter(self.http)
+        self.jane = JaneAdapter(self.http)
         self.softcatala = SoftcatalaAdapter(settings)
 
     async def aclose(self) -> None:

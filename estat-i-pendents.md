@@ -14,15 +14,15 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 209 passats, 17 omesos (els live).
-- **Tests en directe:** 17, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **Tests sense xarxa:** 224 passats, 18 omesos (els live).
+- **Tests en directe:** 18, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
   `.github/workflows/live.yml` executa les proves en directe cada dilluns a les
   06:00 UTC (o manualment des d'Actions), amb un reintent per absorbir talls de
   xarxa puntuals.
 - **Ruff:** `ruff format` i `ruff check` nets.
-- **Eines MCP:** 29 eines, agrupades per font.
+- **Eines MCP:** 30 eines, agrupades per font.
 
 ### Eines per font
 
@@ -36,6 +36,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 | OIEC | `oiec_cerca`, `oiec_text` | Implementat via `api-oiec.iec.cat` |
 | Gramàtiques | `gramatica_cerca`, `gramatica_text` | Implementat (GBU, GEIEC, GIEC) |
 | Softcatalà | `cerca_sinonims` | Dades locals versionades (CC BY 4.0) |
+| Jané | `jane_cerca` | Implementat i provat en directe (CC BY-NC-ND 3.0) |
 | CTILC | `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `dispersio_general`, `collocacions`, `collocacions_forma`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Implementat i provat en directe |
 
 ### Decisions consolidades
@@ -93,6 +94,10 @@ Expectatives datades, no llindars eterns:
   **12**. L'endpoint necessita el nonce de la pàgina i `table_id=7`.
 - DIEC «maliciós» → 3 accepcions.
 - ésAdir «a gust», «hidrosisme» → fitxa i AFI.
+- Jané (20/11/2026): 27.547 entrades; `jane_cerca("maliciós")` → 2 accepcions
+  numerades; `mode="general"` amb «mala fe» → 3 entrades (arteria, malícia,
+  traïdoria); `mode="funcio"` amb «casa» i funció nominal → 92 resultats;
+  `zzzqqqxyz` → `no_results` amb comptador 0.
 
 ---
 
@@ -204,9 +209,16 @@ directe amb `somriure` (lema) el 18/11/2026 i amb `somriures` (forma) el
   integrable, però s'ha decidit no fer-ho: la cerca de text és sobretot de
   títols («cursiva» → 0) i molt contingut viu en PDFs enllaçats; per a
   ortografia i gramàtica ja cobrim l'OIEC i les gramàtiques.
-- **Sinònims Jané.** No implementat. Revisar si aporta alguna cosa respecte de
-  Softcatalà. Issue
-  [#8](https://github.com/papersvells/llengua-mcp/issues/8).
+- **Sinònims Jané: implementat el 20/11/2026 (issue
+  [#8](https://github.com/papersvells/llengua-mcp/issues/8) tancada).** Eina
+  `jane_cerca` sobre `sinonims.iec.cat` (wpDataTables, com el Corpus de
+  consultes): nonce + `admin-ajax.php` amb tres taules (1 lema, 4 general, 5
+  funció sintàctica). 27.547 entrades; les accepcions numerades (`1.`, `2.`)
+  separen sentits, cosa que resol el punt feble de Softcatalà amb
+  `context_no_match` (per exemple, «maliciós»: «1. malpensat, desconfiat,
+  malfiat / 2. murri, trapella, viu, caut, recelós»). Llicència CC BY-NC-ND 3.0:
+  consulta en directe, entrades sense transformar i atribució a Albert Jané i a
+  l'IEC; no es fusiona amb les dades de Softcatalà.
 - **Cobertura del DDLC a BDLex.** Afirmada en converses anteriors sense
   verificació específica; comprovar-ho si es vol citar. Issue
   [#9](https://github.com/papersvells/llengua-mcp/issues/9).
@@ -418,7 +430,8 @@ PY
 Les feines obertes es segueixen al repositori:
 
 1. Eines del CTILC obertes: `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)). La cerca de noms propis es va descartar ([#5](https://github.com/papersvells/llengua-mcp/issues/5), tancada).
-2. Fonts: sinònims Jané ([#8](https://github.com/papersvells/llengua-mcp/issues/8)) i cobertura del DDLC ([#9](https://github.com/papersvells/llengua-mcp/issues/9)). Critèria es va descartar ([#7](https://github.com/papersvells/llengua-mcp/issues/7), tancada).
+2. Fonts: cobertura del DDLC ([#9](https://github.com/papersvells/llengua-mcp/issues/9)). Critèria es va descartar ([#7](https://github.com/papersvells/llengua-mcp/issues/7), tancada) i els sinònims Jané ja són a `jane_cerca`.
+
 3. Acceleració de les respostes: instrumentació, escalfament de l'índex i menys peticions ([#10](https://github.com/papersvells/llengua-mcp/issues/10)).
 4. Fora del repositori, pendents de decisió: contactar amb `dcc@iec.cat` abans
    de publicar (§2.7) i repetir les proves d'ús des d'OpenCode amb dos models.

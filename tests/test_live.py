@@ -324,3 +324,23 @@ async def test_live_esadir() -> None:
     assert search["suggested_fitxa"] == "a gust"
     assert fitxa["status"] == "ok"
     assert fitxa["definitions"] or fitxa["examples"]
+
+
+@pytest.mark.asyncio
+async def test_live_jane() -> None:
+    app = App(Settings.from_env())
+    try:
+        result = await app.jane.cerca("maliciós")
+        general = await app.jane.cerca("mala fe", mode="general")
+        zero = await app.jane.cerca("zzzqqqxyz")
+    finally:
+        await app.aclose()
+    assert result["status"] == "ok"
+    entry = result["results"][0]
+    assert entry["lema"] == "maliciós"
+    assert [sense["num"] for sense in entry["sentits"]] == [1, 2]
+    assert general["status"] == "ok"
+    assert any(
+        "mala fe" in sense["sinonims"] for item in general["results"] for sense in item["sentits"]
+    )
+    assert zero["status"] == "no_results"

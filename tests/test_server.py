@@ -21,6 +21,7 @@ async def test_tools_are_registered() -> None:
         "gramatica_cerca",
         "gramatica_text",
         "cerca_sinonims",
+        "jane_cerca",
         "cerca",
         "cerca_frase",
         "cerca_forma",

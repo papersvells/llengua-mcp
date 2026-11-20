@@ -20,6 +20,7 @@ sencers ni substitueix un corrector.
 | Gramàtiques IEC | `gramatica_cerca`, `gramatica_text` | GBU, GEIEC i GIEC: perífrasis, pronoms, concordança |
 | [CTILC](https://ctilc.iec.cat/) | `cerca`, `cerca_frase`, `cerca_forma`, `cerca_lema`, `cerca_patro`, `continuar_cerca`, `context`, `dispersio_cronologica`, `dispersio_dialectal`, `dispersio_general`, `collocacions`, `collocacions_forma`, `filtres_disponibles`, `obres`, `xifres`, `etiquetes`, `salut` | Ús escrit i contextos, amb filtres, dispersions, cerques bàsiques i metadades de les obres |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) | `cerca_sinonims` | Alternatives lèxiques (dades locals, CC BY 4.0) |
+| [Jané](https://sinonims.iec.cat/) | `jane_cerca` | Sinònims amb accepcions numerades i cerca per funció sintàctica (IEC) |
 
 ## Instal·lació
 
@@ -210,6 +211,12 @@ Variables d'entorn:
   surten) es retornen primer; `context_no_match` vol dir que no s'ha pogut
   prioritzar cap grup. Cal triar les opcions segons la frase i explicar-ne el
   matís.
+- **Jané**: les accepcions numerades (`1.`, `2.`) separen sentits; tria la que
+  encaixa en la frase. `mode="general"` cerca el mot també dins les llistes de
+  sinònims (no és una cerca per frases) i `mode="funcio"` el cerca per funció
+  sintàctica. Cada entrada porta els femenins, les notes d'ús i els enllaços a
+  DIEC, DDLC, CTILC, BDLex, DCVB, CiT i TERMCAT. Complementa Softcatalà; no
+  barregis les dades dels dos diccionaris.
 
 ## Límits coneguts
 
@@ -247,14 +254,19 @@ Variables d'entorn:
   (CTILC) i les adreces de contacte de cada font.
 - Les dades de sinònims són de Softcatalà i tenen llicència CC BY 4.0; cal
   citar-les. Vegeu `NOTICE`.
+- El diccionari de sinònims d'Albert Jané (IEC) és CC BY-NC-ND 3.0: ús no
+  comercial, entrades sense transformar i atribució a l'autor i a l'IEC. Les
+  respostes inclouen `license` i `attribution`; no es fusionen amb les dades de
+  Softcatalà.
 
 ## Citació
 
 > Corpus Textual Informatitzat de la Llengua Catalana (CTILC), Institut
 > d'Estudis Catalans, <https://ctilc.iec.cat/>, consulta feta el DD/MM/AAAA.
 
-Cada resposta inclou `source`, `retrieved_at` i `citation` per a la font
-consultada.
+Cada resposta inclou `source` i `retrieved_at`; les eines que en retornen també
+porten `citation`. `jane_cerca` substitueix la cita per `license` i
+`attribution`, que la llicència del diccionari exigeix.
 
 ## Desenvolupament
 

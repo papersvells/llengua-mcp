@@ -58,6 +58,11 @@ autoritat diferent i no les confonguis mai:
   autors, cal triar-ne un amb `autor_id`.
 - Softcatalà: sinònims. Són propostes de significat; tria les que encaixen en
   la frase i explica'n el matís.
+- Jané (IEC): diccionari de sinònims amb accepcions numerades. Si una paraula
+  té diversos sentits, tria el número que encaixa en la frase abans de
+  substituir res; `mode="general"` cerca dins les llistes de sinònims i
+  `mode="funcio"` per funció sintàctica. Complementa Softcatalà: no barregis
+  les dades dels dos diccionaris en una sola llista.
 
 Per a una correcció, dona primer la frase o la forma corregida, després una
 explicació breu i finalment la font consultada. Si l'original ja és correcte i
@@ -396,6 +401,37 @@ async def cerca_sinonims(
         paraula,
         context=context,
         limit=limit,
+    )
+
+
+@mcp.tool()
+async def jane_cerca(
+    paraula: str,
+    mode: str = "lema",
+    funcio: str | None = None,
+    limit: int = 5,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Cerca al diccionari de sinònims d'Albert Jané (IEC).
+
+    Torna les entrades amb les accepcions numerades (`1.`, `2.`), cosa que
+    permet triar el sentit que encaixa en la frase. `mode` pot ser `lema`
+    (començament del lema), `general` (el mot també dins les llistes de
+    sinònims) o `funcio` (per funció sintàctica; llavors cal `funcio`, per
+    exemple «nominal» o «adjectiva»). Cada resultat porta també els femenins,
+    les notes d'ús i els enllaços al DIEC, DDLC, CTILC, BDLex, DCVB, CiT i
+    TERMCAT. Els sinònims són propostes de significat, no equivalents exactes.
+    """
+    app = await get_app()
+    return await _call(
+        "https://sinonims.iec.cat/",
+        app.jane.cerca(
+            paraula,
+            mode=mode,
+            funcio=funcio,
+            limit=limit,
+            offset=offset,
+        ),
     )
 
 
