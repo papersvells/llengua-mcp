@@ -37,8 +37,9 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
   Els temes són Fonètica, Lèxic, Morfologia, Onomàstica, Ortografia, Sintaxi i
   Altres. El filtre de pregunta és `columns[4][search][value]`.
 - **Critèria: WordPress** amb contingut en PDFs descarregables; l'API REST no publica els posts (0 elements). Poc valor cercable per a l'MCP.
-- Pendent: les eines de les issues obertes del CTILC (col·locacions per forma,
-  noms propis, `classtem`). L'exportació CSV i les obres descarregables queden
+- Pendent: les eines de les issues obertes del CTILC (`classtem` i els modes
+  4–6 de les cerques bàsiques). La cerca de noms propis es va descartar
+  (issue #5, tancada el 20/11/2026). L'exportació CSV i les obres descarregables queden
   fora d'abast: l'MCP no fa extracció massiva ni descarrega textos sencers.
 - Documents de referència:
   - `pla-mcp-ctilc.md` — pla inicial. És útil com a mapa del protocol, però **conté errors** i no s’ha d’implementar literalment.

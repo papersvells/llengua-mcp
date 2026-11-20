@@ -184,9 +184,10 @@ directe amb `somriure` (lema) el 18/11/2026 i amb `somriures` (forma) el
   i queda fora d'abast. Per citar i llegir contextos n'hi ha prou amb les
   ocurrències, el total, el cursor i la data que ja retorna la cerca. A més,
   `Qjson_concordancesCSV.asp` no està verificat (500 a totes les variants).
-- **Cerca de noms propis:** `CTILCQConc_NomsPropis2.asp` és una cerca bàsica
-  independent que encara no té eina. Issue
-  [#5](https://github.com/papersvells/llengua-mcp/issues/5).
+- **Cerca de noms propis: descartada (issue #5 tancada el 20/11/2026).** Per
+  decisió de producte no es farà l'eina sobre `CTILCQConc_NomsPropis2.asp`.
+  Els noms propis no estan analitzats morfosintàcticament i la cerca és només
+  per forma gràfica; no s'hi dedicarà cap eina.
 
 ### 2.6 Fonts encara no integrades
 
@@ -414,7 +415,7 @@ PY
 
 Les feines obertes es segueixen al repositori:
 
-1. Eines del CTILC obertes: `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)), noms propis ([#5](https://github.com/papersvells/llengua-mcp/issues/5)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)).
+1. Eines del CTILC obertes: `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)). La cerca de noms propis es va descartar ([#5](https://github.com/papersvells/llengua-mcp/issues/5), tancada).
 2. Fonts: Critèria ([#7](https://github.com/papersvells/llengua-mcp/issues/7)), sinònims Jané ([#8](https://github.com/papersvells/llengua-mcp/issues/8)) i cobertura del DDLC ([#9](https://github.com/papersvells/llengua-mcp/issues/9)).
 3. Acceleració de les respostes: instrumentació, escalfament de l'índex i menys peticions ([#10](https://github.com/papersvells/llengua-mcp/issues/10)).
 4. Fora del repositori, pendents de decisió: contactar amb `dcc@iec.cat` abans
