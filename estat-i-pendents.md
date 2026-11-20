@@ -198,10 +198,12 @@ directe amb `somriure` (lema) el 18/11/2026 i amb `somriures` (forma) el
   (Fonètica, Lèxic, Morfologia, Onomàstica, Ortografia, Sintaxi, Altres) i per
   pregunta. Els intents anteriors donaven zero perquè faltava el nonce i es
   feia servir `table_id=1` (la portada) en lloc de `7`.
-- **Critèria.** Només explorat parcialment. L'API REST `/wp-json/wp/v2/types`
-  respon; no hi ha evidència que no tingui contingut cercable. Cal revisar-ho
-  abans de descartar-ho. Issue
-  [#7](https://github.com/papersvells/llengua-mcp/issues/7).
+- **Critèria.** Descartat el 20/11/2026 (issue
+  [#7](https://github.com/papersvells/llengua-mcp/issues/7) tancada). La
+  verificació d'aquell dia mostra que l'API REST publica 455 posts i és
+  integrable, però s'ha decidit no fer-ho: la cerca de text és sobretot de
+  títols («cursiva» → 0) i molt contingut viu en PDFs enllaçats; per a
+  ortografia i gramàtica ja cobrim l'OIEC i les gramàtiques.
 - **Sinònims Jané.** No implementat. Revisar si aporta alguna cosa respecte de
   Softcatalà. Issue
   [#8](https://github.com/papersvells/llengua-mcp/issues/8).
@@ -416,7 +418,7 @@ PY
 Les feines obertes es segueixen al repositori:
 
 1. Eines del CTILC obertes: `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)). La cerca de noms propis es va descartar ([#5](https://github.com/papersvells/llengua-mcp/issues/5), tancada).
-2. Fonts: Critèria ([#7](https://github.com/papersvells/llengua-mcp/issues/7)), sinònims Jané ([#8](https://github.com/papersvells/llengua-mcp/issues/8)) i cobertura del DDLC ([#9](https://github.com/papersvells/llengua-mcp/issues/9)).
+2. Fonts: sinònims Jané ([#8](https://github.com/papersvells/llengua-mcp/issues/8)) i cobertura del DDLC ([#9](https://github.com/papersvells/llengua-mcp/issues/9)). Critèria es va descartar ([#7](https://github.com/papersvells/llengua-mcp/issues/7), tancada).
 3. Acceleració de les respostes: instrumentació, escalfament de l'índex i menys peticions ([#10](https://github.com/papersvells/llengua-mcp/issues/10)).
 4. Fora del repositori, pendents de decisió: contactar amb `dcc@iec.cat` abans
    de publicar (§2.7) i repetir les proves d'ús des d'OpenCode amb dos models.

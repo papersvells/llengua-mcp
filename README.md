@@ -227,7 +227,8 @@ Variables d'entorn:
 - El Corpus de consultes de l'IEC es llegeix amb el nonce de la pàgina i
   l'endpoint AJAX de wpDataTables. Si el portal canvia el nonce o la taula,
   l'eina retorna un error accionable; no se'n fan descàrregues massives.
-  Critèria és WordPress amb contingut en PDFs; l'API REST no publica els posts.
+  Critèria no s'integra (descartat el 20/11/2026): encara que l'API REST
+  publica el contingut, la cerca és feble i molt text viu en PDFs enllaçats.
 - BDLex no té una API pública documentada: l'adaptador usa el motor de la
   plataforma. Si el servei canvia, caldrà revisar el parser. Les respostes es
   retallen (entrades, accepcions, exemples, subentrades i fonètica) per no

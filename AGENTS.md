@@ -36,7 +36,11 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
   sense nonce o amb `table_id=1` (portada) retorna zero o el «Dubte del dia».
   Els temes són Fonètica, Lèxic, Morfologia, Onomàstica, Ortografia, Sintaxi i
   Altres. El filtre de pregunta és `columns[4][search][value]`.
-- **Critèria: WordPress** amb contingut en PDFs descarregables; l'API REST no publica els posts (0 elements). Poc valor cercable per a l'MCP.
+- **Critèria: descartat (issue #7 tancada el 20/11/2026).** Per decisió de
+  producte no s'integra. Consta la verificació del 20/11/2026: l'API REST sí que
+  publica el contingut (455 posts, sense nonce), però la cerca de text és feble
+  (només títols) i molt contingut viu en PDFs enllaçats. Per a ortografia i
+  gramàtica ja hi ha l'OIEC i les gramàtiques de l'IEC.
 - Pendent: les eines de les issues obertes del CTILC (`classtem` i els modes
   4–6 de les cerques bàsiques). La cerca de noms propis es va descartar
   (issue #5, tancada el 20/11/2026). L'exportació CSV i les obres descarregables queden
@@ -96,9 +100,9 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
 
 **Fonts addicionals previstes** (útils per respondre dubtes, encara no implementades):
 
-| Font | Quan i com s’ha d’utilitzar |
+| Font | Quan i com s'ha d'utilitzar |
 |---|---|
-| [Critèria](http://criteria.iec.cat/) | Per decisions editorials de l’IEC (majúscules, cursives, abreviacions) quan hi ha més d’una solució possible. |
+| Diccionari de sinònims de Jané | Pendent d'avaluació ([#8](https://github.com/papersvells/llengua-mcp/issues/8) oberta): comparar cobertura i llicència amb el diccionari de Softcatalà (CC BY 4.0) abans d'integrar res. |
 
 **Criteris específics del corpus:**
 
@@ -358,8 +362,9 @@ CTILC ja estan implementats i provats en directe (18–19/11/2026), amb 209 test
 sense xarxa i disset proves en directe optatives (`LLENGUA_LIVE=1`). Hi ha 29
 eines, incloent-hi el Corpus de consultes de l’IEC, els filtres, les obres, les
 dispersions i les cerques bàsiques del CTILC. Els pendents són l’ampliació de
-fonts (Critèria, DDLC); l'exportació CSV i les obres descarregables queden fora
-d'abast.
+fonts (DDLC); l'exportació CSV i les obres descarregables queden fora
+d'abast. Critèria i la cerca de noms propis del CTILC es van descartar
+el 20/11/2026.
 
 La part del CTILC es considera llesta quan:
 
