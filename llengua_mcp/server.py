@@ -743,14 +743,15 @@ async def filtres_disponibles(
 ) -> dict[str, Any]:
     """Llista els valors disponibles d'un filtre del CTILC.
 
-    Passa el `search_cursor` d'una cerca. Retorna els autors o els títols que
-    apareixen en aquell resultat, amb el recompte d'ocurrències de cadascun.
-    Serveix per triar valors vàlids abans de filtrar; un valor inventat pot
-    donar un resultat sense files que no és una absència verificable.
+    Passa el `search_cursor` d'una cerca. Retorna els autors, els títols o els
+    temes (`classtem`) que apareixen en aquell resultat, amb el recompte
+    d'ocurrències de cadascun. Serveix per triar valors vàlids abans de
+    filtrar; un valor inventat pot donar un resultat sense files que no és una
+    absència verificable.
 
     Args:
         cursor: `search_cursor` d'una cerca.
-        tipus: `autors` o `titols`.
+        tipus: `autors`, `titols` o `temes`.
         limit: Nombre màxim de valors (1-100).
         offset: Posició inicial; usa `next_offset`.
     """

@@ -14,8 +14,8 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 224 passats, 18 omesos (els live).
-- **Tests en directe:** 18, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **Tests sense xarxa:** 234 passats, 19 omesos (els live).
+- **Tests en directe:** 19, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
   `.github/workflows/live.yml` executa les proves en directe cada dilluns a les
@@ -58,6 +58,13 @@ verificades) i, per a l'abast, `AGENTS.md`.
   finestra**, no d'adjacència: no es comparen amb `cerca_frase`/`cerca_patro`.
   Cal validar `lema_echo_verified` i recordar que `total` inclou les files de
   puntuació descartades (`excluded_rows`).
+- `classtem` accepta un sol subtema per consulta (el portal no en combina dos)
+  i els grups sencers van a `classtemGSelec`. És incompatible amb `genere` i
+  amb `tipus=LIT`.
+- Amb filtre d'autor validat al catàleg global, un resultat sense files és
+  `no_matches` (`filtered_empty_verified`); un autor inexistent és
+  `invalid_query`. Si la validació falla, la cerca continua amb
+  `author_validation_skipped`.
 - Rate limit per host, cache TTL en memòria, User-Agent identificable.
 - `opencode.jsonc` és local i està ignorat; l'exemple és
   `opencode.jsonc.example`.
@@ -98,6 +105,10 @@ Expectatives datades, no llindars eterns:
   numerades; `mode="general"` amb «mala fe» → 3 entrades (arteria, malícia,
   traïdoria); `mode="funcio"` amb «casa» i funció nominal → 92 resultats;
   `zzzqqqxyz` → `no_results` amb comptador 0.
+- Filtres del CTILC (20/11/2026): `classtem=@3.2` → 4 ocurrències (de 2.136),
+  grup `@3` → 29, `filtres_disponibles(tipus="temes")` → 53 valors; autor
+  **Sagarra, Josep M. de** → 42; **Sagarra, Xavier** → `no_matches` amb
+  `filtered_empty_verified`; autor inventat → `invalid_query`.
 
 ---
 
@@ -177,9 +188,21 @@ directe amb `somriure` (lema) el 18/11/2026 i amb `somriures` (forma) el
   `total` és la «Quantitat filtrada» i `total_unfiltered` la freqüència sense
   filtres; si no hi ha files, el portal pot retornar `1` com a valor de
   control i es tracta com a `unexpected_response`, no com una absència.
-  Queden fora el `classtem` (taxonomia temàtica) i la validació global
-  d'autors fora del resultat. Issue
-  [#4](https://github.com/papersvells/llengua-mcp/issues/4).
+- **`classtem` i validació global d'autors: resolts el 20/11/2026 (issue
+  [#4](https://github.com/papersvells/llengua-mcp/issues/4) tancada).**
+  `classtem` és la classificació temàtica decimal de les obres no literàries;
+  el portal l'envia amb `classtemSelec` (un sol subtema) i `classtemGSelec`
+  (grups sencers `@3@1`). Comprovat: `@3.2` → 4 ocurrències (de 2.136) i
+  `@3` → 29, amb `filters_verified: true`. El portal **no combina dos
+  subtemes** en una sola consulta (retorna el total de control 1): l'eina ho
+  rebutja i demana un subtema o grups sencers. `filtres_disponibles` accepta
+  `tipus="temes"` (panell `filt=lang`, 53 valors amb recompte dins del
+  resultat). `genere` i `classtem` són excloents.
+  La validació d'autors consulta el catàleg global (`CTILCCorpus_Aut1.asp`):
+  un autor inexistent dona `invalid_query` amb suggeriments, i un autor real
+  sense cap ocurrència dona `no_matches` amb `filtered_empty_verified` (el
+  total de control 1 ja no es confon amb una absència). Si la validació no es
+  pot fer, la cerca continua amb l'avís `author_validation_skipped`.
 - **Obres descarregables: descartat (issue #1 tancada el 19/11/2026).** No es
   farà cap eina de descàrrega d'obres: l'MCP no baixa textos sencers. Les
   metadades per autor i títol ja són a `obres` i el context d'una ocurrència a
@@ -429,7 +452,7 @@ PY
 
 Les feines obertes es segueixen al repositori:
 
-1. Eines del CTILC obertes: `classtem` ([#4](https://github.com/papersvells/llengua-mcp/issues/4)) i modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)). La cerca de noms propis es va descartar ([#5](https://github.com/papersvells/llengua-mcp/issues/5), tancada).
+1. Eines del CTILC obertes: modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)). El `classtem` i la validació d'autors ja són fets ([#4](https://github.com/papersvells/llengua-mcp/issues/4)) i la cerca de noms propis es va descartar ([#5](https://github.com/papersvells/llengua-mcp/issues/5), tancada).
 2. Fonts: cobertura del DDLC ([#9](https://github.com/papersvells/llengua-mcp/issues/9)). Critèria es va descartar ([#7](https://github.com/papersvells/llengua-mcp/issues/7), tancada) i els sinònims Jané ja són a `jane_cerca`.
 
 3. Acceleració de les respostes: instrumentació, escalfament de l'índex i menys peticions ([#10](https://github.com/papersvells/llengua-mcp/issues/10)).

@@ -115,8 +115,9 @@ Variables d'entorn:
   per any, varietat, traducció, tipus, gènere literari i classificació temàtica
   en una sola consulta.
 - **Restringir a un autor, any o varietat**: `cerca_patro(..., filtres={...})`
-  amb `autor`, `titol`, `any_min`/`any_max`, `tipus`, `genere`, `varietat` o
-  `traduccio`. Per triar autors o títols vàlids, `filtres_disponibles(cursor)`.
+  amb `autor`, `titol`, `any_min`/`any_max`, `tipus`, `genere`, `classtem`,
+  `varietat` o `traduccio`. Per triar autors, títols o temes vàlids,
+  `filtres_disponibles(cursor)` (amb `tipus="temes"` per al `classtem`).
 - **Saber quines paraules hi van a prop**: `collocacions("somriure")` — quins
   noms, adjectius o verbs hi coapareixen dins d'una finestra de ±3 mots. Amb
   `collocacions_forma("somriures")` s'aïlla una forma i el lema no barreja el
@@ -168,8 +169,12 @@ Variables d'entorn:
 - **Filtres del CTILC**: amb filtres, `total` és la «Quantitat filtrada» i
   `total_unfiltered` la freqüència sense filtres; `filters_verified` ha de ser
   cert. Si el portal no retorna files, el total pot ser un valor de control
-  (1): no es presenta com una absència. Un valor de filtre inventat pot donar
-  aquest cas; comprova'l amb `filtres_disponibles`.
+  (1): no es presenta com una absència. Si el filtre és d'autor i el nom s'ha
+  validat contra el catàleg global, es retorna `no_matches` amb
+  `filtered_empty_verified`. `classtem` filtra les obres no literàries per tema
+  (grup `3` o subtema `3.2`); no es combina amb `genere` ni amb `tipus=LIT`.
+  Un valor de filtre inventat pot donar el total de control; comprova'l amb
+  `filtres_disponibles`.
 - **Optimot**: el nombre de resultats és un recompte de documents del portal, no
   una freqüència d'ús. Cal obrir la fitxa abans de citar-ne el criteri. Els
   resultats s'ordenen per coincidència amb la consulta (`relevance`) i, si el

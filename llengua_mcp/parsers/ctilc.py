@@ -25,6 +25,7 @@ _FILTER_FIELDS = (
     "tipusSelec",
     "genSelec",
     "classtemSelec",
+    "classtemGSelec",
     "tradSelec",
     "varSelec",
 )

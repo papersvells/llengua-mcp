@@ -43,8 +43,8 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
   publica el contingut (455 posts, sense nonce), però la cerca de text és feble
   (només títols) i molt contingut viu en PDFs enllaçats. Per a ortografia i
   gramàtica ja hi ha l'OIEC i les gramàtiques de l'IEC.
-- Pendent: les eines de les issues obertes del CTILC (`classtem` i els modes
-  4–6 de les cerques bàsiques). La cerca de noms propis es va descartar
+- Pendent: les eines de les issues obertes del CTILC (els modes 4–6 de les
+  cerques bàsiques). La cerca de noms propis es va descartar
   (issue #5, tancada el 20/11/2026). L'exportació CSV i les obres descarregables queden
   fora d'abast: l'MCP no fa extracció massiva ni descarrega textos sencers.
 - Documents de referència:
@@ -94,7 +94,7 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
 | [Corpus de consultes de l’IEC](https://consultes-linguistiques.iec.cat/) | Per trobar una pregunta semblant i veure com l’ha resolta l’IEC, amb l’enllaç a la gramàtica o al diccionari. Citar la consulta; no substitueix l’Optimot ni la norma. |
 | [DIEC](https://dlc.iec.cat/) | Per validar el lèxic: comprovar l’entrada i **l’accepció aplicable**. Una locució pot figurar dins l’article d’un dels seus mots. «No l’he trobada al DIEC» no justifica qualificar-la de barbarisme. |
 | [ésAdir](https://www.esadir.cat/) | Per a criteris d’estil de la CCMA, pronunciació i noms propis. Atribuir el criteri editorial a ésAdir; una cerca sense resultats no prova que la forma sigui incorrecta. Si `esadir_consulta` dona `no_entry_results`, obrir `suggested_fitxa` amb `esadir_fitxa`. |
-| CTILC | Per comprovar l’ús escrit: comparar patrons equivalents i llegir exemples en context. Admet filtres per autor, títol, any, tipus, gènere, varietat i traducció. La freqüència, tota sola, no estableix la correcció ni el matís d’una expressió. |
+| CTILC | Per comprovar l’ús escrit: comparar patrons equivalents i llegir exemples en context. Admet filtres per autor, títol, any, tipus, gènere, tema (`classtem`), varietat i traducció. La freqüència, tota sola, no estableix la correcció ni el matís d’una expressió. |
 | [BDLex](https://bdlex.iec.cat/) | Per consultar diccionaris històrics i dialectals (DCVB, DIEC, Fabra, obres dels segles XIX i XX). Pot cercar per entrada, definició, exemple o text lliure. És descriptiu i històric: una forma hi pot constar i no ser adequada avui; una absència no la fa incorrecta. Cal citar el diccionari concret. |
 | [OIEC](https://oiec.iec.cat/) | Per regles d’ortografia (apòstrofs, guionets, accents, dièresis) que afecten molts mots. Citar el codi i el títol de l’apartat. |
 | [GBU](https://gbu.iec.cat/inici), [GEIEC](https://geiec.iec.cat/inici) i [GIEC](https://giec.iec.cat/) | Per explicar una regla gramatical. La GBU és la consulta d’ús; la GEIEC, la versió en línia; la GIEC, la descripció especialitzada. |
@@ -185,7 +185,7 @@ Aquestes regles estan verificades i no s’han de “simplificar” sense tornar
 17. **L'eco visible també es valida.** Els camps ocults `formdata` han de coincidir amb la consulta enviada i el patró visible ha de ser equivalent; si no, el resultat no es presenta com una absència.
 18. **La continuació no barreja cerques.** Si el total o el patró canvien respecte del cursor, `continuar_cerca` retorna `stale_search` i descarta les files noves.
 19. **`strquery` és un canal CQL intern**, però no una API general. Permet reexecutar el CQL compilat; els rangs i el CQL simplificat no funcionen. No exposar-lo sense validació i advertències.
-20. **Els filtres canvien el total i l’eco.** Amb filtres, `Freqüència total` continua sent el total sense filtrar, i la xifra vàlida és `Quantitat filtrada`. Els camps `*Selec` (`autSelec`, `anySelec`, `varSelec`…) s’han de comparar amb els enviats. Si el resultat filtrat no té files, el portal pot retornar `1` com a valor de control: és `unexpected_response`, no una absència.
+20. **Els filtres canvien el total i l’eco.** Amb filtres, `Freqüència total` continua sent el total sense filtrar, i la xifra vàlida és `Quantitat filtrada`. Els camps `*Selec` (`autSelec`, `anySelec`, `varSelec`…) s’han de comparar amb els enviats. Si el resultat filtrat no té files, el portal pot retornar `1` com a valor de control: és `unexpected_response`, no una absència. Dues excepcions verificades el 20/11/2026: si l’autor s’ha validat abans contra `CTILCCorpus_Aut1.asp`, el total de control es converteix en `no_matches` amb `filtered_empty_verified`; i `classtem` només accepta un subtema a la vegada (els grups sencers van a `classtemGSelec`).
 21. **Les obres tenen pàgines pròpies.** `CTILCCorpus_Aut1.asp` llista autors (`select#autorL`), `Aut2.asp` retorna les obres d’un autor i `Obr2.asp` cerca per títol. La taula no es pagina i una cerca massa àmplia pot superar el límit de 4 MB: cal retornar `too_many_results` amb una pista accionable, no un error genèric.
 22. **La dispersió dialectal té tres gràfics.** `CTILCQDispersionsDial.asp` retorna la distribució del corpus, la proporció de la cerca per varietat i el repartiment de la cerca. Cal llegir el gràfic `Proporció`, que porta al tooltip el numerador i el denominador; no comparar recomptes absoluts entre varietats de mides diferents, sinó `per_million`. Un zero pot ser una mancança del corpus.
 23. **Les cerques bàsiques tenen pàgines pròpies.** `Formes2.asp` i `FormesLema2.asp` no tenen «Patró seleccionat»: l’encapçalament és `Forma : …` / `Lemes : …` (plural) i `Freqüència total`. El panell `formesSelec` dona `form|lema CG|CM` a `Formes2` i `lema CG|form|CM` a `FormesLema2`: l’ordre canvia. La paginació és `iStart`/`iOffset` i no necessita el `resultat`; els modes 4–6 no estan verificats.
@@ -219,19 +219,23 @@ Prioritat dins l’adaptador CTILC:
 - `dispersio_general(cursor)` — distribució per any, varietat, traducció, tipus, gènere i classificació temàtica. Cada atribut té el seu total: `genere` només cobreix les obres literàries i `classificacio` les no literàries.
 - `collocacions(lema, radi?, freq_min?, limit?)` — coaparicions dins d'una finestra de ±radi mots (0-5), agrupades per categoria gramatical. Els resultats són a `CTILCQCol_LemesAgrup2.asp` (POST amb `cadlema`, `radiE`/`radiD`, `freqMin`); la pàgina conté totes les files. Les de puntuació de l'apartat ALTRES es descarten (`excluded_rows`) i els noms propis es retornen a part, a `altres`. Cal validar `lema_echo_verified` abans de fer servir les dades.
 - `collocacions_forma(forma, radi?, freq_min?, limit?)` — el mateix per a una forma concreta (`CTILCQCol_FormesAgrup2.asp`, `cadforma`), útil per separar lectures que el lema barreja (`somriures` nom vs. `somriure` verb). Afegeix `info_mutua`, `freq`, `distancia`, `varianca` i `freq_lema`; cal validar `forma_echo_verified`. Sense resultats, el portal només dona un missatge sense comptador: `unexpected_response` amb `zero_without_counter`, no una absència verificada.
-- `filtres_disponibles(cursor, tipus?, limit?, offset?)` — autors o títols d’un resultat concret, amb recompte. Serveix per triar valors vàlids abans de filtrar.
+- `filtres_disponibles(cursor, tipus?, limit?, offset?)` — autors, títols o temes (`classtem`) d’un resultat concret, amb recompte. Serveix per triar valors vàlids abans de filtrar.
 - `obres(autor?, titol?, autor_id?, limit?, offset?)` — metadades de les obres per autor o per títol (any, tipus, gènere, classificació, traducció i varietat). Si un cognom dona diversos autors, retorna `ambiguous_author` i cal continuar amb `autor_id`.
 - `xifres()` — mida i cobertura del corpus.
 - `etiquetes()` — categories i codis morfològics llegibles.
 - `salut()` — comprova que el lloc respon i que l’echo de control és correcte. No crea ni esborra cursors.
 
 `cerca`, `cerca_frase` i `cerca_patro` accepten `filtres` (`autor`, `titol`,
-`any_min`/`any_max`, `tipus`, `genere`, `varietat`, `traduccio`). Amb filtres,
-`total` és la «Quantitat filtrada» i `total_unfiltered` la freqüència sense
-filtres; `filters_verified` ha de ser cert. Si no hi ha files, el portal pot
-retornar un total de control (1): és `unexpected_response` amb
-`filtered_empty_unverified`, no una absència. Els valors per a
-`tipus`/`genere`/`varietat` són LIT/NLIT, A/N/P/T i les cinc varietats.
+`any_min`/`any_max`, `tipus`, `genere`, `classtem`, `varietat`, `traduccio`).
+Amb filtres, `total` és la «Quantitat filtrada» i `total_unfiltered` la
+freqüència sense filtres; `filters_verified` ha de ser cert. Si no hi ha files,
+el portal pot retornar un total de control (1): és `unexpected_response` amb
+`filtered_empty_unverified`, no una absència. Si l'autor s'ha validat contra el
+catàleg global i els filtres quadren, és `no_matches` amb
+`filtered_empty_verified`. `classtem` és la classificació temàtica de les obres
+no literàries: un grup sencer (`3`) o un sol subtema (`3.2`); no es combina amb
+`genere` ni amb `tipus=LIT`. Els valors per a `tipus`/`genere`/`varietat` són
+LIT/NLIT, A/N/P/T i les cinc varietats.
 
 Posteriors:
 
@@ -359,8 +363,8 @@ Proves d’acceptació del producte des d’OpenCode:
 3. **Alternatives:** davant «Què puc posar en lloc de “maliciós” a “un somriure maliciós”?», consulta Softcatalà i explica quines opcions conserven el sentit i quines el canvien. Cita l’entrada i presenta les alternatives com a suggeriments.
 
 **Estat de la definició de fet:** els tres casos d’acceptació i les eines del
-CTILC ja estan implementats i provats en directe (18–19/11/2026), amb 224 tests
-sense xarxa i divuit proves en directe optatives (`LLENGUA_LIVE=1`). Hi ha 30
+CTILC ja estan implementats i provats en directe (18–19/11/2026), amb 234 tests
+sense xarxa i dinou proves en directe optatives (`LLENGUA_LIVE=1`). Hi ha 30
 eines, incloent-hi el Corpus de consultes de l’IEC, els filtres, les obres, les
 dispersions i les cerques bàsiques del CTILC. Els pendents són l’ampliació de
 fonts (DDLC); l'exportació CSV i les obres descarregables queden fora

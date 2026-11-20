@@ -26,6 +26,8 @@ class CtilcFilters(BaseModel):
     Els valors es normalitzen a l'adaptador. `any_min` i `any_max` es poden
     fer servir sols; el rang vàlid és 1832–2022. `traduccio` és `True` per a
     obres traduïdes, `False` per a originals i `None` per a totes.
+    `classtem` és la classificació temàtica de les obres no literàries: un
+    grup sencer (`3`) o un sol subtema (`3.2`). No es combina amb `genere`.
     """
 
     autor: list[str] | None = None
@@ -34,6 +36,7 @@ class CtilcFilters(BaseModel):
     any_max: int | None = None
     tipus: list[str] | None = None
     genere: list[str] | None = None
+    classtem: list[str] | None = None
     varietat: list[str] | None = None
     traduccio: bool | None = None
 

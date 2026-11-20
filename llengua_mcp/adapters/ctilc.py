@@ -217,6 +217,38 @@ def _resolve_filters(filters: CtilcFilters | None) -> tuple[dict[str, str], dict
         fields["tradSelec"] = "sí" if filters.traduccio else "no"
         public["traduccio"] = filters.traduccio
 
+    if filters.classtem:
+        codes = _normalize_classtem(filters.classtem)
+        groups = [code for code in codes if "." not in code]
+        subtemes = [code for code in codes if "." in code]
+        if len(subtemes) > 1:
+            raise InvalidQueryError(
+                "El CTILC només aplica un subtema de classificació a la vegada.",
+                hint=(
+                    "Indica un sol subtema (per exemple «3.2») o grups sencers "
+                    "(per exemple «3»). El portal no combina diversos subtemes."
+                ),
+            )
+        if groups:
+            fields["classtemGSelec"] = "".join(f"@{group}" for group in groups)
+        if subtemes:
+            fields["classtemSelec"] = f"@{subtemes[0]}"
+        public["classtem"] = codes
+
+    if filters.classtem and filters.genere:
+        raise InvalidQueryError(
+            "`genere` i `classtem` són filtres excloents.",
+            hint=(
+                "`genere` només existeix per a les obres literàries i "
+                "`classtem` per a les no literàries: junts no donen cap resultat."
+            ),
+        )
+    if filters.classtem and public.get("tipus") == ["LIT"]:
+        raise InvalidQueryError(
+            "`classtem` filtra obres no literàries i `tipus=LIT` només literàries.",
+            hint="Treu `tipus` o fes servir `tipus=NLIT`.",
+        )
+
     return fields, (public or None)
 
 
@@ -255,6 +287,30 @@ def _filter_tokens(value: str) -> list[str]:
     )
 
 
+def _group_tokens(value: str) -> list[str]:
+    """Separa els codis de grup de `classtemGSelec` (`@3@1`)."""
+
+    return sorted(part.strip() for part in re.split(r"@", value) if part.strip())
+
+
+def _normalize_classtem(values: list[str]) -> list[str]:
+    codes: list[str] = []
+    for value in values:
+        code = clean_text(value).lstrip("@").strip()
+        if not re.fullmatch(r"[0-9](?:\.[0-9])?", code):
+            raise InvalidQueryError(
+                f"El codi de classificació «{value}» no és vàlid.",
+                hint=(
+                    "Valors: un grup del 0 al 9 (per exemple «3») o un subtema "
+                    "amb un decimal (per exemple «3.2»). Consulta "
+                    '`filtres_disponibles` amb `tipus="temes"`.'
+                ),
+            )
+        if code not in codes:
+            codes.append(code)
+    return codes
+
+
 def _filters_match(sent: dict[str, str], echo: dict[str, str]) -> bool:
     if not sent:
         return True
@@ -264,6 +320,9 @@ def _filters_match(sent: dict[str, str], echo: dict[str, str]) -> bool:
         echoed = echo.get(name, "")
         if name == "tradSelec":
             if normalize_key(echoed) != normalize_key(value):
+                return False
+        elif name == "classtemGSelec":
+            if _group_tokens(echoed) != _group_tokens(value):
                 return False
         elif _filter_tokens(echoed) != _filter_tokens(value):
             return False
@@ -281,6 +340,26 @@ class CtilcAdapter:
         self.settings = settings
         self.cursors = cursors
 
+    async def _author_exists(self, name: str) -> tuple[bool | None, list[str]]:
+        """Comprova un autor al catàleg global del CTILC.
+
+        Retorna `(None, [])` si la validació no s'ha pogut fer (error de
+        transport o de format): no s'ha de bloquejar una cerca per això.
+        """
+
+        try:
+            result = await self.client.post_text(
+                OBRES_AUT_URL,
+                f"autor={quote_plus(name)}",
+                cache_ttl=86400,
+            )
+            parsed = parse_authors(result.text)
+        except LlenguaError:
+            return None, []
+        names = [author["name"] for author in parsed["authors"]]
+        exists = any(normalize_key(candidate) == normalize_key(name) for candidate in names)
+        return exists, names
+
     async def search(
         self,
         *,
@@ -297,6 +376,26 @@ class CtilcAdapter:
         if start < 1:
             raise InvalidQueryError("`start` ha de ser 1 o més gran.")
         offset = max(1, min(limit, self.settings.max_occurrences))
+
+        validated_authors: set[str] = set()
+        extra_warnings: list[str] = []
+        if filter_query and filter_query.get("autor"):
+            for author in filter_query["autor"]:
+                exists, candidates = await self._author_exists(author)
+                if exists is None:
+                    extra_warnings.append("author_validation_skipped")
+                elif not exists:
+                    hint = "Comprova el nom exacte del catàleg del CTILC."
+                    if candidates:
+                        hint = "Autors semblants: " + "; ".join(candidates[:5]) + "."
+                    raise InvalidQueryError(
+                        f"L'autor «{author}» no és al catàleg del CTILC.",
+                        hint=hint,
+                        source=OBRES_AUT_URL,
+                    )
+                else:
+                    validated_authors.add(normalize_key(author))
+
         compiled = compile_pattern(elements)
         body = compiled.body(start=start, offset=offset, filters=filters)
         result = await self.client.post_text(COOCUR_URL, body, use_cache=use_cache)
@@ -309,10 +408,14 @@ class CtilcAdapter:
         if filter_query:
             query = {**query, "filters": filter_query}
 
-        warnings = _dedupe(result.warnings + page.warnings)
+        warnings = _dedupe(result.warnings + page.warnings + extra_warnings)
         status = "ok"
         error_note = None
         filters_ok = True
+        total = page.total
+        authors_verified = bool(filter_query and filter_query.get("autor")) and all(
+            normalize_key(name) in validated_authors for name in filter_query["autor"]
+        )
         if filters and page.total_unfiltered != 0:
             if page.filtered_total is None:
                 filters_ok = False
@@ -348,15 +451,24 @@ class CtilcAdapter:
                     "El total és zero però la pàgina no confirma explícitament cap coincidència."
                 )
         elif page.total is not None and page.total > 0 and not page.occurrences:
-            status = "unexpected_response"
             if filters and page.filtered_total is not None:
-                warnings.append("filtered_empty_unverified")
-                error_note = (
-                    "Amb filtres, el portal dona un total positiu però no retorna files. "
-                    "Aquest total pot ser un valor de control (1) i no un recompte fiable; "
-                    "no es pot interpretar com una absència."
-                )
+                if authors_verified:
+                    # L'autor existeix al catàleg i els filtres s'han verificat:
+                    # el total 1 és el valor de control del portal, no una fila.
+                    status = "no_matches"
+                    total = 0
+                    warnings = [w for w in warnings if w != "parse_partial"]
+                    warnings.append("filtered_empty_verified")
+                else:
+                    status = "unexpected_response"
+                    warnings.append("filtered_empty_unverified")
+                    error_note = (
+                        "Amb filtres, el portal dona un total positiu però no retorna files. "
+                        "Aquest total pot ser un valor de control (1) i no un recompte fiable; "
+                        "no es pot interpretar com una absència."
+                    )
             else:
+                status = "unexpected_response"
                 error_note = (
                     "El servidor dona un total positiu però la pàgina no conté files. "
                     "Pot ser un resultat remot caducat o un canvi de format."
@@ -366,16 +478,16 @@ class CtilcAdapter:
         # Avancem la mida de pàgina demanada, no les files parsejades: una fila
         # mal formada no ha de fer saltar la posició següent.
         next_start = start + offset
-        has_more = bool(page.total and page.total > start - 1 + offset)
+        has_more = bool(total and total > start - 1 + offset)
         search_cursor = None
         next_cursor = None
 
-        if persist_cursor and status in {"ok", "no_matches"} and page.total is not None:
+        if persist_cursor and status in {"ok", "no_matches"} and total is not None:
             payload = CursorPayload(
                 query=query,
                 elements=elements,
                 pattern_echo=page.pattern_echo,
-                total=page.total,
+                total=total,
                 resultat=page.server_fields.get("resultat"),
                 qlocali=page.server_fields.get("Qlocali"),
                 filters=filters or {},
@@ -404,7 +516,7 @@ class CtilcAdapter:
             "query": {**query, "limit": offset, "start": start},
             "pattern_echo": page.pattern_echo,
             "echo_verified": page.echo_verified,
-            "total": page.total,
+            "total": total,
             "returned": returned,
             "has_more": has_more,
             "search_cursor": search_cursor,
@@ -1447,7 +1559,11 @@ class CtilcAdapter:
         limit: int = 50,
         offset: int = 0,
     ) -> dict[str, Any]:
-        """Valors disponibles d'un filtre per a una cerca concreta."""
+        """Valors disponibles d'un filtre per a una cerca concreta.
+
+        `tipus` pot ser `autors`, `titols` o `temes` (classificació temàtica
+        de les obres no literàries).
+        """
 
         if tipus not in KINDS:
             raise InvalidQueryError(

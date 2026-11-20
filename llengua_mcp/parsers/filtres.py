@@ -1,8 +1,10 @@
-"""Parser de les llistes de filtres del CTILC (autors i títols).
+"""Parser de les llistes de filtres del CTILC (autors, títols i temes).
 
 Les llistes es carreguen amb `CTILCQConcFiltObra_filtres.asp` i depenen del
 resultat actual (`resultat`). Cada valor és una casella amb `VALUE="@…"` i una
-etiqueta amb el recompte, per exemple `Abelló, Montserrat [2]`.
+etiqueta amb el recompte, per exemple `Abelló, Montserrat [2]`. El panell
+`filt=lang` porta la classificació temàtica NLIT (`classtemSelecBox`), amb el
+codi decimal i la descripció dins d'un `tooltiptext`.
 """
 
 from __future__ import annotations
@@ -16,18 +18,54 @@ from llengua_mcp.text import clean_text
 FILTRES_URL = "https://ctilc.iec.cat/scripts/CTILCQConcFiltObra_filtres.asp"
 
 BOXES = {"autors": "autSelecBox", "titols": "titSelecBox"}
-KINDS = {"autors": "authors", "titols": "titles"}
-EXTRA_PARAMS = {"autors": "autSelec=&AutTria=0", "titols": "titSelec=&TitTria=0"}
+KINDS = {"autors": "authors", "titols": "titles", "temes": "lang"}
+EXTRA_PARAMS = {
+    "autors": "autSelec=&AutTria=0",
+    "titols": "titSelec=&TitTria=0",
+    "temes": "tipusSelec=&genSelec=&classtemSelec=&classtemGSelec=",
+}
+
+_THEME_RE = re.compile(
+    r"NAME=['\"]classtemSelecBox['\"][^>]*VALUE=['\"](@\d+(?:\.\d)?)['\"][^>]*>"
+    r"\s*(?:&nbsp;|\s)*<span class=\"tooltip\">\s*[^<\[]*\[(\d+)\]\s*"
+    r"<span class=\"tooltiptext\">([^<]*)</span>",
+    re.IGNORECASE,
+)
+
+
+def _parse_themes(html: str) -> list[dict[str, Any]]:
+    values: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for match in _THEME_RE.finditer(html):
+        code = clean_text(match.group(1)).lstrip("@")
+        count = int(match.group(2))
+        label = clean_text(match.group(3))
+        label = re.sub(rf"^{re.escape(code)}\s*-\s*", "", label) or label
+        if not code or code in seen:
+            continue
+        seen.add(code)
+        values.append({"value": code, "label": label, "count": count})
+    return values
 
 
 def parse_filter_values(html: str, *, tipus: str) -> list[dict[str, Any]]:
     """Retorna els valors de la llista amb etiqueta i recompte."""
 
+    if tipus == "temes":
+        values = _parse_themes(html)
+        if not values:
+            raise UnexpectedResponseError(
+                "La llista de temes no té el format esperat.",
+                hint="El CTILC pot haver canviat; cal revisar el parser.",
+                source=FILTRES_URL,
+            )
+        return values
+
     box = BOXES.get(tipus)
     if box is None:
         raise UnexpectedResponseError(
             f"La llista de filtres «{tipus}» no existeix.",
-            hint="Valors disponibles: " + ", ".join(sorted(BOXES)) + ".",
+            hint="Valors disponibles: " + ", ".join(sorted(KINDS)) + ".",
             source=FILTRES_URL,
         )
 
@@ -58,4 +96,10 @@ def parse_filter_values(html: str, *, tipus: str) -> list[dict[str, Any]]:
     return values
 
 
-__all__ = ["BOXES", "EXTRA_PARAMS", "FILTRES_URL", "KINDS", "parse_filter_values"]
+__all__ = [
+    "BOXES",
+    "EXTRA_PARAMS",
+    "FILTRES_URL",
+    "KINDS",
+    "parse_filter_values",
+]

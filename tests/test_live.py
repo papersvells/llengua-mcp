@@ -6,6 +6,7 @@ import pytest
 
 from llengua_mcp.app import App
 from llengua_mcp.config import Settings
+from llengua_mcp.errors import InvalidQueryError
 from llengua_mcp.models import CtilcFilters, PatternElement
 
 pytestmark = pytest.mark.skipif(
@@ -344,3 +345,39 @@ async def test_live_jane() -> None:
         "mala fe" in sense["sinonims"] for item in general["results"] for sense in item["sentits"]
     )
     assert zero["status"] == "no_results"
+
+
+@pytest.mark.asyncio
+async def test_live_filtres_classtem_i_autor() -> None:
+    elements = [
+        PatternElement(type="lema", value="somriure"),
+        PatternElement(type="cg", category="adj"),
+    ]
+    app = App(Settings.from_env())
+    try:
+        theme = await app.ctilc.search_pattern(
+            elements, limit=1, filters=CtilcFilters(classtem=["3.2"])
+        )
+        themes = await app.ctilc.filtres_disponibles(theme["search_cursor"], tipus="temes", limit=3)
+        author_hits = await app.ctilc.search_pattern(
+            elements, limit=1, filters=CtilcFilters(autor=["Sagarra, Josep M. de"])
+        )
+        author_empty = await app.ctilc.search_pattern(
+            elements, limit=1, filters=CtilcFilters(autor=["Sagarra, Xavier"])
+        )
+        with pytest.raises(InvalidQueryError):
+            await app.ctilc.search_pattern(
+                elements, limit=1, filters=CtilcFilters(autor=["Inventat, Pere"])
+            )
+    finally:
+        await app.aclose()
+    assert theme["status"] == "ok"
+    assert theme["total"] and theme["total"] > 0
+    assert theme["filters_verified"] is True
+    assert themes["status"] == "ok"
+    assert themes["values"]
+    assert author_hits["status"] == "ok"
+    assert author_hits["total"] and author_hits["total"] > 0
+    assert author_empty["status"] == "no_matches"
+    assert author_empty["total"] == 0
+    assert "filtered_empty_verified" in author_empty["warnings"]
