@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from typing import Any
 
@@ -13,6 +14,27 @@ from llengua_mcp.text import clean_text
 class SoftcatalaAdapter:
     def __init__(self, settings: Settings) -> None:
         self.index = SinonimsIndex(settings.data_dir)
+        self._load_lock = asyncio.Lock()
+
+    async def warm(self) -> None:
+        """Carrega l'índex en segon pla; la primera consulta no paga la lectura."""
+
+        if self.index.loaded:
+            return
+        async with self._load_lock:
+            if self.index.loaded:
+                return
+            await asyncio.to_thread(self.index.load)
+
+    async def cerca_async(
+        self,
+        paraula: str,
+        *,
+        context: str | None = None,
+        limit: int = 15,
+    ) -> dict[str, Any]:
+        await self.warm()
+        return self.cerca(paraula, context=context, limit=limit)
 
     def cerca(
         self,

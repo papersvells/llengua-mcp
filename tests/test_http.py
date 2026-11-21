@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 from llengua_mcp.config import Settings
-from llengua_mcp.http import HttpClient
+from llengua_mcp.http import HttpClient, current_meter, reset_meter, start_meter
 
 
 def _settings(tmp_path) -> Settings:
@@ -101,3 +101,84 @@ async def test_cacheable_response_is_cached(tmp_path, monkeypatch) -> None:
             use_cache=True,
         )
     assert calls == 1
+
+
+@pytest.mark.asyncio
+async def test_meter_counts_network_and_cache(tmp_path, monkeypatch) -> None:
+    client = _client(tmp_path)
+    calls = 0
+
+    async def fake_request(method, url, *, body, headers):
+        nonlocal calls
+        calls += 1
+        return "ok", 200, [], 2, {"cache-control": "max-age=60"}
+
+    monkeypatch.setattr(client, "_one_request", fake_request)
+
+    token = start_meter()
+    try:
+        await client.get_text("https://example.test/a")
+        first = current_meter().payload()
+        await client.get_text("https://example.test/a")
+        second = current_meter().payload()
+    finally:
+        reset_meter(token)
+
+    assert calls == 1
+    assert first["upstream_requests"] == 1
+    assert first["from_cache"] is False
+    assert second["upstream_requests"] == 1
+    assert second["cache_hits"] == 1
+    assert second["from_cache"] is False
+    assert second["elapsed_ms"] >= first["elapsed_ms"]
+
+
+@pytest.mark.asyncio
+async def test_meter_marks_a_pure_cache_hit(tmp_path, monkeypatch) -> None:
+    client = _client(tmp_path)
+
+    async def fake_request(method, url, *, body, headers):
+        return "ok", 200, [], 2, {"cache-control": "max-age=60"}
+
+    monkeypatch.setattr(client, "_one_request", fake_request)
+    await client.get_text("https://example.test/b")
+
+    token = start_meter()
+    try:
+        await client.get_text("https://example.test/b")
+        payload = current_meter().payload()
+    finally:
+        reset_meter(token)
+
+    assert payload["upstream_requests"] == 0
+    assert payload["from_cache"] is True
+
+
+@pytest.mark.asyncio
+async def test_meter_counts_retries_as_separate_requests(tmp_path, monkeypatch) -> None:
+    client = _client(tmp_path)
+    calls = 0
+
+    async def fake_request(method, url, *, body, headers):
+        nonlocal calls
+        calls += 1
+        if calls < 3:
+            raise httpx.ConnectError("fallada transitòria")
+        return "ok", 200, [], 2, {}
+
+    async def no_sleep(*args, **kwargs) -> None:
+        return None
+
+    monkeypatch.setattr(client, "_one_request", fake_request)
+    monkeypatch.setattr("llengua_mcp.http.asyncio.sleep", no_sleep)
+
+    token = start_meter()
+    try:
+        await client.get_text("https://example.test/c")
+        payload = current_meter().payload()
+    finally:
+        reset_meter(token)
+
+    assert calls == 3
+    assert payload["upstream_requests"] == 3
+    assert payload["from_cache"] is False

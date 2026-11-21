@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from datetime import UTC, datetime
 from typing import Any
@@ -78,21 +79,32 @@ class ConsultesAdapter:
         self.client = client
         self._bootstrap: dict[str, Any] | None = None
         self._bootstrap_at = 0.0
+        self._bootstrap_lock = asyncio.Lock()
+
+    def _bootstrap_fresh(self) -> bool:
+        return (
+            self._bootstrap is not None
+            and time.monotonic() - self._bootstrap_at < BOOTSTRAP_TTL_SECONDS
+        )
 
     async def _bootstrap_data(self, *, force: bool = False) -> dict[str, Any]:
-        now = time.monotonic()
-        if (
-            not force
-            and self._bootstrap is not None
-            and now - self._bootstrap_at < BOOTSTRAP_TTL_SECONDS
-        ):
-            return self._bootstrap
+        if not force and self._bootstrap_fresh():
+            return self._bootstrap  # type: ignore[return-value]
 
-        result = await self.client.get_text(SOURCE_URL, cache_ttl=60, use_cache=not force)
-        data = parse_bootstrap(result.text)
-        self._bootstrap = data
-        self._bootstrap_at = now
-        return data
+        # Una sola càrrega encara que diverses eines demanin el nonce alhora.
+        requested_at = self._bootstrap_at
+        async with self._bootstrap_lock:
+            if not force and self._bootstrap_fresh():
+                return self._bootstrap  # type: ignore[return-value]
+            if force and self._bootstrap is not None and self._bootstrap_at > requested_at:
+                # Una altra crida ja l'ha refrescat mentre esperàvem el pany.
+                return self._bootstrap
+
+            result = await self.client.get_text(SOURCE_URL, cache_ttl=60, use_cache=not force)
+            data = parse_bootstrap(result.text)
+            self._bootstrap = data
+            self._bootstrap_at = time.monotonic()
+            return data
 
     async def _post(
         self, bootstrap: dict[str, Any], body: str

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from urllib.parse import parse_qs
@@ -148,3 +149,21 @@ async def test_limit_es_retalla_a_vint() -> None:
     result = await ConsultesAdapter(client).cerca("tenir", limit=100)
     assert result["query"]["limit"] == 20
     assert _params(client.bodies[0])["length"] == ["20"]
+
+
+@pytest.mark.asyncio
+async def test_dues_cerques_comparteixen_el_nonce() -> None:
+    client = FakeClient(ROWS)
+    adapter = ConsultesAdapter(client)
+    await adapter.cerca("tenir")
+    await adapter.cerca("ésser")
+    assert client.gets == 1
+    assert len(client.bodies) == 2
+
+
+@pytest.mark.asyncio
+async def test_cerques_simultànies_carreguen_el_nonce_un_cop() -> None:
+    client = FakeClient(ROWS)
+    adapter = ConsultesAdapter(client)
+    await asyncio.gather(adapter.cerca("tenir"), adapter.cerca("ésser"), adapter.cerca("fer"))
+    assert client.gets == 1

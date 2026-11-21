@@ -60,6 +60,10 @@ class SinonimsIndex:
         self.meta: dict[str, Any] = {}
         self._loaded = False
 
+    @property
+    def loaded(self) -> bool:
+        return self._loaded
+
     def load(self) -> None:
         if self._loaded:
             return

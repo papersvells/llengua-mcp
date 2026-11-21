@@ -382,7 +382,32 @@ La part del CTILC es considera llesta quan:
 7. S’ha revisat el cas “tenir foc als ulls” com a test d’acceptació: la resposta ha de ser una fitxa d’evidència, no un “N → és quotidià”.
 8. Els filtres per autor, any, gènere i varietat validen l’eco i no converteixen el total de control (1) en una absència.
 
-## 15. Enllaços
+## 15. Ús eficient de les eines
+
+Cada crida té un cost de xarxa i el limitador és d’**1 petició per segon i per
+host**. Una resposta amb deu consultes pot trigar més de deu segons encara que
+cap crida sigui lenta.
+
+- **Agrupa les consultes independents en un mateix torn.** Les de hosts
+  diferents poden anar en paral·lel; les del mateix host fan cua i el limitador
+  les espacia. Una consulta per torn multiplica l’espera.
+- **No cridis `salut` per sistema.** És un diagnòstic de protocol, no una
+  comprovació prèvia necessària. El servidor ja valida l’eco de cada cerca.
+- **No repeteixis cerques equivalents.** Canviar un accent, un plural o l’ordre
+  de dos mots sovint dona el mateix resultat; llig les `warnings` i els cursors
+  abans de tornar a consultar. Les respostes idèntiques surten de la memòria
+  cau, però les que només canvien de forma no.
+- **Fes servir l’eina més petita que respongui.** Per a un sol mot, `cerca` o
+  `diec_consulta`; `cerca_patro` només per a combinacions. `max_senses` baix
+  quan no calen totes les accepcions, i `limit` ajustat a les files que es
+  llegiran.
+- **Llegeix el bloc `timing`.** `upstream_requests` diu quantes peticions ha
+  costat la crida i `from_cache` si ha sortit de la memòria cau; serveix per
+  detectar consultes cares abans de repetir-les.
+- **No demanis el mateix article dues vegades** per citar-ne dues accepcions:
+  `max_senses` és un paràmetre, no cal una segona crida.
+
+## 16. Enllaços
 
 - CTILC: <https://ctilc.iec.cat/>
 - BDLex: <https://bdlex.iec.cat/>

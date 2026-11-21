@@ -138,6 +138,12 @@ Variables d'entorn:
   patró visible. Un zero només és `no_matches` si la pàgina en dona el comptador
   explícit i el missatge de cap coincidència; si no, és `unexpected_response`.
   Si és `false`, el resultat no es pot presentar com una absència lingüística.
+- **`timing`**: cada resposta, també les d'error, porta un bloc amb
+  `elapsed_ms`, `upstream_requests` (intents de xarxa, reintents inclosos),
+  `cache_hits` i `from_cache`. `from_cache` només és cert quan tota la feina ha
+  sortit de la memòria cau HTTP; una eina que treballa amb dades locals no
+  compta com a encert de cau. Serveix per veure on se'n va el temps d'una
+  sessió, no per interpretar el resultat.
 - **`next_cursor`**: continua la mateixa cerca. És local i caduca; si el total o
   el patró canvien, l'eina retorna `stale_search` i no barreja pàgines.
 - **`search_cursor`**: vincula la cerca amb eines com la dispersió. N'hi ha
@@ -163,8 +169,9 @@ Variables d'entorn:
   Compara amb `per_million`, no amb `query_hits`.
 - **Cerques bàsiques**: `cerca_forma` i `cerca_lema` retornen `total`, el
   desglossament `forms` (lema, categoria, forma i morfologia) i una pàgina
-  d'`occurrences`. `mode` pot ser `coincident`, `comença per`, `acaba en` o
-  `conté`; els modes negatius no s'exposen. Per paginar, passa `offset`.
+  d'`occurrences`. `mode` pot ser `coincident`, `comença per`, `acaba en`,
+  `conté`, `no comença per`, `no acaba en` o `no conté`; els modes negatius
+  requereixen `cg`. Per paginar, passa `offset`.
   Aquestes pàgines no apliquen els filtres de `cerca`/`cerca_patro`.
 - **Filtres del CTILC**: amb filtres, `total` és la «Quantitat filtrada» i
   `total_unfiltered` la freqüència sense filtres; `filters_verified` ha de ser

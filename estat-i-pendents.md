@@ -428,6 +428,44 @@ atribut.
 - Nota: `per_million` és la mesura per comparar grups de mides diferents; la
   varietat, el gènere i el tema són de l'obra, i el corpus és escrit.
 
+### 2.15 Acceleració de les respostes (resolt el 21/11/2026)
+
+Issue [#10](https://github.com/papersvells/llengua-mcp/issues/10).
+
+- **Instrumentació.** Totes les eines retornen un bloc `timing` (també quan el
+  resultat és un error) amb `elapsed_ms`, `upstream_requests` (intents de xarxa,
+  reintents inclosos), `cache_hits` i `from_cache`. `from_cache` només és cert si
+  tota la feina ha sortit de la memòria cau HTTP; una eina amb dades locals no
+  compta com a encert. S'implementa amb un `ContextVar` al client HTTP
+  (`RequestMeter`), de manera que les eines no han de passar comptadors.
+- **Escalfament de sinònims.** El servidor carrega l'índex de Softcatalà en
+  segon pla en arrencar (`lifespan` del servidor MCP, `asyncio.to_thread`). La
+  primera `cerca_sinonims` ja no paga la lectura; si les dades falten, només
+  falla aquesta eina. Un `asyncio.Lock` evita carregar-lo dues vegades si la
+  primera consulta arriba abans que acabi l'escalfament.
+- **Nonce de `consultes_iec`.** Ja es reutilitzava durant 600 s amb un reintent
+  si l'AJAX falla. S'hi ha afegit un pany perquè diverses crides simultànies no
+  demanin la pàgina del nonce més d'un cop, i perquè dos refrescos concurrents
+  no en facin dos.
+- **Mesura del flux de 10 crides** (stdio, xarxa real, 21/11/2026; el flux és
+  `optimot_cerca`, `diec_consulta`, `esadir_consulta`, `cerca_sinonims`,
+  `cerca_frase`, `collocacions`, `consultes_iec`, `diec_consulta("fe", 25)`,
+  `bdlex_consulta`, `cerca_sinonims`):
+
+| Estat | Total | Primera `cerca_sinonims` |
+|---|---:|---:|
+| Abans (19/11/2026) | 13,8 s | 1,0 s |
+| Abans, reproduït el 21/11/2026 | 14,116 s | 1,362 s |
+| Després, 1a mesura | 12,669 s | 0,002 s |
+| Després, 2a mesura | 11,499 s | 0,002 s |
+
+  La resta del temps és xarxa i espaiat: `collocacions` (~2,2 s), `diec_consulta`
+  amb 25 accepcions (~3,4 s) i `consultes_iec` (~2,4 s, dues peticions: nonce i
+  AJAX). Cap canvi no apuja el ritme per sobre d'1 req/s per host.
+- **Guia d'ús eficient** a `AGENTS.md` §15: agrupar consultes independents,
+  evitar `salut` per sistema i no repetir cerques equivalents.
+
+
 ---
 
 ## 3. Comandes útils
@@ -497,10 +535,9 @@ PY
 
 Les feines obertes es segueixen al repositori:
 
-1. Acceleració de les respostes: instrumentació, escalfament de l'índex i menys peticions ([#10](https://github.com/papersvells/llengua-mcp/issues/10)).
-2. Fonts: DDLC fora del catàleg de BDLex, verificat a §2.6 ([#9](https://github.com/papersvells/llengua-mcp/issues/9)). Critèria es va descartar ([#7](https://github.com/papersvells/llengua-mcp/issues/7), tancada) i els sinònims Jané ja són a `jane_cerca`.
-3. CTILC: tancades les issues de modes 4–6 amb `cg` ([#6](https://github.com/papersvells/llengua-mcp/issues/6)), `classtem` i validació d'autors ([#4](https://github.com/papersvells/llengua-mcp/issues/4)) i descart de la cerca de noms propis ([#5](https://github.com/papersvells/llengua-mcp/issues/5)).
-4. Fora del repositori, pendents de decisió: contactar amb `dcc@iec.cat` abans
+1. CTILC: tancades les issues de modes 4–6 amb `cg` ([#6](https://github.com/papersvells/llengua-mcp/issues/6)), `classtem` i validació d'autors ([#4](https://github.com/papersvells/llengua-mcp/issues/4)) i descart de la cerca de noms propis ([#5](https://github.com/papersvells/llengua-mcp/issues/5)).
+2. Acceleració: `timing`, escalfament de l'índex i nonce compartit, resolts a §2.15 ([#10](https://github.com/papersvells/llengua-mcp/issues/10)).
+3. Fora del repositori, pendents de decisió: contactar amb `dcc@iec.cat` abans
    de publicar (§2.7) i repetir les proves d'ús des d'OpenCode amb dos models.
-5. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
+4. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de
    fum abans de donar per bona una versió.

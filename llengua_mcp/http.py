@@ -7,6 +7,7 @@ import hashlib
 import json
 import random
 import time
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlsplit
@@ -28,6 +29,56 @@ class HttpResult:
     warnings: list[str] = field(default_factory=list)
     from_cache: bool = False
     bytes_received: int = 0
+
+
+@dataclass
+class RequestMeter:
+    """Compta el cost real d'una crida a una eina.
+
+    `upstream_requests` inclou cada intent de xarxa, també els reintents;
+    `cache_hits` compta les respostes servides des de la memòria cau HTTP.
+    """
+
+    started_at: float = field(default_factory=time.monotonic)
+    upstream_requests: int = 0
+    cache_hits: int = 0
+
+    def payload(self) -> dict[str, Any]:
+        return {
+            "elapsed_ms": round((time.monotonic() - self.started_at) * 1000),
+            "upstream_requests": self.upstream_requests,
+            "cache_hits": self.cache_hits,
+            "from_cache": self.upstream_requests == 0 and self.cache_hits > 0,
+        }
+
+
+_METER: ContextVar[RequestMeter | None] = ContextVar("llengua_meter", default=None)
+
+
+def start_meter() -> RequestMeter:
+    """Obre un comptador per a la crida actual i el deixa al context."""
+
+    meter = RequestMeter()
+    _METER.set(meter)
+    return meter
+
+
+def current_meter() -> RequestMeter | None:
+    return _METER.get()
+
+
+def reset_meter(_meter: RequestMeter | None = None) -> None:
+    _METER.set(None)
+
+
+def _count(*, upstream: bool) -> None:
+    meter = _METER.get()
+    if meter is None:
+        return
+    if upstream:
+        meter.upstream_requests += 1
+    else:
+        meter.cache_hits += 1
 
 
 def is_cacheable(headers: dict[str, str]) -> bool:
@@ -169,6 +220,7 @@ class HttpClient:
         if use_cache:
             cached = self.cache.get(key)
             if cached is not None:
+                _count(upstream=False)
                 text, status = cached
                 return HttpResult(
                     text=text,
@@ -182,6 +234,7 @@ class HttpClient:
         last_error: Exception | None = None
 
         for attempt in range(3):
+            _count(upstream=True)
             await self.limiter.wait(host)
             try:
                 text, status, warnings, size, response_headers = await self._one_request(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
@@ -14,6 +15,7 @@ from llengua_mcp.errors import (
     UnexpectedResponseError,
     error_payload,
 )
+from llengua_mcp.http import current_meter, reset_meter, start_meter
 from llengua_mcp.models import CtilcFilters, PatternElement
 
 INSTRUCTIONS = """\
@@ -74,8 +76,6 @@ No revisis paràgrafs sencers per iniciativa pròpia: l'usuari fa consultes
 puntuals sobre una paraula, una expressió o una frase.
 """
 
-mcp = MCPServer("llengua", instructions=INSTRUCTIONS, version="0.1.0")
-
 _app: App | None = None
 _app_lock = asyncio.Lock()
 
@@ -89,20 +89,51 @@ async def get_app() -> App:
     return _app
 
 
-async def _call(source: str, awaitable) -> dict[str, Any]:
+async def _warm_indexes(app: App) -> None:
+    """Carrega en segon pla els índexs locals que no depenen de la xarxa."""
+
     try:
-        return await awaitable
-    except LlenguaError as exc:
-        return error_payload(exc, source=source or exc.source)
-    except Exception as exc:  # noqa: BLE001 - l'agent ha de rebre un error útil
-        return error_payload(
-            UnexpectedResponseError(
-                "Error inesperat en consultar la font.",
-                hint=f"{type(exc).__name__}: {exc}",
+        await app.softcatala.warm()
+    except Exception:  # noqa: BLE001 - si falten dades, l'eina ho explica en consultar-se
+        return
+
+
+@asynccontextmanager
+async def _lifespan(_server: MCPServer):
+    app = await get_app()
+    warm = asyncio.create_task(_warm_indexes(app))
+    try:
+        yield {}
+    finally:
+        warm.cancel()
+        await app.aclose()
+
+
+async def _call(source: str, awaitable) -> dict[str, Any]:
+    token = start_meter()
+    try:
+        try:
+            payload = await awaitable
+        except LlenguaError as exc:
+            payload = error_payload(exc, source=source or exc.source)
+        except Exception as exc:  # noqa: BLE001 - l'agent ha de rebre un error útil
+            payload = error_payload(
+                UnexpectedResponseError(
+                    "Error inesperat en consultar la font.",
+                    hint=f"{type(exc).__name__}: {exc}",
+                    source=source,
+                ),
                 source=source,
-            ),
-            source=source,
-        )
+            )
+        meter = current_meter()
+        if meter is not None:
+            payload["timing"] = meter.payload()
+        return payload
+    finally:
+        reset_meter(token)
+
+
+mcp = MCPServer("llengua", instructions=INSTRUCTIONS, version="0.1.0", lifespan=_lifespan)
 
 
 @mcp.tool()
@@ -246,22 +277,6 @@ async def esadir_fitxa(entrada: str) -> dict[str, Any]:
     return await _call("https://www.esadir.cat", app.esadir.fitxa(entrada))
 
 
-def _sync_call(source: str, function, *args, **kwargs) -> dict[str, Any]:
-    try:
-        return function(*args, **kwargs)
-    except LlenguaError as exc:
-        return error_payload(exc, source=source or exc.source)
-    except Exception as exc:  # noqa: BLE001
-        return error_payload(
-            UnexpectedResponseError(
-                "Error inesperat en consultar la font.",
-                hint=f"{type(exc).__name__}: {exc}",
-                source=source,
-            ),
-            source=source,
-        )
-
-
 @mcp.tool()
 async def bdlex_consulta(
     paraula: str | None = None,
@@ -400,12 +415,13 @@ async def cerca_sinonims(
     ha de triar les opcions que hi encaixen i explicar-ne el matís.
     """
     app = await get_app()
-    return _sync_call(
+    return await _call(
         "https://www.softcatala.org/diccionari-de-sinonims/",
-        app.softcatala.cerca,
-        paraula,
-        context=context,
-        limit=limit,
+        app.softcatala.cerca_async(
+            paraula,
+            context=context,
+            limit=limit,
+        ),
     )
 
 
