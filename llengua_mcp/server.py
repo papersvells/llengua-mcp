@@ -505,9 +505,11 @@ async def cerca_forma(
 
     A diferència de `cerca`, aquesta eina dona el desglossament de les formes
     trobades amb la categoria i la morfologia, a més d'una pàgina
-    d'ocurrències. `mode` pot ser `coincident`, `comença per`, `acaba en` o
-    `conté`; els modes negatius no estan verificats i no s'exposen. `cg`
-    restringeix per categoria o codi morfològic (per exemple `V` o `V:3PI`).
+    d'ocurrències. `mode` pot ser `coincident`, `comença per`, `acaba en`,
+    `conté`, `no comença per`, `no acaba en` o `no conté`. Els modes negatius
+    requereixen `cg` (p. ex. `I` per a interjeccions); tria una categoria
+    concreta perquè el portal retorna tot el desglossament, encara que `limit`
+    sigui baix. `cg` restringeix per categoria o codi morfològic.
     Per continuar, passa `offset`.
     """
     app = await get_app()
@@ -535,8 +537,11 @@ async def cerca_lema(
 
     Retorna la freqüència total, les formes del lema amb categoria i morfologia
     (útil per construir un `formalema`) i una pàgina d'ocurrències. `mode` pot
-    ser `coincident`, `comença per`, `acaba en` o `conté`. `cg` restringeix per
-    categoria o codi morfològic. Per continuar, passa `offset`.
+    ser `coincident`, `comença per`, `acaba en`, `conté`, `no comença per`,
+    `no acaba en` o `no conté`. Els modes negatius requereixen `cg` (p. ex. `I`
+    per a interjeccions) i s'apliquen al lema, no a les seves formes. Tria una
+    categoria concreta: `limit` només redueix la pàgina d'ocurrències, no el
+    desglossament. Per continuar, passa `offset`.
     """
     app = await get_app()
     return await _call(

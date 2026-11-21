@@ -131,8 +131,14 @@ def parse_basiques(html: str, *, kind: str) -> dict[str, Any]:
     if match:
         echo = clean_text(match.group("echo"))
         total = _int(match.group("total"))
-    if explicit_zero:
-        total = 0
+    field = f"cad{kind}"
+    form = doc.css_first('form[name="fConc"]')
+    echo_fields: dict[str, str] = {}
+    if form is not None:
+        for name in (field, f"{field}cond", "cg"):
+            inputs = form.css(f'input[type="hidden"][name="{name}"][value]')
+            if len(inputs) == 1:
+                echo_fields[name] = clean_text(inputs[0].attributes["value"])
 
     page = pages = None
     page_match = _PAGE_RE.search(body_text)
@@ -151,6 +157,7 @@ def parse_basiques(html: str, *, kind: str) -> dict[str, Any]:
     return {
         "kind": kind,
         "echo": echo,
+        "echo_fields": echo_fields,
         "total": total,
         "page": page,
         "pages": pages,

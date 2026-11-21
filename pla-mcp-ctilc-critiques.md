@@ -504,7 +504,32 @@ mode 5 → 0
 mode 6 → 0
 ```
 
-Els modes 4–6 retornen 0; o estan trencats, o necessiten una altra sintaxi. No prometre'ls sense investigar-los.
+**Verificació del 21/11/2026 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)).**
+Els formularis `CTILCQConc_Formes1.asp` i `CTILCQConc_FormesLema1.asp`
+envien els modes 4–6 al mateix camp que els positius, sense cap paràmetre
+addicional de negació. Els controls es van fer amb aquests cossos POST
+(`N` és cadascun dels valors 1–6):
+
+```text
+CTILCQConc_Formes2.asp      cadforma=ah&cadformacond=N&cg=I&seccio=CTILC1&iStart=1&iOffset=2
+CTILCQConc_FormesLema2.asp  cadlema=ah&cadlemacond=N&cg=I&seccio=CTILC1&iStart=1&iOffset=2
+```
+
+| Modes (positiu / negatiu) | Forma | Lema |
+|---|---:|---:|
+| 1 / 4 (comença per) | 11.334 / 83.380 | 11.437 / 83.277 |
+| 2 / 5 (acaba en) | 12.147 / 82.567 | 12.146 / 82.568 |
+| 3 / 6 (conté) | 12.277 / 82.437 | 12.243 / 82.471 |
+
+Cada parella suma 94.714 dins de `cg=I`. Les concordances negatives mostren
+«Hola» i «Apa», i cap element del panell negatiu compleix el criteri positiu
+respectiu (es compara la forma a `Formes2` i el lema a `FormesLema2`, sense
+distinció de caixa ni d'accents). L'eco visible i els camps ocults coincideixen.
+Repetint el mode 4 amb `somriu` i `cg=` als dos endpoints s'obté un fals zero
+amb el missatge de cap coincidència i l'eco correcte. Per això l'MCP només
+envia modes negatius amb `cg` i comprova l'eco del terme, el mode i el filtre.
+El desglossament no es pagina: amb `iOffset=2`, la resposta negativa per lema
+ja pesa uns 2,6 MB.
 
 ### 3.8. Falten eines bàsiques
 
@@ -765,7 +790,7 @@ Conclusió: la comparació pot ser suggestiva, però no demostra que el català 
 |---|---|---|---|
 | `cerca_patro` | `QuerySpec` | `Coocur2.asp` | Retorna cursor, echo, total, files |
 | `ocurrencies` | `cursor`, `start?`, `limit?` | re-POST `Coocur2.asp` | No depèn només de `resultat` |
-| `cerca_forma` | `forma`, `mode`, `cg?` | `Formes2.asp` | Modes 0–3 verificats; 4–6 no |
+| `cerca_forma` | `forma`, `mode`, `cg?` | `Formes2.asp` | Modes 0–3; 4–6 amb `cg` |
 | `cerca_lema` | `lema`, `mode`, `cg?` | `FormesLema2.asp` | Retorna ocurrències; per a formes, `formes_de_lema` |
 | `cerca_nom_propi` | `forma`, `mode` | `NomsPropis2.asp` | Afegir |
 | `formes_de_lema` | `lema`, `cg?` | `Coocur1b`/`strquery` | Per construir `formalema` |

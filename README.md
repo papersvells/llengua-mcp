@@ -227,9 +227,11 @@ Variables d'entorn:
 
 - La revisió automàtica de paràgrafs sencers no forma part de l'abast.
 - Les cerques bàsiques del CTILC (`Formes2`, `FormesLema2`) no apliquen els
-  filtres de la consulta combinada i els modes negatius (4–6) no estan
-  verificats. Les col·locacions d'una forma encara no s'exposen: calen fixtures
-  i proves pròpies.
+  filtres de la consulta combinada. Els modes `no comença per`, `no acaba en`
+  i `no conté` requereixen `cg`: sense categoria el portal pot donar un fals
+  zero. Fes servir una categoria concreta (p. ex. `cg="I"`); `limit` no
+  redueix el desglossament que el portal envia i una cerca molt àmplia pot
+  superar el límit de mida.
 - `obres` cerca per autor o per títol, no les dues coses alhora. Una cerca molt
   àmplia pot superar el límit de resposta (4 MB per defecte); aleshores retorna
   `too_many_results` i cal concretar el títol o l'autor.

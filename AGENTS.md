@@ -43,8 +43,8 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
   publica el contingut (455 posts, sense nonce), però la cerca de text és feble
   (només títols) i molt contingut viu en PDFs enllaçats. Per a ortografia i
   gramàtica ja hi ha l'OIEC i les gramàtiques de l'IEC.
-- Pendent: les eines de les issues obertes del CTILC (els modes 4–6 de les
-  cerques bàsiques). La cerca de noms propis es va descartar
+- Els modes 4–6 de les cerques bàsiques del CTILC es van verificar el
+  21/11/2026 amb `cg=I` i s'exposen amb `cg` obligatori. La cerca de noms propis es va descartar
   (issue #5, tancada el 20/11/2026). L'exportació CSV i les obres descarregables queden
   fora d'abast: l'MCP no fa extracció massiva ni descarrega textos sencers.
 - Documents de referència:
@@ -188,7 +188,7 @@ Aquestes regles estan verificades i no s’han de “simplificar” sense tornar
 20. **Els filtres canvien el total i l’eco.** Amb filtres, `Freqüència total` continua sent el total sense filtrar, i la xifra vàlida és `Quantitat filtrada`. Els camps `*Selec` (`autSelec`, `anySelec`, `varSelec`…) s’han de comparar amb els enviats. Si el resultat filtrat no té files, el portal pot retornar `1` com a valor de control: és `unexpected_response`, no una absència. Dues excepcions verificades el 20/11/2026: si l’autor s’ha validat abans contra `CTILCCorpus_Aut1.asp`, el total de control es converteix en `no_matches` amb `filtered_empty_verified`; i `classtem` només accepta un subtema a la vegada (els grups sencers van a `classtemGSelec`).
 21. **Les obres tenen pàgines pròpies.** `CTILCCorpus_Aut1.asp` llista autors (`select#autorL`), `Aut2.asp` retorna les obres d’un autor i `Obr2.asp` cerca per títol. La taula no es pagina i una cerca massa àmplia pot superar el límit de 4 MB: cal retornar `too_many_results` amb una pista accionable, no un error genèric.
 22. **La dispersió dialectal té tres gràfics.** `CTILCQDispersionsDial.asp` retorna la distribució del corpus, la proporció de la cerca per varietat i el repartiment de la cerca. Cal llegir el gràfic `Proporció`, que porta al tooltip el numerador i el denominador; no comparar recomptes absoluts entre varietats de mides diferents, sinó `per_million`. Un zero pot ser una mancança del corpus.
-23. **Les cerques bàsiques tenen pàgines pròpies.** `Formes2.asp` i `FormesLema2.asp` no tenen «Patró seleccionat»: l’encapçalament és `Forma : …` / `Lemes : …` (plural) i `Freqüència total`. El panell `formesSelec` dona `form|lema CG|CM` a `Formes2` i `lema CG|form|CM` a `FormesLema2`: l’ordre canvia. La paginació és `iStart`/`iOffset` i no necessita el `resultat`; els modes 4–6 no estan verificats.
+23. **Les cerques bàsiques tenen pàgines pròpies.** `Formes2.asp` i `FormesLema2.asp` no tenen «Patró seleccionat»: l’encapçalament és `Forma : …` / `Lemes : …` (plural) i `Freqüència total`. El panell `formesSelec` dona `form|lema CG|CM` a `Formes2` i `lema CG|form|CM` a `FormesLema2`: l’ordre canvia. La paginació és `iStart`/`iOffset` i no necessita el `resultat`. Els modes negatius 4–6 es verifiquen amb l’eco visible i els camps ocults de `fConc`; cal `cg` per evitar el fals zero de la cerca sense categoria. `iOffset` no limita el desglossament.
 24. **La dispersió general creua sis atributs.** `CTILCQDispersions.asp` retorna tres gràfics per atribut (`Proporció`, `Repartiment`, `Total`/`Totals`). Cal aparellar `Repartiment` (ocurrències de la cerca) amb `Total`/`Totals` (corpus); `genere` suma només les obres literàries i `classificacio` les no literàries, així que no han de sumar el total general.
 
 ## 8. Eines MCP
@@ -209,8 +209,8 @@ Prioritat dins l’adaptador CTILC:
 
 - `cerca_frase(frase, variants?, limit?)` — tokenitza, prova variants (`al`/`als`, accents, etc.), compila el patró i retorna una fitxa d’evidència.
 - `cerca(lema?, forma?, categoria?, limit?)` — cerca simple per a la majoria de preguntes.
-- `cerca_forma(forma, mode?, cg?, limit?, offset?)` — concordança bàsica amb el desglossament de formes i morfologia (modes 0–3).
-- `cerca_lema(lema, mode?, cg?, limit?, offset?)` — concordança bàsica d’un lema amb les seves formes; útil per construir un `formalema`.
+- `cerca_forma(forma, mode?, cg?, limit?, offset?)` — concordança bàsica amb el desglossament de formes i morfologia (modes 0–6; `cg` obligatori per als negatius).
+- `cerca_lema(lema, mode?, cg?, limit?, offset?)` — concordança bàsica d’un lema amb les seves formes; útil per construir un `formalema`. Admet els mateixos modes, aplicats al lema.
 - `continuar_cerca(cursor, limit?)` — reprèn una pàgina amb el cursor local.
 - `cerca_patro(elements, limit?)` — patró avançat amb elements tipats.
 - `context(occurrence_id)` — context ±50 i paràgraf, amb metadades de l’obra.

@@ -349,9 +349,12 @@ Eines `cerca_forma(forma, mode?, cg?, limit?, offset?)` i
 - Retornen `total`, el desglossament `forms` (lema, categoria, forma,
   morfologia i recompte) i una pàgina d'`occurrences`, amb `page`, `pages`,
   `has_more` i `next_offset`.
-- Modes verificats: 0 coincident, 1 comença per, 2 acaba en, 3 conté. Els modes
-  4–6 no s'exposen i retornen 0 al portal. Issue
-  [#6](https://github.com/papersvells/llengua-mcp/issues/6).
+- Modes verificats: 0 coincident, 1 comença per, 2 acaba en, 3 conté.
+  El 21/11/2026 també es van verificar 4 `no comença per`, 5 `no acaba en`
+  i 6 `no conté` amb `cg="I"` en tots dos endpoints. Els modes negatius
+  requereixen `cg` perquè el portal pot retornar un fals zero sense categoria.
+  Els controls i els cossos POST consten a `pla-mcp-ctilc-critiques.md` §3.7
+  ([#6](https://github.com/papersvells/llengua-mcp/issues/6)).
 - La paginació és `iStart`/`iOffset` i no necessita el `resultat`; es pot
   demanar qualsevol pàgina amb `offset`.
 - El panell `formesSelec` té ordres diferents: `form|lema CG|CM` a `Formes2` i

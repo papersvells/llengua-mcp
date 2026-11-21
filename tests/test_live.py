@@ -173,6 +173,21 @@ async def test_live_cerca_forma_i_lema() -> None:
 
 
 @pytest.mark.asyncio
+async def test_live_cerca_basica_negativa() -> None:
+    app = App(Settings.from_env())
+    try:
+        forma = await app.ctilc.cerca_forma("ah", mode="no comença per", cg="I", limit=2)
+        lema = await app.ctilc.cerca_lema("ah", mode="no conté", cg="I", limit=2)
+    finally:
+        await app.aclose()
+    for result in (forma, lema):
+        assert result["status"] == "ok"
+        assert result["echo_verified"] is True
+        assert result["total"] > 0
+        assert result["returned"] == 2
+
+
+@pytest.mark.asyncio
 async def test_live_dispersio_general() -> None:
     app = App(Settings.from_env())
     try:

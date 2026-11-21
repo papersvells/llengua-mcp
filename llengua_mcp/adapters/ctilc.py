@@ -260,21 +260,39 @@ _BASIC_MODES = {
     "acabada en": "2",
     "conte": "3",
     "en qualsevol posicio": "3",
+    "no comenca per": "4",
+    "no comencada per": "4",
+    "no comencat per": "4",
+    "no acaba en": "5",
+    "no acabada en": "5",
+    "no acabat en": "5",
+    "no conte": "6",
+    "que no contingui": "6",
+}
+
+_NEGATIVE_BASIC_ECHO = {
+    "forma": {"4": "No començada per", "5": "No acabada en", "6": "Que no contingui"},
+    "lema": {"4": "No començat per", "5": "No acabat en", "6": "Que no contingui"},
 }
 
 
-def _basic_mode(mode: str) -> str:
+def _basic_mode(mode: str, cg: str) -> str:
     key = normalize_key(mode)
-    if key in _BASIC_MODES:
-        return _BASIC_MODES[key]
-    raise InvalidQueryError(
-        f"El mode «{mode}» no és vàlid per a una cerca bàsica.",
-        hint=(
-            "Modes: coincident, comença per, acaba en o conté. Els modes "
-            "negatius (no comença per, no acaba en, que no contingui) no estan "
-            "verificats i no s'exposen."
-        ),
-    )
+    condition = _BASIC_MODES.get(key)
+    if condition is None:
+        raise InvalidQueryError(
+            f"El mode «{mode}» no és vàlid per a una cerca bàsica.",
+            hint=(
+                "Modes: coincident, comença per, acaba en, conté, "
+                "no comença per, no acaba en o no conté."
+            ),
+        )
+    if condition in _NEGATIVE_BASIC_ECHO["forma"] and not cg:
+        raise InvalidQueryError(
+            "El mode negatiu requereix el filtre `cg`.",
+            hint="Acota la cerca amb una categoria concreta (per exemple `cg=I`, interjecció).",
+        )
+    return condition
 
 
 def _filter_tokens(value: str) -> list[str]:
@@ -613,6 +631,7 @@ class CtilcAdapter:
         kind: str,
         query: str,
         mode: str,
+        condition: str,
         cg: str,
         data: dict[str, Any],
         limit: int,
@@ -623,26 +642,50 @@ class CtilcAdapter:
         total = data["total"]
         occurrences = data["occurrences"]
         forms = data["forms"]
-        forms_truncated = len(forms) > BASIC_FORMS_LIMIT
-        if forms_truncated:
-            forms = forms[:BASIC_FORMS_LIMIT]
-            warnings.append("forms_truncated")
-        echo_verified = bool(data["echo"]) and normalize_key(query) in normalize_key(data["echo"])
-        if data["echo"] and not echo_verified:
+        prefix = _NEGATIVE_BASIC_ECHO[kind].get(condition)
+        negative = prefix is not None
+        if negative:
+            field = f"cad{kind}"
+            visible_query = data["echo"].split(" (Categoria lèxica:", 1)[0]
+            echo_verified = (
+                data["echo_fields"] == {field: query, f"{field}cond": condition, "cg": cg}
+                and visible_query == f"{prefix} {query}"
+            )
+        else:
+            echo_verified = bool(data["echo"]) and normalize_key(query) in normalize_key(
+                data["echo"]
+            )
+        if not echo_verified and (data["echo"] or negative):
             warnings.append("echo_unexpected")
-        if any(item["occurrence_id"] is None for item in occurrences):
-            warnings.append("occurrence_id_missing")
 
-        if total is None:
+        if negative and not echo_verified:
             status = "unexpected_response"
-        elif total == 0:
-            status = "no_matches"
-            warnings.append("zero_results")
-        elif not occurrences:
+            total, forms, occurrences = None, [], []
+        elif data["explicit_zero"] or total == 0:
+            if (
+                total == 0
+                and data["explicit_zero"]
+                and echo_verified
+                and not (forms or occurrences)
+            ):
+                status = "no_matches"
+                warnings.append("zero_results")
+            else:
+                status = "unexpected_response"
+                warnings.append("zero_unverified")
+                total, forms, occurrences = None, [], []
+        elif total is None or not occurrences:
             status = "unexpected_response"
             warnings.append("parse_partial")
         else:
             status = "ok"
+
+        forms_truncated = len(forms) > BASIC_FORMS_LIMIT
+        if forms_truncated:
+            forms = forms[:BASIC_FORMS_LIMIT]
+            warnings.append("forms_truncated")
+        if any(item["occurrence_id"] is None for item in occurrences):
+            warnings.append("occurrence_id_missing")
 
         returned = len(occurrences)
         has_more = bool(total) and returned > 0 and offset + returned < total
@@ -718,7 +761,7 @@ class CtilcAdapter:
             raise InvalidQueryError("`offset` ha de ser 0 o més gran.")
         limit = max(1, min(limit, 50))
         cg = clean_text(cg) if cg else ""
-        condition = _basic_mode(mode)
+        condition = _basic_mode(mode, cg)
         body = (
             f"cadforma={quote_plus(forma)}&cadformacond={condition}"
             f"&cg={quote_plus(cg)}&seccio=CTILC1"
@@ -730,6 +773,7 @@ class CtilcAdapter:
             kind="forma",
             query=forma,
             mode=mode,
+            condition=condition,
             cg=cg,
             data=data,
             limit=limit,
@@ -764,7 +808,7 @@ class CtilcAdapter:
             raise InvalidQueryError("`offset` ha de ser 0 o més gran.")
         limit = max(1, min(limit, 50))
         cg = clean_text(cg) if cg else ""
-        condition = _basic_mode(mode)
+        condition = _basic_mode(mode, cg)
         body = (
             f"cadlema={quote_plus(lema)}&cadlemacond={condition}"
             f"&cg={quote_plus(cg)}&seccio=CTILC1"
@@ -776,6 +820,7 @@ class CtilcAdapter:
             kind="lema",
             query=lema,
             mode=mode,
+            condition=condition,
             cg=cg,
             data=data,
             limit=limit,
