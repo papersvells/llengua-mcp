@@ -242,9 +242,51 @@ directe amb `somriure` (lema) el 18/11/2026 i amb `somriures` (forma) el
   malfiat / 2. murri, trapella, viu, caut, recelós»). Llicència CC BY-NC-ND 3.0:
   consulta en directe, entrades sense transformar i atribució a Albert Jané i a
   l'IEC; no es fusiona amb les dades de Softcatalà.
-- **Cobertura del DDLC a BDLex.** Afirmada en converses anteriors sense
-  verificació específica; comprovar-ho si es vol citar. Issue
-  [#9](https://github.com/papersvells/llengua-mcp/issues/9).
+- **El DDLC no forma part de BDLex (verificat el 21/11/2026, issue
+  [#9](https://github.com/papersvells/llengua-mcp/issues/9)).** Segons la
+  [presentació de BDLex](https://bdlex.iec.cat/scripts/IniPresentacio.asp),
+  la base va ser una font complementària per redactar el DDLC, que té
+  [un portal propi](https://dcc.iec.cat/ddlcI/scripts/index.html).
+  L’enllaç al DDLC a `jane_cerca` apunta a aquest altre recurs.
+
+#### Catàleg de BDLex verificat el 21/11/2026
+
+Els codis dels 15 diccionaris del
+[selector de consulta avançada](https://bdlex.iec.cat/scripts/Qorth1av.asp)
+coincideixen amb els que accepta `bdlex_consulta`. El portal mostra
+`DIEC2e`, `DIEC2` i `DIEC1`, però els valors que envia al motor són `DIEe`,
+`DIE2` i `DIEC`, respectivament.
+
+S’han fet quatre cerques exactes per codi, enviant un sol `dict[]` cada
+vegada: `key_ext=<mot>&key_ext_type=exact&element=entry&dict[]=<codi>&result_type=ids`.
+S’han obert els articles retornats pel seu `entry_id[]`: tots tenien
+l’atribut XML `dict` del diccionari demanat. En cada cerca amb resultats,
+almenys una fitxa corresponia a la forma o clau normalitzada i contenia
+una definició o traducció. Les xifres són **fitxes retornades pel motor**
+(poden incloure variants), no accepcions.
+
+| Codi a `dicts` | Obra | `casa` | `pa` | `aigua` | `maliciós` | Verificació |
+|---|---|---:|---:|---:|---:|---|
+| `DIEe` | DIEC2 en línia | 1 | 1 | 1 | 1 | Verificat |
+| `DIE2` | DIEC2 (2007) | 1 | 1 | 1 | 1 | Verificat |
+| `DIEC` | DIEC1 (1995) | 1 | 1 | 1 | 1 | Verificat |
+| `DGFP` | Ferrer Pastor (1985) | 1 | 3 | 1 | 1 | Verificat |
+| `DCVB` | Alcover–Moll | 4 | 5 | 9 | 1 | Verificat |
+| `DGLC` | Fabra (1932) | 1 | 1 | 1 | 1 | Verificat |
+| `DPCV` | Vallès, *Pal·las* (1927) | 1 | 1 | 1 | 1 | Verificat |
+| `DGMG` | Martí i Gadea (1891) | 6 | 4 | 18 | 4 | Verificat |
+| `DMCT` | Tarongí (1878, inacabat) | 3 | 0 | 3 | 0 | Verificat |
+| `NDMA` | Amengual (1858) | 3 | 1 | 4 | 1 | Verificat |
+| `DVCE` | Escrig (1851) | 5 | 1 | 6 | 3 | Verificat |
+| `DMCF` | Figuera (1840) | 7 | 5 | 5 | 1 | Verificat |
+| `DLCL` | Labèrnia (1839–1840) | 2 | 3 | 4 | 2 | Verificat |
+| `DEBJ` | Esteve, Bellvitges i Juglà (1803–1805) | 2 | 3 | 1 | 1 | Verificat |
+| `DMFC` | Febrer i Cardona (s. XIX) | 2 | 5 | 3 | 1 | Verificat |
+| — (prova amb `DDLC`) | Diccionari descriptiu de la llengua catalana | 0 | 0 | 0 | 0 | Fora del catàleg |
+
+Amb `dict[]=DDLC`, el motor ha retornat un XML buit a cadascuna de les
+quatre proves. Aquests zeros sols no demostren que el codi no sigui admès;
+la conclusió es basa en el selector i en el catàleg publicat per l’IEC.
 
 ### 2.7 Legal i publicació
 
@@ -455,10 +497,9 @@ PY
 
 Les feines obertes es segueixen al repositori:
 
-1. Eines del CTILC obertes: modes 4–6 ([#6](https://github.com/papersvells/llengua-mcp/issues/6)). El `classtem` i la validació d'autors ja són fets ([#4](https://github.com/papersvells/llengua-mcp/issues/4)) i la cerca de noms propis es va descartar ([#5](https://github.com/papersvells/llengua-mcp/issues/5), tancada).
-2. Fonts: cobertura del DDLC ([#9](https://github.com/papersvells/llengua-mcp/issues/9)). Critèria es va descartar ([#7](https://github.com/papersvells/llengua-mcp/issues/7), tancada) i els sinònims Jané ja són a `jane_cerca`.
-
-3. Acceleració de les respostes: instrumentació, escalfament de l'índex i menys peticions ([#10](https://github.com/papersvells/llengua-mcp/issues/10)).
+1. Acceleració de les respostes: instrumentació, escalfament de l'índex i menys peticions ([#10](https://github.com/papersvells/llengua-mcp/issues/10)).
+2. Fonts: DDLC fora del catàleg de BDLex, verificat a §2.6 ([#9](https://github.com/papersvells/llengua-mcp/issues/9)). Critèria es va descartar ([#7](https://github.com/papersvells/llengua-mcp/issues/7), tancada) i els sinònims Jané ja són a `jane_cerca`.
+3. CTILC: tancades les issues de modes 4–6 amb `cg` ([#6](https://github.com/papersvells/llengua-mcp/issues/6)), `classtem` i validació d'autors ([#4](https://github.com/papersvells/llengua-mcp/issues/4)) i descart de la cerca de noms propis ([#5](https://github.com/papersvells/llengua-mcp/issues/5)).
 4. Fora del repositori, pendents de decisió: contactar amb `dcc@iec.cat` abans
    de publicar (§2.7) i repetir les proves d'ús des d'OpenCode amb dos models.
 5. Reiniciar el servidor MCP després de cada canvi i repetir una consulta de

@@ -194,7 +194,9 @@ Variables d'entorn:
 - **BDLex**: agrupa diccionaris de períodes i abasts diferents. Cal citar el
   diccionari concret de cada entrada (`dictionary` / `dictionary_label`) i no
   tractar una forma antiga o dialectal com a adequada per a un text formal
-  actual. Una absència tampoc no la fa incorrecta.
+  actual. Una absència tampoc no la fa incorrecta. El
+  [DDLC](https://dcc.iec.cat/ddlcI/scripts/index.html) és un recurs separat:
+  BDLex es va fer servir per redactar-lo, però `bdlex_consulta` no el consulta.
 - **OIEC**: l'ortografia normativa. Cita sempre el codi d'apartat (`codi_text`)
   i el títol de la secció.
 - **Gramàtiques**: per a un dubte d'ús, la GBU; la GEIEC és la versió en línia;

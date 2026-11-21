@@ -34,7 +34,8 @@ autoritat diferent i no les confonguis mai:
 - BDLex: diccionaris històrics i dialectals (DCVB, DIEC, Fabra, obres dels
   segles XIX i XX). Per documentar mots antics o propis d'un parlar i per
   cercar per definició o exemple. És descriptiu: una forma hi pot constar i
-  no ser adequada avui. Cita sempre el diccionari concret.
+  no ser adequada avui. Cita sempre el diccionari concret. El DDLC té un
+  portal propi; no es consulta per BDLex.
 - ésAdir: estil de la CCMA, pronunciació i noms propis. No és la norma de l'IEC.
 - OIEC: ortografia normativa (apòstrofs, guionets, accents, dièresi). Cita
   sempre el codi d'apartat i el títol de la secció.
@@ -279,7 +280,11 @@ async def bdlex_consulta(
     (`definicio`), per un exemple (`exemple`) o per text lliure
     (`text_lliure`). Retorna entrades estructurades amb definicions, exemples,
     variants, etimologia, fonètica i etiquetes d'àrea. Per defecte consulta
-    `DCVB` i `DIEe`; indica `dicts` per afegir-ne d'altres (p. ex. `DGLC`, `DIE2`).
+    `DCVB` i `DIEe`. `dicts` substitueix aquesta selecció: els codis admesos
+    són `DCVB`, `DIEe` (DIEC2 en línia), `DIE2` (DIEC2 de 2007), `DIEC`
+    (DIEC1 de 1995), `DGLC`, `DGFP`, `DPCV`, `DGMG`, `DMCT`, `NDMA`,
+    `DVCE`, `DMCF`, `DLCL`, `DEBJ` i `DMFC`. El DDLC no forma part de BDLex:
+    té un portal propi (https://dcc.iec.cat/ddlcI/scripts/index.html).
     `max_senses` limita les accepcions per entrada (màxim 15).
 
     És una font descriptiva i històrica: una forma pot constar-hi i no ser

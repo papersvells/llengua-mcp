@@ -53,10 +53,13 @@ async def test_no_results() -> None:
 
 
 @pytest.mark.asyncio
-async def test_unknown_dictionary() -> None:
-    adapter = BdlexAdapter(FakeClient("", ""))
+@pytest.mark.parametrize("code", ["NOEXISTEIX", "DDLC"])
+async def test_unknown_dictionary(code: str) -> None:
+    client = FakeClient("", "")
+    adapter = BdlexAdapter(client)
     with pytest.raises(InvalidQueryError, match="no existeix"):
-        await adapter.consulta("engrunar", dicts=["NOEXISTEIX"])
+        await adapter.consulta("engrunar", dicts=[code])
+    assert client.urls == []
 
 
 @pytest.mark.asyncio
