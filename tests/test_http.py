@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import httpx
 import pytest
 
@@ -244,3 +246,158 @@ async def test_meter_counts_retries_as_separate_requests(tmp_path, monkeypatch) 
     assert calls == 3
     assert payload["upstream_requests"] == 3
     assert payload["from_cache"] is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["get", "post", "json"])
+async def test_concurrent_identical_requests_share_cached_result(
+    tmp_path, monkeypatch, mode
+) -> None:
+    client = _client(tmp_path)
+    started, release = asyncio.Event(), asyncio.Event()
+    calls = 0
+
+    async def respond(method, url, *, body, headers):
+        nonlocal calls
+        calls += 1
+        started.set()
+        await release.wait()
+        return '{"data":[]}', 200, [], 11, {}
+
+    async def invoke():
+        meter = start_meter()
+        try:
+            if mode == "get":
+                result = await client.get_text("https://example.test/a")
+            elif mode == "post":
+                result = await client.post_text("https://example.test/a", "q=1")
+            else:
+                _, result = await client.post_json("https://example.test/a", "q=1")
+            return result, meter.payload()
+        finally:
+            reset_meter(meter)
+
+    monkeypatch.setattr(client, "_one_request", respond)
+    tasks = [asyncio.create_task(invoke()) for _ in range(4)]
+    try:
+        await started.wait()
+        await asyncio.sleep(0)
+        release.set()
+        results = await asyncio.gather(*tasks)
+        assert calls == 1
+        assert sum(result.from_cache for result, _ in results) == 3
+        assert sum(meter["upstream_requests"] for _, meter in results) == 1
+        assert sum(meter["cache_hits"] for _, meter in results) == 3
+        assert not client._cache_locks
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["no_store", "eof", "uncached", "invalid_json", "error"])
+async def test_concurrent_unusable_results_are_not_shared(tmp_path, monkeypatch, kind) -> None:
+    client = _client(tmp_path)
+    started, release = asyncio.Event(), asyncio.Event()
+    calls = 0
+
+    async def respond(method, url, *, body, headers):
+        nonlocal calls
+        calls += 1
+        started.set()
+        await release.wait()
+        if kind == "error":
+            return "error", 500, [], 5, {}
+        if kind == "invalid_json":
+            return "[]", 200, [], 2, {}
+        return (
+            "ok",
+            200,
+            ["transport_eof"] if kind == "eof" else [],
+            2,
+            ({"cache-control": "no-store"} if kind == "no_store" else {}),
+        )
+
+    async def invoke():
+        if kind == "invalid_json":
+            return await client.post_json("https://example.test/a", "q=1")
+        return await client.get_text("https://example.test/a", use_cache=kind != "uncached")
+
+    monkeypatch.setattr(client, "_one_request", respond)
+    tasks = [asyncio.create_task(invoke()) for _ in range(3)]
+    try:
+        await started.wait()
+        await asyncio.sleep(0)
+        release.set()
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        assert calls == 3
+        assert all(isinstance(result, Exception) for result in results) == (
+            kind in {"invalid_json", "error"}
+        )
+        assert not client._cache_locks
+    finally:
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_distinct_headers_do_not_share_cached_responses(tmp_path, monkeypatch) -> None:
+    client = _client(tmp_path)
+    both_started, release = asyncio.Event(), asyncio.Event()
+    calls = 0
+
+    async def respond(method, url, *, body, headers):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            both_started.set()
+        await release.wait()
+        return headers["X-Variant"], 200, [], 1, {}
+
+    monkeypatch.setattr(client, "_one_request", respond)
+    tasks = [
+        asyncio.create_task(client.get_text("https://example.test/a", headers={"X-Variant": v}))
+        for v in ("a", "b")
+    ]
+    try:
+        await asyncio.wait_for(both_started.wait(), timeout=2)
+        release.set()
+        assert [result.text for result in await asyncio.gather(*tasks)] == ["a", "b"]
+        assert calls == 2
+        assert not client._cache_locks
+    finally:
+        release.set()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        await client.aclose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cancel_leader", [False, True])
+async def test_cancelled_cache_waiter_or_leader_releases_lock(
+    tmp_path, monkeypatch, cancel_leader
+) -> None:
+    client = _client(tmp_path)
+    started, release = asyncio.Event(), asyncio.Event()
+    calls = 0
+
+    async def respond(method, url, *, body, headers):
+        nonlocal calls
+        calls += 1
+        started.set()
+        await release.wait()
+        return "ok", 200, [], 2, {}
+
+    monkeypatch.setattr(client, "_one_request", respond)
+    first = asyncio.create_task(client.get_text("https://example.test/a"))
+    await started.wait()
+    second = asyncio.create_task(client.get_text("https://example.test/a"))
+    await asyncio.sleep(0)
+    cancelled, survivor = (first, second) if cancel_leader else (second, first)
+    cancelled.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await cancelled
+    release.set()
+    try:
+        assert (await survivor).text == "ok"
+        assert calls == (2 if cancel_leader else 1)
+        assert not client._cache_locks
+    finally:
+        await client.aclose()

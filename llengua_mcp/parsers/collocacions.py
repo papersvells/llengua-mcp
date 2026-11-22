@@ -18,7 +18,8 @@ L'ordre és: informació mútua, freqüència de coaparició, distància mitjana
 variància i freqüència del lema. Els decimals fan servir coma.
 
 El nombre total de col·locacions és a `getElementById("freq").innerHTML = N`.
-La pàgina conté totes les files; no cal retallar-les aquí.
+La pàgina conté totes les files; es compten totes, encara que es limiti
+el nombre d'elements materialitzats.
 
 L'apartat ALTRES barreja noms propis (sense categoria) i files de puntuació
 (',' , '.', '—'...). Les files de puntuació no són col·locacions i es compten
@@ -107,11 +108,12 @@ def _item(term: str, cells: list[str]) -> dict[str, Any]:
     return item
 
 
-def parse_collocacions(html: str) -> dict[str, Any]:
+def parse_collocacions(html: str, *, limit: int | None = None) -> dict[str, Any]:
     """Retorna les col·locacions agrupades per categoria gramatical.
 
     `status` és `ok`, o `empty` quan el portal diu explícitament que no hi ha
     cap lema o forma que compleixi les condicions, sense comptador.
+    `limit` restringeix els elements retornats per categoria, no els recomptes.
     """
 
     sections = {}
@@ -144,6 +146,7 @@ def parse_collocacions(html: str) -> dict[str, Any]:
 
     categories: list[dict[str, Any]] = []
     altres: list[dict[str, Any]] = []
+    altres_rows = 0
     excluded_rows = 0
     layout = "lema"
     for code, info in sections.items():
@@ -151,31 +154,41 @@ def parse_collocacions(html: str) -> dict[str, Any]:
         end = min(starts) if starts else len(html)
         segment = html[info["position"] : end]
         items = []
-        for inner, cells_html in _ROW_RE.findall(segment):
+        rows = 0
+        for match in _ROW_RE.finditer(segment):
+            inner, cells_html = match.groups()
             term = _visible_term(inner)
             if not term or not _TERM_CONTENT_RE.match(term):
                 # L'apartat ALTRES inclou puntuació (',', '.', '—'...):
                 # no són col·locacions útils i es descarten.
                 excluded_rows += 1
                 continue
-            cells = _CELL_RE.findall(cells_html)
-            if len(cells) > 1:
+            cell_matches = _CELL_RE.finditer(cells_html)
+            first_cell = next(cell_matches, None)
+            second_cell = next(cell_matches, None)
+            if second_cell is not None:
                 layout = "forma"
             if code == ALT_SECTION:
-                altres.append(_item(term, cells))
+                altres_rows += 1
+                target = altres
             else:
-                items.append(_item(term, cells))
-        if items:
+                rows += 1
+                target = items
+            if limit is None or len(target) < limit:
+                cells = [cell.group(1) for cell in (first_cell, second_cell) if cell is not None]
+                cells.extend(cell.group(1) for cell in cell_matches)
+                target.append(_item(term, cells))
+        if rows:
             categories.append(
                 {
                     "codi": code,
                     "categoria": info["categoria"],
-                    "rows": len(items),
+                    "rows": rows,
                     "items": items,
                 }
             )
 
-    counted_rows = sum(category["rows"] for category in categories) + len(altres)
+    counted_rows = sum(category["rows"] for category in categories) + altres_rows
     return {
         "status": "ok",
         "layout": layout,
@@ -184,7 +197,7 @@ def parse_collocacions(html: str) -> dict[str, Any]:
         "counted_rows": counted_rows,
         "excluded_rows": excluded_rows,
         "categories": categories,
-        "altres": {"rows": len(altres), "items": altres},
+        "altres": {"rows": altres_rows, "items": altres},
     }
 
 

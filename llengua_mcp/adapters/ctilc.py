@@ -1548,7 +1548,7 @@ class CtilcAdapter:
                 ),
                 source=url,
             ) from exc
-        data = parse_collocacions(result.text)
+        data = parse_collocacions(result.text, limit=limit)
 
         warnings = list(result.warnings)
         retrieved_at = datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")

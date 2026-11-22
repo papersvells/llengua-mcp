@@ -72,6 +72,50 @@ def test_parse_collocacions_forma() -> None:
     assert set(first) >= {"info_mutua", "freq", "distancia", "varianca", "freq_lema"}
 
 
+@pytest.mark.parametrize(
+    "fixture",
+    ["collocacions_moltes.html", "collocacions_forma_somriures.html"],
+)
+def test_limit_conserva_recomptes_i_nomes_materialitza_elements_retornats(
+    fixture: str, monkeypatch
+) -> None:
+    import llengua_mcp.parsers.collocacions as parser
+
+    html = (FIXTURES / fixture).read_text(encoding="utf-8")
+    full = parse_collocacions(html)
+    original = parser._item
+    calls = 0
+
+    def counted_item(term, cells):
+        nonlocal calls
+        calls += 1
+        return original(term, cells)
+
+    monkeypatch.setattr(parser, "_item", counted_item)
+    limited = parse_collocacions(html, limit=1)
+    assert limited == {
+        **full,
+        "categories": [
+            {**category, "items": category["items"][:1]} for category in full["categories"]
+        ],
+        "altres": {**full["altres"], "items": full["altres"]["items"][:1]},
+    }
+    assert calls == sum(len(category["items"]) for category in limited["categories"]) + len(
+        limited["altres"]["items"]
+    )
+
+
+def test_detecta_format_despres_del_limit() -> None:
+    html = """<div id="V">Coincident amb <i>mot</i> + <b>verb</b></div>
+    <a class="lnkU">primer V</a></td><td>1</td>
+    <a class="lnkU">segon V</a></td><td>1</td><td>2</td>
+    <a class="lnkU">,</a></td><td>3</td>"""
+    data = parse_collocacions(html, limit=1)
+    assert data["layout"] == "forma"
+    assert data["categories"][0]["rows"] == 2
+    assert data["excluded_rows"] == 1
+
+
 def test_parse_collocacions_sense_resultats_es_buit() -> None:
     data = parse_collocacions(
         (FIXTURES / "collocacions_forma_zero.html").read_text(encoding="utf-8")

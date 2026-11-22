@@ -7,6 +7,7 @@ import hashlib
 import json
 import random
 import time
+from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
@@ -115,6 +116,7 @@ class HttpClient:
         self.settings = settings
         self.cache = TTLCache(default_ttl=settings.cache_ttl_seconds)
         self.limiter = RateLimiter(settings.rate_per_second)
+        self._cache_locks: dict[str, tuple[asyncio.Lock, int]] = {}
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(settings.timeout_seconds),
             follow_redirects=True,
@@ -129,9 +131,28 @@ class HttpClient:
         await self._client.aclose()
 
     @staticmethod
-    def _cache_key(method: str, url: str, body: str | None) -> str:
-        payload = f"{method}|{url}|{body or ''}".encode()
+    def _cache_key(
+        method: str, url: str, body: str | None, headers: dict[str, str] | None = None
+    ) -> str:
+        normalized_headers = sorted(httpx.Headers(headers).multi_items())
+        payload = json.dumps([method, url, body, normalized_headers], ensure_ascii=False).encode()
         return hashlib.sha256(payload).hexdigest()
+
+    @asynccontextmanager
+    async def _cache_lock(self, key: str):
+        """Serialitza una mateixa clau i allibera el pany quan ja no té usuaris."""
+
+        lock, users = self._cache_locks.get(key, (asyncio.Lock(), 0))
+        self._cache_locks[key] = (lock, users + 1)
+        try:
+            async with lock:
+                yield
+        finally:
+            _, users = self._cache_locks[key]
+            if users == 1:
+                del self._cache_locks[key]
+            else:
+                self._cache_locks[key] = (lock, users - 1)
 
     def _cached_result(self, key: str, url: str) -> HttpResult | None:
         cached = self.cache.get(key)
@@ -205,10 +226,24 @@ class HttpClient:
         if headers:
             merged.update(headers)
         # Separa els POST de text cru dels POST amb JSON validat.
-        key = self._cache_key("POST JSON", url, body)
+        key = self._cache_key("POST JSON", url, body, merged)
         result = self._cached_result(key, url)
-        if result is None:
-            result = await self.post_text(url, body, headers=merged, use_cache=False)
+        if result is not None:
+            return self._parse_json(result, url), result
+        async with self._cache_lock(key):
+            result = self._cached_result(key, url)
+            if result is None:
+                result = await self.post_text(url, body, headers=merged, use_cache=False)
+            payload = self._parse_json(result, url)
+            if result._cacheable:
+                result._cache_token = object()
+                self.cache.set(
+                    key, (result.text, result.status, result._cache_token), ttl=cache_ttl
+                )
+            return payload, result
+
+    @staticmethod
+    def _parse_json(result: HttpResult, url: str) -> dict[str, Any]:
         try:
             payload = json.loads(result.text)
         except json.JSONDecodeError as exc:
@@ -223,10 +258,7 @@ class HttpClient:
                 hint="Cal revisar el parser del servei.",
                 source=url,
             )
-        if result._cacheable:
-            result._cache_token = object()
-            self.cache.set(key, (result.text, result.status, result._cache_token), ttl=cache_ttl)
-        return payload, result
+        return payload
 
     async def _request(
         self,
@@ -238,18 +270,38 @@ class HttpClient:
         cache_ttl: int | None,
         use_cache: bool,
     ) -> HttpResult:
-        key = self._cache_key(method, url, body)
+        key = self._cache_key(method, url, body, headers)
         if use_cache:
             cached = self._cached_result(key, url)
             if cached is not None:
                 return cached
+            async with self._cache_lock(key):
+                cached = self._cached_result(key, url)
+                if cached is not None:
+                    return cached
+                return await self._request_network(
+                    method, url, body=body, headers=headers, cache_ttl=cache_ttl, key=key
+                )
+        return await self._request_network(
+            method, url, body=body, headers=headers, cache_ttl=cache_ttl, key=None
+        )
 
+    async def _request_network(
+        self,
+        method: str,
+        url: str,
+        *,
+        body: str | None,
+        headers: dict[str, str] | None,
+        cache_ttl: int | None,
+        key: str | None,
+    ) -> HttpResult:
         host = urlsplit(url).netloc
         last_error: Exception | None = None
 
         for attempt in range(3):
-            _count(upstream=True)
             await self.limiter.wait(host)
+            _count(upstream=True)
             try:
                 text, status, warnings, size, response_headers = await self._one_request(
                     method, url, body=body, headers=headers
@@ -296,7 +348,7 @@ class HttpClient:
                 _cacheable=not warnings and is_cacheable(response_headers),
             )
             # No cachegem respostes amb transport incomplet.
-            if use_cache and result._cacheable:
+            if key is not None and result._cacheable:
                 result._cache_token = object()
                 self.cache.set(key, (text, status, result._cache_token), ttl=cache_ttl)
             return result
