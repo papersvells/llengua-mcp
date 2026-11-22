@@ -120,7 +120,10 @@ class SinonimsIndex:
             pos = head_match.group("pos")
             context = clean_text(head_match.group("context") or "")
             group = SynonymGroup(pos=pos, context=context)
-            for item in _split_terms(match.group("body")):
+            # Les anotacions editorials del fitxer comencen amb ` #` i
+            # poden contenir comes: cal retirar-les abans de separar termes.
+            body = re.split(r"\s+#", match.group("body"), maxsplit=1)[0]
+            for item in _split_terms(body):
                 item = clean_text(item)
                 if not item:
                     continue

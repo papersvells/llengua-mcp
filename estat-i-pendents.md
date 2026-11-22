@@ -607,8 +607,7 @@ fitxer: `com més va\, més` es trencava en `com més va\` i un `més` inventat.
   `\:`, les dues seqüències que apareixen al fitxer.
 - Amb les dades locals, cap terme conserva barres invertides; `com més va,
   més` es indexa sencer i `més` deixa de rebre aquest grup per un terme fals.
-- `#separar` continua tractant-se com a text del terme: és una anotació del
-  projecte original, no un escape, i queda fora d'aquest canvi.
+- Les anotacions `#separar` es tracten a la issue #27, no com a escapes.
 
 ### 2.25 Arrencada per stdio i reinici del servidor
 

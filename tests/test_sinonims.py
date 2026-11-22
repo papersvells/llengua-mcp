@@ -192,3 +192,20 @@ def test_dos_punts_escapats_formen_part_del_terme(tmp_path) -> None:
     forms = [item["form"] for item in result["groups"][0]["synonyms"]]
     assert "cap geperut no es veu la gepa" in forms
     assert all("\\" not in form for form in forms)
+
+
+def test_comentari_editorial_no_es_indexa(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text(
+        "-n: presidència, regència, capitania #separar, ampliar\n"
+        "-adv: cada vegada més, com més va\\, més (col·loquial) #...\n",
+        encoding="utf-8",
+    )
+    index = SinonimsIndex(tmp_path)
+    result = index.lookup("presidència")
+    forms = [item["form"] for group in result["groups"] for item in group["synonyms"]]
+    assert forms == ["regència", "capitania"]
+    assert index.lookup("ampliar")["status"] == "no_results"
+    assert index.lookup("capitania")["status"] == "ok"
+
+    escaped = index.lookup("cada vegada més")["groups"][0]["synonyms"]
+    assert escaped == [{"form": "com més va, més", "note": "col·loquial"}]
