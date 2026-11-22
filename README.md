@@ -1,13 +1,25 @@
-# llengua — MCP de consultes de llengua catalana
+<p align="center">
+  <img src="llengua-mcp-logo.png" alt="Logo de Llengua MCP" width="300">
+</p>
+
+# Llengua — assessorament de llengua catalana per al teu assistent
 
 [![CI](https://github.com/papersvells/llengua-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/papersvells/llengua-mcp/actions/workflows/ci.yml)
 
-`llengua` és un servidor MCP local per a OpenCode. Permet plantejar un dubte
-sobre una paraula, una expressió o una frase, consultar fonts amb autoritat
-diferent i obtenir una resposta pràctica i documentada. No revisa documents
-sencers ni substitueix un corrector.
+**Llengua** és un servidor local de [Model Context Protocol (MCP)](https://modelcontextprotocol.io/):
+connecta un assistent d'IA amb diccionaris, gramàtiques i corpus de català.
+Pots formular un dubte amb les teves paraules i demanar-li que consulti les
+fonts abans de respondre.
 
-## Fonts
+Et pot ajudar a **resoldre dubtes**, comparar expressions, trobar sinònims,
+explicar una regla o examinar exemples d'ús escrit. Les respostes depenen del
+model i de les fonts consultades: revisa les citacions i els matisos. No és un
+corrector automàtic de documents sencers ni un servei oficial de l'IEC.
+
+## Fonts i eines
+
+Llengua posa a disposició de l'assistent 30 eines per consultar aquestes fonts.
+No cal que en recordis els noms: pots fer la pregunta directament.
 
 | Font | Eina | Què aporta |
 |---|---|---|
@@ -24,31 +36,59 @@ sencers ni substitueix un corrector.
 
 ## Instal·lació
 
-Requereix Python 3.11 o posterior.
+Necessites Git, **Python 3.11 o posterior**, [uv](https://docs.astral.sh/uv/getting-started/installation/),
+un client compatible amb MCP i connexió a Internet per consultar les fonts.
+Els exemples següents són per a Linux i macOS.
+
+1. Clona el repositori i entra-hi:
+
+```sh
+git clone https://github.com/papersvells/llengua-mcp.git
+cd llengua-mcp
+```
+
+2. Crea l'entorn i instal·la el servidor:
 
 ```sh
 uv venv .venv
 uv pip install --python .venv/bin/python -e .
 ```
 
-Per baixar les dades de sinònims (un sol fitxer, 1 MB aproximadament):
+3. Baixa les dades locals de sinònims de Softcatalà (aproximadament 1 MB):
 
 ```sh
 .venv/bin/python -m llengua_mcp.fetch_sinonims
 ```
 
-Les dades es desen a `LLENGUA_DATA_DIR` (per defecte, el directori de dades de
-l'usuari). El descàrrec usa un commit fixat perquè la instal·lació sigui
-reproduïble; per actualitzar-les, `--ref master --force`.
+Les dades es desen al directori de dades de l'usuari, o al directori indicat
+per `LLENGUA_DATA_DIR`. Si configures aquesta variable al client, fes servir
+el mateix valor en baixar les dades. La descàrrega usa un commit fixat; per
+actualitzar-les pots executar el mateix mòdul amb `--ref master --force`.
 
-La configuració d'OpenCode és local i no es versiona: copia
-`opencode.jsonc.example`, ajusta-hi les rutes i desa'l com a `opencode.jsonc`.
+4. Obtén la ruta absoluta del Python de l'entorn. La necessitaràs per
+configurar el client:
 
-Després de canviar el codi del servidor, reinicia el servidor MCP (o l'editor):
-OpenCode no recarrega en calent els processos MCP i, si no, les eines
-continuen responent amb la versió anterior.
+```sh
+pwd
+```
 
-## Configuració d'OpenCode
+Afegeix `/.venv/bin/python` a la ruta mostrada. En els exemples següents,
+substitueix `/RUTA/AL/PROJECTE` per aquesta ruta. En Windows, l'executable és
+habitualment `.venv\Scripts\python.exe`; adapta també les ordres al teu terminal.
+
+## Configuració del client
+
+El servidor s'executa localment per **stdio**: el client l'engega quan el
+necessita. Les consultes, excepte les dades locals de Softcatalà, es fan als
+serveis externs. Els exemples configuren el servidor, però la compatibilitat
+de cada client i versió s'ha de comprovar amb una consulta real.
+
+### OpenCode
+
+Afegeix aquesta entrada a `opencode.jsonc` del projecte on faràs les consultes,
+o a `~/.config/opencode/opencode.jsonc` per a tots els projectes. Si el fitxer
+ja existeix, integra-hi l'entrada sense esborrar la resta de configuració.
+També pots partir de `opencode.jsonc.example`.
 
 ```jsonc
 {
@@ -57,11 +97,7 @@ continuen responent amb la versió anterior.
     "servers": {
       "llengua": {
         "type": "local",
-        "command": ["/ruta/al/projecte/.venv/bin/python", "-m", "llengua_mcp.server"],
-        "environment": {
-          "LLENGUA_USER_AGENT": "llengua-mcp/0.1 (recerca; contacte)",
-          "LLENGUA_CONTACT": "la-teva-adreca@example.com"
-        },
+        "command": ["/RUTA/AL/PROJECTE/.venv/bin/python", "-m", "llengua_mcp.server"],
         "timeout": { "execution": 60000 },
         "codemode": false
       }
@@ -70,7 +106,102 @@ continuen responent amb la versió anterior.
 }
 ```
 
-Variables d'entorn:
+Comprova la connexió amb `opencode mcp list` o amb `/mcps` dins d'OpenCode.
+`codemode: false` exposa les eines directament. Consulta la
+[documentació d'OpenCode](https://opencode.ai/docs/mcp-servers) per a més opcions.
+
+### Claude Code
+
+Registra el servidor per a tots els teus projectes i comprova'n la configuració:
+
+```sh
+claude mcp add --scope user --transport stdio llengua -- /RUTA/AL/PROJECTE/.venv/bin/python -m llengua_mcp.server
+claude mcp get llengua
+```
+
+Obre Claude Code i consulta `/mcp` per revisar l'estat. Vegeu la
+[documentació de Claude Code](https://code.claude.com/docs/en/mcp).
+
+### Codex
+
+Registra el servidor i comprova que apareix a la llista:
+
+```sh
+codex mcp add llengua -- /RUTA/AL/PROJECTE/.venv/bin/python -m llengua_mcp.server
+codex mcp list
+```
+
+Inicia Codex i revisa l'estat de les eines MCP abans de fer una consulta.
+Vegeu la [documentació de Codex](https://developers.openai.com/codex/mcp/).
+
+### Antigravity
+
+A l'Antigravity App, entra a **Customizations → Installed → MCP Servers**
+i utilitza **Copy Config File Path** per localitzar `mcp_config.json`. Afegeix
+l'entrada següent a `mcpServers`, conservant els altres servidors:
+
+```json
+{
+  "mcpServers": {
+    "llengua": {
+      "command": "/RUTA/AL/PROJECTE/.venv/bin/python",
+      "args": ["-m", "llengua_mcp.server"]
+    }
+  }
+}
+```
+
+Comprova l'estat al gestor de servidors MCP. El procediment per obrir el
+fitxer pot variar entre l'App, l'IDE i la CLI; vegeu la
+[documentació d'Antigravity](https://antigravity.google/docs/mcp).
+Aquesta integració no s'ha verificat en directe amb aquest projecte.
+
+### Pi
+
+Pi no ofereix una configuració MCP nativa equivalent a les anteriors: cal una
+extensió compatible amb servidors MCP. Segueix les instruccions de l'extensió
+que triïs per afegir un servidor stdio amb l'executable i els arguments
+indicats a l'apartat anterior, i comprova que exposa les eines de Llengua.
+La configuració concreta depèn de l'extensió i no s'ha verificat en directe
+amb aquest projecte. Vegeu la [documentació de Pi](https://pi.dev/).
+
+### Altres clients i comprovació
+
+En qualsevol altre client que admeti MCP local per stdio, configura com a
+comanda el Python de `.venv` i com a arguments `-m` i `llengua_mcp.server`.
+Consulta la documentació del client per saber on afegir-la.
+
+Un cop connectat, prova de preguntar: **«És correcte dir “tinc que anar a
+casa”? Consulta les fonts i explica'm l'alternativa.»** Comprova que l'assistent
+fa servir les eines de Llengua i cita les fonts, no només que dona una resposta.
+Si no es connecta, revisa la ruta absoluta, la instal·lació i els permisos; si
+falten els sinònims, comprova que la baixada i el client fan servir el mateix
+directori de dades.
+
+## Idees per començar
+
+- «És correcte dir “tinc que anar a casa”? Per què?»
+- «Què et sembla millor, “somriure maliciós” o “somriure de mala fe”?»
+- «Quines alternatives a “maliciós” encaixen en “un somriure maliciós”?»
+- «Quina regla explica aquest guionet? Cita la secció de l'OIEC.»
+- «Apareix aquesta expressió al CTILC? Mostra'm alguns contextos.»
+
+## Consells d'ús
+
+- Dona la **frase sencera** i explica el registre o el matís que vols.
+- Demana que es **consultin i citin les fonts**; l'assistent pot no fer-ho
+  automàticament i la seva resposta pot contenir errors.
+- Distingeix una regla normativa d'una recomanació de registre o d'estil.
+- El CTILC recull textos escrits: una ocurrència no demostra correcció ni
+  freqüència quotidiana, i una absència no demostra que una expressió no existeixi.
+- Les fonts externes poden ser lentes o canviar. El límit de peticions i la
+  disponibilitat dels portals afecten el temps de resposta.
+- Les consultes s'envien a les fonts externes: evita incloure-hi informació
+  sensible. El projecte no fa descàrregues massives.
+
+## Referència avançada
+
+### Variables d'entorn
 
 | Variable | Per defecte | Ús |
 |---|---|---|
