@@ -196,7 +196,9 @@ Variables d'entorn:
   `frase_exacta`).
 - **Consultes de l'IEC**: són respostes curades, no la norma. Cita la consulta i
   enllaça la font que citen (GIEC, DIEC, Optimot). `camp="pregunta"` limita la
-  cerca al títol de la consulta i sol ser més precís que la cerca global.
+  cerca al títol de la consulta i sol ser més precís que la cerca global. Si el
+  portal no retorna el comptador `recordsFiltered` i no hi ha files, la resposta
+  és `unexpected_response` amb `records_filtered_missing`, no un zero verificat.
 - **DIEC**: cal citar l'entrada i l'accepció. No trobar-hi una forma no la fa
   incorrecta. Els articles llargs es retallen a `max_senses` (20 per defecte);
   si `senses_truncated` és cert, apuja'l per veure les locucions finals.
@@ -240,7 +242,9 @@ Variables d'entorn:
   sinònims (no és una cerca per frases) i `mode="funcio"` el cerca per funció
   sintàctica. Cada entrada porta els femenins, les notes d'ús i els enllaços a
   DIEC, DDLC, CTILC, BDLex, DCVB, CiT i TERMCAT. Complementa Softcatalà; no
-  barregis les dades dels dos diccionaris.
+  barregis les dades dels dos diccionaris. Si falta el comptador
+  `recordsFiltered` i no hi ha files, és `unexpected_response` amb
+  `records_filtered_missing`, no un zero verificat.
 
 ## Límits coneguts
 

@@ -14,7 +14,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 290 passats, 20 omesos (els live).
+- **Tests sense xarxa:** 298 passats, 20 omesos (els live).
 - **Tests en directe:** 20, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
@@ -544,6 +544,24 @@ Comprovat amb les dades locals el 22/11/2026: `mes` → conjunció i nom;
 `més` → adverbis; `dona` → nom; `dóna` → `no_results`; `opinio` → coincidència
 aproximada amb avís. La coma escapada de `com més va\, més` és un problema
 separat ([#19](https://github.com/papersvells/llengua-mcp/issues/19)).
+
+### 2.20 Comptador absent a wpDataTables (resolt el 22/11/2026)
+
+Issue [#15](https://github.com/papersvells/llengua-mcp/issues/15). Si una
+resposta de wpDataTables no portava `recordsFiltered`, el parser feia
+`total = len(results)`: amb zero files, l'eina afirmava que no hi havia cap
+consulta o cap entrada.
+
+- Els parsers de Consultes IEC i Jané comparteixen ara
+  `parsers/wpdatatables.py`. Un comptador absent amb files dona el nombre de
+  files i l'avís `records_filtered_missing`; absent i sense files dona
+  `total: null`.
+- Els adaptadors tracten `total: null` com a `unexpected_response` amb
+  `records_filtered_missing`, mai com a `no_results`.
+- Un `recordsFiltered: 0` explícit continua sent un zero verificat.
+
+Comprovat en directe el 22/11/2026: `consultes_iec("tenir")` → 257 i
+`jane_cerca("maliciós")` → 1, sense avisos; el comptador hi és.
 
 ---
 

@@ -65,3 +65,18 @@ def test_parse_rows_fila_mal_formada_avisa() -> None:
     data = parse_rows(payload)
     assert data["results"] == []
     assert "parse_partial" in data["warnings"]
+
+
+def test_total_sense_comptador_no_es_zero() -> None:
+    data = parse_rows({"recordsTotal": 1176, "data": []})
+    assert data["total"] is None
+    assert data["results"] == []
+    assert "records_filtered_missing" in data["warnings"]
+
+
+def test_total_sense_comptador_amb_files_usa_el_nombre_de_files() -> None:
+    payload = json.loads((FIXTURES / "consultes_rows.json").read_text(encoding="utf-8"))
+    payload.pop("recordsFiltered")
+    data = parse_rows(payload)
+    assert data["total"] == 2
+    assert "records_filtered_missing" in data["warnings"]

@@ -115,6 +115,29 @@ async def test_offset_mes_enlla_del_total_no_es_error() -> None:
 
 
 @pytest.mark.asyncio
+async def test_sense_comptador_no_es_un_zero() -> None:
+    payload = {"recordsTotal": 1176, "data": []}
+    result = await ConsultesAdapter(FakeClient(payload)).cerca("tenir")
+
+    assert result["status"] == "unexpected_response"
+    assert result["total"] is None
+    assert "records_filtered_missing" in result["warnings"]
+    assert "zero_results" not in result["warnings"]
+    assert result["error"]["code"] == "unexpected_response"
+
+
+@pytest.mark.asyncio
+async def test_sense_comptador_amb_files_ho_avisa() -> None:
+    payload = dict(ROWS)
+    payload.pop("recordsFiltered")
+    result = await ConsultesAdapter(FakeClient(payload)).cerca("tenir")
+
+    assert result["status"] == "ok"
+    assert result["total"] == 2
+    assert "records_filtered_missing" in result["warnings"]
+
+
+@pytest.mark.asyncio
 async def test_nonce_caducat_reintenta_un_cop() -> None:
     client = FakeClient(ROWS, fail_first=True)
     result = await ConsultesAdapter(client).cerca("tenir")

@@ -115,6 +115,28 @@ async def test_zero_is_no_results() -> None:
 
 
 @pytest.mark.asyncio
+async def test_sense_comptador_no_es_un_zero() -> None:
+    result = await JaneAdapter(FakeClient({"recordsTotal": 27547, "data": []})).cerca("maliciós")
+
+    assert result["status"] == "unexpected_response"
+    assert result["total"] is None
+    assert "records_filtered_missing" in result["warnings"]
+    assert "zero_results" not in result["warnings"]
+    assert result["error"]["code"] == "unexpected_response"
+
+
+@pytest.mark.asyncio
+async def test_sense_comptador_amb_files_ho_avisa() -> None:
+    payload = dict(LEMA)
+    payload.pop("recordsFiltered")
+    result = await JaneAdapter(FakeClient(payload)).cerca("maliciós")
+
+    assert result["status"] == "ok"
+    assert result["total"] == 1
+    assert "records_filtered_missing" in result["warnings"]
+
+
+@pytest.mark.asyncio
 async def test_nonce_is_refreshed_once_on_failure() -> None:
     client = FakeClient(LEMA, fail_first=True)
     result = await JaneAdapter(client).cerca("maliciós")

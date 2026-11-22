@@ -23,6 +23,7 @@ from urllib.parse import urljoin
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from llengua_mcp.errors import UnexpectedResponseError
+from llengua_mcp.parsers.wpdatatables import count_value, resolve_filtered_total
 from llengua_mcp.text import clean_text, strip_tags
 
 SOURCE_URL = "https://consultes-linguistiques.iec.cat/cerca-general/"
@@ -49,15 +50,6 @@ PREGUNTA_COLUMN = COLUMNS.index("opt_pregunta")
 MAX_REFERENCES = 5
 
 _LINK_RE = re.compile(r'<a\s+[^>]*href="([^"]+)"[^>]*>(.*?)</a>', re.IGNORECASE | re.DOTALL)
-
-
-def _count(value: Any) -> int | None:
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def parse_bootstrap(html: str) -> dict[str, Any]:
@@ -157,16 +149,18 @@ def parse_rows(payload: Any) -> dict[str, Any]:
             continue
         results.append(_row(raw))
 
-    total = _count(payload.get("recordsFiltered"))
-    if total is None:
-        total = len(results)
-        partial = True
+    total, total_verified = resolve_filtered_total(payload, results)
+    warnings = []
+    if partial:
+        warnings.append("parse_partial")
+    if not total_verified:
+        warnings.append("records_filtered_missing")
 
     return {
         "total": total,
-        "corpus_total": _count(payload.get("recordsTotal")),
+        "corpus_total": count_value(payload.get("recordsTotal")),
         "results": results,
-        "warnings": ["parse_partial"] if partial else [],
+        "warnings": warnings,
     }
 
 

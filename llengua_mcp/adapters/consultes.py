@@ -212,7 +212,20 @@ class ConsultesAdapter:
         warnings = _dedupe(list(result.warnings) + list(data["warnings"]))
         status = "ok"
         error = None
-        if total == 0 and not results:
+        if total is None:
+            status = "unexpected_response"
+            error = {
+                "code": status,
+                "message": (
+                    "El portal no ha retornat el comptador de resultats i no hi ha "
+                    "cap fila: no es pot afirmar que no hi hagi consultes."
+                ),
+                "hint": (
+                    "Torna-ho a provar; si continua, la taula pot haver canviat de "
+                    "format. No és una absència verificada."
+                ),
+            }
+        elif total == 0 and not results:
             status = "no_results"
             warnings.append("zero_results")
         elif total > 0 and not results and offset >= total:
@@ -228,7 +241,7 @@ class ConsultesAdapter:
                 "hint": "La taula pot haver canviat de format; no és una absència.",
             }
 
-        has_more = total > offset + len(results)
+        has_more = total is not None and total > offset + len(results)
         if has_more:
             warnings.append("truncated")
 

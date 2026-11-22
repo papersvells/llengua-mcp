@@ -92,3 +92,21 @@ def test_short_row_is_reported_as_partial() -> None:
 
     assert data["results"] == []
     assert "parse_partial" in data["warnings"]
+
+
+def test_total_sense_comptador_no_es_zero() -> None:
+    data = parse_rows({"recordsTotal": 27547, "data": []})
+
+    assert data["total"] is None
+    assert data["results"] == []
+    assert "records_filtered_missing" in data["warnings"]
+
+
+def test_total_sense_comptador_amb_files_usa_el_nombre_de_files() -> None:
+    payload = dict(LEMA)
+    payload.pop("recordsFiltered")
+    data = parse_rows(payload)
+
+    assert data["total"] == len(data["results"])
+    assert data["total"] > 0
+    assert "records_filtered_missing" in data["warnings"]

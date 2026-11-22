@@ -23,6 +23,7 @@ from typing import Any
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from llengua_mcp.errors import UnexpectedResponseError
+from llengua_mcp.parsers.wpdatatables import count_value, resolve_filtered_total
 from llengua_mcp.text import clean_text, strip_tags
 
 SOURCE_URLS = {
@@ -179,13 +180,6 @@ def _row(row: list[Any], columns: tuple[str, ...]) -> dict[str, Any]:
     }
 
 
-def _count(value: Any) -> int | None:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
-
-
 def parse_rows(payload: Any, *, columns: tuple[str, ...] = COLUMNS) -> dict[str, Any]:
     """Normalitza la resposta JSON de wpDataTables."""
 
@@ -204,16 +198,18 @@ def parse_rows(payload: Any, *, columns: tuple[str, ...] = COLUMNS) -> dict[str,
             continue
         results.append(_row(raw, columns))
 
-    total = _count(payload.get("recordsFiltered"))
-    if total is None:
-        total = len(results)
-        partial = True
+    total, total_verified = resolve_filtered_total(payload, results)
+    warnings = []
+    if partial:
+        warnings.append("parse_partial")
+    if not total_verified:
+        warnings.append("records_filtered_missing")
 
     return {
         "total": total,
-        "catalog_total": _count(payload.get("recordsTotal")),
+        "catalog_total": count_value(payload.get("recordsTotal")),
         "results": results,
-        "warnings": ["parse_partial"] if partial else [],
+        "warnings": warnings,
     }
 
 
