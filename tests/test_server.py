@@ -7,7 +7,7 @@ import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from llengua_mcp.server import mcp
+from llengua_mcp.server import INSTRUCTIONS, mcp
 
 
 @pytest.mark.asyncio
@@ -24,6 +24,7 @@ async def test_stdio_initialize_list_and_call_tool(tmp_path) -> None:
         async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
             initialized = await session.initialize()
             assert initialized.server_info.name == "llengua"
+            assert initialized.instructions == INSTRUCTIONS
 
             tools = {tool.name for tool in (await session.list_tools()).tools}
             assert tools == {tool.name for tool in await mcp.list_tools()}

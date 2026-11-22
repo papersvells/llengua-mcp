@@ -86,7 +86,7 @@ El CTILC no té una API JSON moderna: és un lloc ASP amb formularis HTML i un m
 
 ## 5. Principis de producte
 
-**Resposta a l’usuari:** el model ha de consultar l’MCP, donar primer la correcció o la tria recomanada, explicar-ne breument el motiu i citar la font que ha llegit. Cal preservar el sentit i el to de la frase. Si l’original ja és correcte, es pot suggerir una alternativa més natural, marcada com a **opció d’estil**. Si una font no respon o no tracta el cas, cal dir-ho sense atribuir-li cap criteri.
+**Resposta a l’usuari:** dona primer la correcció o la tria recomanada i, tot seguit, desplega l’evidència pertinent ja obtinguda, per fonts quan n’hi hagi més d’una. Explica per què cada forma funciona o no, quines alternatives preserven el sentit i el to i quines els canvien. Distingeix norma, registre i **opció d’estil**. Inclou l’origen documentat i l’ús al CTILC quan constin: recomptes verificats de variants comparables, concordances pertinents amb metadades i dispersió validada. Separa el total d’ocurrències dels testimonis mostrats. Cita les fonts i fes visibles les limitacions que afectin la conclusió. No facis més peticions ni paginis només per ampliar la resposta.
 
 | Font | Quan i com s’ha d’utilitzar |
 |---|---|

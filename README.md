@@ -86,6 +86,13 @@ Variables d'entorn:
 
 ## Exemples d'ús
 
+La resposta dona primer la conclusió i després el detall que les fonts ja
+consultades permeten: què funciona i per què, quines alternatives canvien el
+matís, l'origen documentat i l'ús escrit al CTILC. Si hi ha concordances, es
+distingeixen els testimonis que es mostren del total verificat; si hi ha
+dispersió validada, es pot explicar on es concentra l'ús. No es fan més
+peticions només per afegir detall ni es confon la freqüència amb la correcció.
+
 - **Corregir una construcció**: `optimot_cerca("tenir que", mode="frase_exacta")`
   i `optimot_fitxa(ref)` per justificar *he d'anar* en lloc de *tinc que anar*.
   Si la cerca exacta no dona res, `optimot_cerca("perífrasi d'obligació")`.
