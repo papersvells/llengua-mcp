@@ -396,6 +396,17 @@ def parse_general(html: str) -> dict[str, Any]:
     ):
         warnings.append("attribute_totals_mismatch")
 
+    # Els eixos complets han de sumar el total de la cerca. `genere` i
+    # `classificacio` en queden fora perquè només cobreixen una part del
+    # corpus (literari i no literari, respectivament).
+    if search_total is not None:
+        for axis in ("any", "varietat", "traduccio", "tipus"):
+            axis_data = attributes.get(axis)
+            if axis_data is None:
+                continue
+            if axis_data["totals"]["query_hits"] != search_total:
+                warnings.append("attribute_totals_mismatch")
+
     return {
         "attributes": attributes,
         "pattern_echo": pattern_echo,

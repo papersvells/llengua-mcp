@@ -164,9 +164,11 @@ Variables d'entorn:
   `varieties` queda buit i les dades són a `unvalidated`.
 - **Dispersió general**: `attributes` conté sis eixos (`any`, `varietat`,
   `traduccio`, `tipus`, `genere`, `classificacio`), cadascun amb `groups`,
-  `totals`, `index` i pics. `genere` cobreix només les obres literàries i
-  `classificacio` les no literàries: els seus totals no sumen el total general.
-  Compara amb `per_million`, no amb `query_hits`.
+  `totals`, `index` i pics. Els quatre eixos complets han de sumar el total de
+  la cerca; `genere` cobreix només les obres literàries i `classificacio` les
+  no literàries, i es contrasten amb els subtotals de `tipus`. Un desquadre
+  (`attribute_totals_mismatch`) invalida la resposta. Compara amb
+  `per_million`, no amb `query_hits`.
 - **Cerques bàsiques**: `cerca_forma` i `cerca_lema` retornen `total`, el
   desglossament `forms` (lema, categoria, forma i morfologia) i una pàgina
   d'`occurrences`. `mode` pot ser `coincident`, `comença per`, `acaba en`,

@@ -128,3 +128,27 @@ def test_parse_general() -> None:
 def test_general_sense_grafic_es_error() -> None:
     with pytest.raises(UnexpectedResponseError):
         parse_general("<html><body>error intern</body></html>")
+
+
+@pytest.mark.parametrize(
+    ("original", "replacement"),
+    [
+        (
+            "['Central', 1237, 'x', llistacolorsVar['central']]",
+            "['Central', 1238, 'x', llistacolorsVar['central']]",
+        ),
+        (
+            "['Assaig', 100, 'x', llistacolorsGen['Assaig']]",
+            "['Assaig', 101, 'x', llistacolorsGen['Assaig']]",
+        ),
+        (
+            "['Traducció', 237, 'x', llistacolorsTrad['Traducció']]",
+            "['Traducció', 238, 'x', llistacolorsTrad['Traducció']]",
+        ),
+    ],
+)
+def test_general_eix_desquadrat(original, replacement) -> None:
+    html = (FIXTURES / "dispersio_general.html").read_text(encoding="utf-8")
+    assert original in html
+    data = parse_general(html.replace(original, replacement))
+    assert "attribute_totals_mismatch" in data["warnings"]

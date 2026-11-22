@@ -14,7 +14,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 282 passats, 20 omesos (els live).
+- **Tests sense xarxa:** 286 passats, 20 omesos (els live).
 - **Tests en directe:** 20, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
@@ -506,6 +506,25 @@ de subcadena sobre un text sense accents: `somriure` acceptava un eco de
 Comprovat en directe el 22/11/2026: `somriu` (2.019), `Somriu` (2.019),
 `somriures` (605), `somri` amb `comença per` (14.731) i `somriure` com a lema
 (14.290) donen `echo_verified: true`; `zzzz` dona `no_matches` verificat.
+
+### 2.18 Tots els eixos de la dispersió general (resolt el 22/11/2026)
+
+Issue [#13](https://github.com/papersvells/llengua-mcp/issues/13). Només es
+validava l'eix `any`; un altre eix podia sumar un nombre d'ocurrències
+diferent del total de la cerca i la resposta continuava amb `data_valid:
+true`.
+
+- Els eixos complets (`any`, `varietat`, `traduccio`, `tipus`) han de sumar el
+  total de la cerca.
+- `genere` i `classificacio` es contrasten amb els subtotals de `tipus`, com ja
+  es feia.
+- Qualsevol desquadre dona `attribute_totals_mismatch`, invalida la resposta
+  (`data_valid: false`, `attributes` buit, dades a `unvalidated`) i deixa
+  l'estat en `partial`.
+
+Comprovat en directe el 22/11/2026 amb tres consultes: `somriure` + adjectiu
+(2.136), `maliciós` (564) i `xiuxiuejar` (713). En totes, els quatre eixos
+complets sumen exactament el total i la resposta continua sent vàlida.
 
 ---
 

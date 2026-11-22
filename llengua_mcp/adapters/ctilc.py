@@ -1343,6 +1343,7 @@ class CtilcAdapter:
                 "pattern_echo_unexpected",
                 "corpus_updated",
                 "totals_mismatch",
+                "attribute_totals_mismatch",
                 "parse_partial",
             )
             if reason in warnings
