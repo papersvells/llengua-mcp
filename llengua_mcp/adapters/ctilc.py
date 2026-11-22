@@ -394,9 +394,14 @@ class CtilcAdapter:
 
         validated: set[str] = set()
         warnings: list[str] = []
+        checked: set[str] = set()
         if not filter_query or not filter_query.get("autor"):
             return validated, warnings
         for author in filter_query["autor"]:
+            key = normalize_key(author)
+            if key in checked:
+                continue
+            checked.add(key)
             exists, candidates = await self._author_exists(author)
             if exists is None:
                 warnings.append("author_validation_skipped")
@@ -410,7 +415,7 @@ class CtilcAdapter:
                     source=OBRES_AUT_URL,
                 )
             else:
-                validated.add(normalize_key(author))
+                validated.add(key)
         return validated, warnings
 
     async def search(
@@ -425,12 +430,15 @@ class CtilcAdapter:
         persist_cursor: bool = True,
         filters: dict[str, str] | None = None,
         filter_query: dict[str, Any] | None = None,
+        author_validation: tuple[set[str], list[str]] | None = None,
     ) -> dict[str, Any]:
         if start < 1:
             raise InvalidQueryError("`start` ha de ser 1 o més gran.")
         offset = max(1, min(limit, self.settings.max_occurrences))
 
-        validated_authors, extra_warnings = await self._validate_filter_authors(filter_query)
+        if author_validation is None:
+            author_validation = await self._validate_filter_authors(filter_query)
+        validated_authors, extra_warnings = author_validation
 
         compiled = compile_pattern(elements)
         body = compiled.body(start=start, offset=offset, filters=filters)
@@ -876,7 +884,7 @@ class CtilcAdapter:
         filter_fields, filter_query = _resolve_filters(filters)
         # Valida els autors abans de consultar cap variant: un autor inexistent
         # ha de donar un error net, no un resultat per variant.
-        await self._validate_filter_authors(filter_query)
+        author_validation = await self._validate_filter_authors(filter_query)
         base_query = phrase_query(frase, variants)
         if filter_query:
             base_query = {**base_query, "filters": filter_query}
@@ -895,6 +903,7 @@ class CtilcAdapter:
                     start=1,
                     filters=filter_fields,
                     filter_query=filter_query,
+                    author_validation=author_validation,
                 )
             except LlenguaError as exc:
                 errors += 1

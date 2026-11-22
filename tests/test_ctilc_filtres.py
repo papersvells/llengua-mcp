@@ -353,3 +353,23 @@ async def test_cerca_frase_cataleg_indisponible_avisa(tmp_path) -> None:
 
     assert result["status"] == "ok"
     assert "author_validation_skipped" in result["variants"][0]["warnings"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fail_authors", [True, False])
+async def test_cerca_frase_valida_autor_un_solit_cop(tmp_path, fail_authors) -> None:
+    client = SearchClient(
+        _phrase_page(autor="@Sagarra, Xavier", filtered=1),
+        fail_authors=fail_authors,
+    )
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+    result = await adapter.search_phrase(
+        "somriure maliciós",
+        variants=["somriure amable", "somriure irònic"],
+        filters=CtilcFilters(autor=["Sagarra, Xavier", "Sagarra, Xavier"]),
+    )
+    assert sum("CTILCCorpus_Aut1" in url for url in client.urls) == 1
+    assert len(result["variants"]) == 3
+    if fail_authors:
+        assert all("author_validation_skipped" in v["warnings"] for v in result["variants"])
+        assert all(v["status"] != "no_matches" for v in result["variants"])
