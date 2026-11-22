@@ -4,6 +4,7 @@ import httpx
 import pytest
 
 from llengua_mcp.config import Settings
+from llengua_mcp.errors import UnexpectedResponseError
 from llengua_mcp.http import HttpClient, current_meter, reset_meter, start_meter
 
 
@@ -101,6 +102,67 @@ async def test_cacheable_response_is_cached(tmp_path, monkeypatch) -> None:
             use_cache=True,
         )
     assert calls == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("invalid_body", ["<html>Error transitori</html>", "[]"])
+async def test_post_json_caches_only_valid_objects(tmp_path, invalid_body) -> None:
+    client = _client(tmp_path)
+    calls = 0
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(200, text=invalid_body)
+        return httpx.Response(200, json={"data": []})
+
+    await client.aclose()
+    client._client = httpx.AsyncClient(transport=httpx.MockTransport(respond))
+    url = "https://example.test/ajax"
+    meter = start_meter()
+    try:
+        with pytest.raises(UnexpectedResponseError):
+            await client.post_json(url, "draw=1")
+
+        payload, fresh = await client.post_json(url, "draw=1")
+        cached_payload, cached = await client.post_json(url, "draw=1")
+    finally:
+        reset_meter(meter)
+        await client.aclose()
+
+    assert payload == cached_payload == {"data": []}
+    assert not fresh.from_cache
+    assert cached.from_cache
+    assert calls == meter.upstream_requests == 2
+    assert meter.cache_hits == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("warnings", "response_headers"),
+    [([], {"cache-control": "no-store"}), (["transport_eof"], {})],
+)
+async def test_post_json_respects_cache_restrictions(
+    tmp_path, monkeypatch, warnings, response_headers
+) -> None:
+    client = _client(tmp_path)
+    calls = 0
+
+    async def respond(method, url, *, body, headers):
+        nonlocal calls
+        calls += 1
+        return '{"data":[]}', 200, warnings, 11, response_headers
+
+    monkeypatch.setattr(client, "_one_request", respond)
+    try:
+        for _ in range(2):
+            payload, result = await client.post_json("https://example.test/ajax", "draw=1")
+            assert payload == {"data": []}
+            assert not result.from_cache
+    finally:
+        await client.aclose()
+    assert calls == 2
 
 
 @pytest.mark.asyncio

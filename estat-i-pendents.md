@@ -14,7 +14,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 304 passats, 20 omesos (els live).
+- **Tests sense xarxa:** 308 passats, 20 omesos (els live).
 - **Tests en directe:** 20, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
@@ -588,6 +588,14 @@ posició abans que cap l'actualitzés i retornaven la mateixa pàgina.
 - Comprovat en directe el 22/11/2026 amb `somriure` + adjectiu: les dues
   continuacions demanen `iStart=2` i `iStart=3` i retornen ocurrències
   diferents.
+
+### 2.23 Memòria cau de respostes AJAX
+
+Issue [#18](https://github.com/papersvells/llengua-mcp/issues/18).
+`post_json` valida que la resposta sigui un objecte JSON abans de desar-la.
+Un HTTP 200 amb HTML o amb un JSON que no sigui un objecte no queda desat:
+la crida següent torna a la font. Els objectes vàlids es desen en un espai
+separat dels POST de text cru, respectant `no-store` i els avisos de transport.
 
 ---
 

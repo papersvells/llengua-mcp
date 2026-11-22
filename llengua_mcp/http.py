@@ -29,6 +29,7 @@ class HttpResult:
     warnings: list[str] = field(default_factory=list)
     from_cache: bool = False
     bytes_received: int = 0
+    _cacheable: bool = field(default=False, repr=False, compare=False)
 
 
 @dataclass
@@ -131,6 +132,20 @@ class HttpClient:
         payload = f"{method}|{url}|{body or ''}".encode()
         return hashlib.sha256(payload).hexdigest()
 
+    def _cached_result(self, key: str, url: str) -> HttpResult | None:
+        cached = self.cache.get(key)
+        if cached is None:
+            return None
+        _count(upstream=False)
+        text, status = cached
+        return HttpResult(
+            text=text,
+            status=status,
+            url=url,
+            from_cache=True,
+            bytes_received=len(text.encode("utf-8")),
+        )
+
     async def get_text(
         self,
         url: str,
@@ -187,9 +202,11 @@ class HttpClient:
         }
         if headers:
             merged.update(headers)
-        result = await self.post_text(
-            url, body, headers=merged, cache_ttl=cache_ttl, use_cache=True
-        )
+        # Separa els POST de text cru dels POST amb JSON validat.
+        key = self._cache_key("POST JSON", url, body)
+        result = self._cached_result(key, url)
+        if result is None:
+            result = await self.post_text(url, body, headers=merged, use_cache=False)
         try:
             payload = json.loads(result.text)
         except json.JSONDecodeError as exc:
@@ -204,6 +221,8 @@ class HttpClient:
                 hint="Cal revisar el parser del servei.",
                 source=url,
             )
+        if result._cacheable:
+            self.cache.set(key, (result.text, result.status), ttl=cache_ttl)
         return payload, result
 
     async def _request(
@@ -218,17 +237,9 @@ class HttpClient:
     ) -> HttpResult:
         key = self._cache_key(method, url, body)
         if use_cache:
-            cached = self.cache.get(key)
+            cached = self._cached_result(key, url)
             if cached is not None:
-                _count(upstream=False)
-                text, status = cached
-                return HttpResult(
-                    text=text,
-                    status=status,
-                    url=url,
-                    from_cache=True,
-                    bytes_received=len(text.encode("utf-8")),
-                )
+                return cached
 
         host = urlsplit(url).netloc
         last_error: Exception | None = None
@@ -279,9 +290,10 @@ class HttpClient:
                 url=url,
                 warnings=warnings,
                 bytes_received=size,
+                _cacheable=not warnings and is_cacheable(response_headers),
             )
             # No cachegem respostes amb transport incomplet.
-            if use_cache and not warnings and is_cacheable(response_headers):
+            if use_cache and result._cacheable:
                 self.cache.set(key, (text, status), ttl=cache_ttl)
             return result
 
