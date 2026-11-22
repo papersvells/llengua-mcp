@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -110,6 +111,37 @@ async def test_obres_titol_i_paginacio(tmp_path) -> None:
     assert result["next_offset"] == 2
     assert result["echo_verified"] is True
     assert client.calls == [(OBRES_TITOL_URL, "obra=vida")]
+
+
+@pytest.mark.asyncio
+async def test_obres_incompletes_no_entren_en_bucle(tmp_path) -> None:
+    html = _resultats()
+    # Conserva la primera obra però elimina les altres dues files.
+    html = re.sub(r"\s*<tr>\s*<td>Puig i Alfonso, Francesc</td>.*?</tr>", "", html, flags=re.DOTALL)
+    html = re.sub(r"\s*<tr>\s*<td>Desclot, Miquel</td>.*?</tr>", "", html, flags=re.DOTALL)
+    adapter = _adapter(FakeClient({OBRES_TITOL_URL: html}), tmp_path)
+
+    first = await adapter.obres(titol="vida", limit=1)
+    assert first["status"] == "partial"
+    assert first["total"] == 3
+    assert first["returned"] == 1
+    assert "rows_mismatch" in first["warnings"]
+    assert first["has_more"] is False
+    assert first["next_offset"] is None
+
+    beyond = await adapter.obres(titol="vida", limit=1, offset=1)
+    assert beyond["status"] == "partial"
+    assert beyond["returned"] == 0
+    assert beyond["has_more"] is False
+    assert beyond["next_offset"] is None
+
+
+@pytest.mark.asyncio
+async def test_obres_offset_mes_enlla_de_les_files(tmp_path) -> None:
+    adapter = _adapter(FakeClient({OBRES_TITOL_URL: _resultats()}), tmp_path)
+    result = await adapter.obres(titol="vida", limit=1, offset=3)
+    assert result["has_more"] is False
+    assert result["next_offset"] is None
 
 
 @pytest.mark.asyncio

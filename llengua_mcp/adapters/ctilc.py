@@ -1736,7 +1736,7 @@ class CtilcAdapter:
         error: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         page = works[offset : offset + limit]
-        has_more = bool(works) and total is not None and offset + len(page) < total
+        has_more = bool(page) and offset + len(page) < len(works)
         parts = []
         if query.get("autor"):
             parts.append(f"autor «{query['autor']}»")
@@ -1959,6 +1959,8 @@ class CtilcAdapter:
             )
 
         status = "ok" if total > 0 else "no_matches"
+        if total > 0 and any(w in warnings for w in ("rows_mismatch", "parse_partial")):
+            status = "partial"
         if status == "no_matches":
             warnings.append("zero_results")
         return self._obres_payload(
