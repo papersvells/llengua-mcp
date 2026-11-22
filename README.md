@@ -145,7 +145,9 @@ Variables d'entorn:
   compta com a encert de cau. Serveix per veure on se'n va el temps d'una
   sessió, no per interpretar el resultat.
 - **`next_cursor`**: continua la mateixa cerca. És local i caduca; si el total o
-  el patró canvien, l'eina retorna `stale_search` i no barreja pàgines.
+  el patró canvien, l'eina retorna `stale_search` i no barreja pàgines. Les
+  continuacions del mateix cursor se serialitzen: dues crides concurrents no
+  retornen la mateixa pàgina.
 - **`search_cursor`**: vincula la cerca amb eines com la dispersió. N'hi ha
   sempre que la cerca sigui vàlida, encara que tots els resultats càpiguen en
   una pàgina; `next_cursor` només hi és si queden pàgines.

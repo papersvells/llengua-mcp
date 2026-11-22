@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import re
 from pathlib import Path
 
@@ -153,6 +154,60 @@ async def test_unknown_cursor_is_stale(tmp_path) -> None:
     adapter = CtilcAdapter(FakeClient(""), _settings(tmp_path), CursorStore())
     with pytest.raises(StaleSearchError):
         await adapter.continue_search("no-existeix")
+
+
+ELEMENTS = [
+    PatternElement(type="lema", value="somriure"),
+    PatternElement(type="cg", category="adj"),
+]
+
+
+class SlowClient(FakeClient):
+    """Retarda la resposta perquè dues continuacions coincideixin."""
+
+    def __init__(self, html: str, *, fail_at: int | None = None) -> None:
+        super().__init__(html)
+        self.fail_at = fail_at
+
+    async def post_text(self, url: str, body: str, **kwargs) -> HttpResult:
+        self.bodies.append(body)
+        await asyncio.sleep(0.02)
+        if self.fail_at is not None and len(self.bodies) == self.fail_at:
+            raise UpstreamError("Tall simulat.", source=url)
+        return HttpResult(text=self.html, status=200, url=url)
+
+
+@pytest.mark.asyncio
+async def test_continuacions_concurrents_no_repeteixen_la_pagina(tmp_path) -> None:
+    page = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    client = SlowClient(page)
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+    start = await adapter.search_pattern(ELEMENTS, limit=1)
+    assert start["next_cursor"]
+
+    first, second = await asyncio.gather(
+        adapter.continue_search(start["next_cursor"], limit=1),
+        adapter.continue_search(start["next_cursor"], limit=1),
+    )
+
+    starts = sorted(re.search(r"iStart=(\d+)", body).group(1) for body in client.bodies[1:])
+    assert starts == ["2", "3"]
+    assert first["query"]["start"] != second["query"]["start"]
+
+
+@pytest.mark.asyncio
+async def test_continuacio_fallida_no_avanca_el_cursor(tmp_path) -> None:
+    page = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    client = SlowClient(page, fail_at=2)
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+    start = await adapter.search_pattern(ELEMENTS, limit=1)
+    assert start["next_cursor"]
+
+    with pytest.raises(UpstreamError):
+        await adapter.continue_search(start["next_cursor"], limit=1)
+
+    result = await adapter.continue_search(start["next_cursor"], limit=1)
+    assert result["query"]["start"] == 2
 
 
 class SequenceClient:

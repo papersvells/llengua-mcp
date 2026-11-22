@@ -14,7 +14,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 298 passats, 20 omesos (els live).
+- **Tests sense xarxa:** 304 passats, 20 omesos (els live).
 - **Tests en directe:** 20, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
@@ -575,6 +575,19 @@ amb nodes de títol (sense `contingut`) es presentava com a `no_results`, i
   diferent, és `unexpected_response`; no es presenta un altre apartat.
 - Comprovat en directe el 22/11/2026: `4.2.1` retorna el seu text; `4.1`, que
   l'API retorna tot nul, dona l'error accionable en lloc d'un text buit.
+
+### 2.22 Continuacions concurrents del mateix cursor (resolta el 22/11/2026)
+
+Issue [#17](https://github.com/papersvells/llengua-mcp/issues/17). Dues crides
+simultànies a `continuar_cerca` amb el mateix `next_cursor` llegien la mateixa
+posició abans que cap l'actualitzés i retornaven la mateixa pàgina.
+
+- `CursorStore` té un `asyncio.Lock` per cursor. `continue_search` el pren i
+  rellegeix el payload dins del pany, per si una altra crida ja l'ha avançat.
+- Si la petició falla, el cursor no s'actualitza i la posició no es perd.
+- Comprovat en directe el 22/11/2026 amb `somriure` + adjectiu: les dues
+  continuacions demanen `iStart=2` i `iStart=3` i retornen ocurrències
+  diferents.
 
 ---
 

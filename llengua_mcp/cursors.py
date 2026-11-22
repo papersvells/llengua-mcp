@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import secrets
 import time
 from dataclasses import dataclass
@@ -22,6 +23,14 @@ class CursorStore:
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
         self._entries: dict[str, _Entry] = {}
+        # Un pany per cursor: dues continuacions del mateix testimoni no poden
+        # llegir la mateixa posició abans que cap l'hagi avançada.
+        self._locks: dict[str, asyncio.Lock] = {}
+
+    def lock(self, token: str) -> asyncio.Lock:
+        """Retorna el pany d'un cursor existent, per serialitzar-ne les crides."""
+
+        return self._locks.setdefault(token, asyncio.Lock())
 
     def create(self, payload: CursorPayload) -> str:
         self._purge()
@@ -30,6 +39,7 @@ class CursorStore:
         while len(self._entries) > self.max_entries:
             oldest = min(self._entries, key=lambda key: self._entries[key].expires_at)
             self._entries.pop(oldest, None)
+            self._locks.pop(oldest, None)
         return token
 
     def get(self, token: str) -> CursorPayload | None:
@@ -38,6 +48,7 @@ class CursorStore:
             return None
         if entry.expires_at < time.monotonic():
             self._entries.pop(token, None)
+            self._locks.pop(token, None)
             return None
         return entry.payload
 
@@ -50,3 +61,4 @@ class CursorStore:
         expired = [key for key, entry in self._entries.items() if entry.expires_at < now]
         for key in expired:
             self._entries.pop(key, None)
+            self._locks.pop(key, None)

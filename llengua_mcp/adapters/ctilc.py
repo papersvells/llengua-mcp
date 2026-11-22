@@ -972,8 +972,7 @@ class CtilcAdapter:
     async def continue_search(self, cursor: str, *, limit: int | None = None) -> dict[str, Any]:
         if limit is not None and limit < 1:
             raise InvalidQueryError("`limit` ha de ser 1 o més gran.")
-        payload = self.cursors.get(cursor)
-        if payload is None:
+        if self.cursors.get(cursor) is None:
             raise StaleSearchError(
                 "El cursor no existeix o ha caducat.",
                 hint=(
@@ -982,6 +981,24 @@ class CtilcAdapter:
                 ),
                 source=COOCUR_URL,
             )
+        async with self.cursors.lock(cursor):
+            # Una altra continuació pot haver avançat el cursor mentre
+            # esperàvem el pany: cal rellegir-lo per no repetir la pàgina.
+            payload = self.cursors.get(cursor)
+            if payload is None:
+                raise StaleSearchError(
+                    "El cursor no existeix o ha caducat.",
+                    hint=(
+                        "Torna a executar la cerca original. El cursor és local i té "
+                        "una validesa limitada."
+                    ),
+                    source=COOCUR_URL,
+                )
+            return await self._continue_locked(cursor, payload, limit)
+
+    async def _continue_locked(
+        self, cursor: str, payload: CursorPayload, limit: int | None
+    ) -> dict[str, Any]:
         if payload.total and payload.next_start > payload.total:
             return {
                 "status": "ok",
