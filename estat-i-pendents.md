@@ -14,7 +14,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 316 passats, 20 omesos (els live).
+- **Tests sense xarxa:** 319 passats, 20 omesos (els live).
 - **Tests en directe:** 20, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
@@ -644,6 +644,17 @@ cerca responia `invalid_query`, com si l’autor no existís.
 - Una pàgina vàlida que no troba l’autor continua donant `invalid_query`.
 - Comprovat en directe el 22/11/2026: `Sagarra, Xavier` → `no_matches`
   verificat i `Sagarra, Josep M. de` → 42, sense avisos.
+
+### 2.28 Un apartat sense codi no és citable a les gramàtiques (resolt el 22/11/2026)
+
+Issue [#24](https://github.com/papersvells/llengua-mcp/issues/24). Si l’API
+retornava contingut sense `codiText`, `gramatica_text` acceptava l’apartat amb
+un enllaç sense codi. La validació només comparava quan el codi era present.
+
+- `parse_text` exigeix que el codi retornat coincideixi amb el sol·licitat.
+  Un codi absent, nul, buit o divergent dona `unexpected_response`.
+- Comprovat en directe el 22/11/2026: GIEC `8.3.3` retorna el text amb el codi
+  correcte; GBU `28` continua donant l’error accionable d’apartat sense text.
 
 ---
 

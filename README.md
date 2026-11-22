@@ -221,8 +221,8 @@ Variables d'entorn:
   sol·licitat: si no, dona error en lloc de presentar un altre apartat.
 - **Gramàtiques**: per a un dubte d'ús, la GBU; la GEIEC és la versió en línia;
   la GIEC, la descripció exhaustiva. Cita el codi i el títol. Si el codi retornat
-  no coincideix amb el sol·licitat, l'eina dona error; un total sense cap apartat
-  llegible és `partial`, no `no_results`.
+  falta, és buit o no coincideix amb el sol·licitat, l'eina dona error; un total
+  sense cap apartat llegible és `partial`, no `no_results`.
 - **Col·locacions**: `total` és el recompte del servidor i inclou les files de
   puntuació descartades (`excluded_rows`); `counted_rows` en són les
   aprofitables. `rows` de cada categoria és el nombre disponible abans de

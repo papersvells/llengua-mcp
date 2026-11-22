@@ -87,3 +87,13 @@ def test_parse_text_accepta_el_codi_esperat() -> None:
     )
     assert data["codi_text"] == "8.3.3"
     assert data["url"] == "https://giec.iec.cat/textgramatica/codi/8.3.3"
+
+
+@pytest.mark.parametrize("codi", [None, "", "  "])
+def test_parse_text_sense_codi_no_es_pot_verificar(codi) -> None:
+    with pytest.raises(UnexpectedResponseError, match="no identifica"):
+        parse_text(
+            {"codiText": codi, "titol": "T", "contingut": "<p>text</p>"},
+            font=FONT,
+            expected="8.3.3",
+        )

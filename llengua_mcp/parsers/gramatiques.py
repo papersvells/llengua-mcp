@@ -154,7 +154,17 @@ def parse_text(payload: Any, *, font: str, expected: str | None = None) -> dict[
         )
 
     codi_text = payload.get("codiText")
-    if expected and codi_text and str(codi_text) != expected:
+    codi_rebut = str(codi_text or "").strip()
+    if expected and codi_rebut != expected:
+        if not codi_rebut:
+            raise _unexpected(
+                f"La resposta no identifica cap codi; s'ha demanat «{expected}».",
+                font=font,
+                hint=(
+                    "El codi pot no existir o l'API pot haver canviat. "
+                    "Comprova'l amb la cerca abans de citar-lo."
+                ),
+            )
         raise _unexpected(
             f"El codi retornat («{codi_text}») no correspon al sol·licitat («{expected}»).",
             font=font,
