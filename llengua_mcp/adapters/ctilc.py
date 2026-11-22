@@ -378,6 +378,37 @@ class CtilcAdapter:
         exists = any(normalize_key(candidate) == normalize_key(name) for candidate in names)
         return exists, names
 
+    async def _validate_filter_authors(
+        self, filter_query: dict[str, Any] | None
+    ) -> tuple[set[str], list[str]]:
+        """Valida els autors d'un filtre contra el catàleg global del CTILC.
+
+        Retorna els noms normalitzats que existeixen i els avisos de les
+        validacions que no s'han pogut fer. Un autor inexistent és un error de
+        consulta, no un resultat sense files.
+        """
+
+        validated: set[str] = set()
+        warnings: list[str] = []
+        if not filter_query or not filter_query.get("autor"):
+            return validated, warnings
+        for author in filter_query["autor"]:
+            exists, candidates = await self._author_exists(author)
+            if exists is None:
+                warnings.append("author_validation_skipped")
+            elif not exists:
+                hint = "Comprova el nom exacte del catàleg del CTILC."
+                if candidates:
+                    hint = "Autors semblants: " + "; ".join(candidates[:5]) + "."
+                raise InvalidQueryError(
+                    f"L'autor «{author}» no és al catàleg del CTILC.",
+                    hint=hint,
+                    source=OBRES_AUT_URL,
+                )
+            else:
+                validated.add(normalize_key(author))
+        return validated, warnings
+
     async def search(
         self,
         *,
@@ -395,24 +426,7 @@ class CtilcAdapter:
             raise InvalidQueryError("`start` ha de ser 1 o més gran.")
         offset = max(1, min(limit, self.settings.max_occurrences))
 
-        validated_authors: set[str] = set()
-        extra_warnings: list[str] = []
-        if filter_query and filter_query.get("autor"):
-            for author in filter_query["autor"]:
-                exists, candidates = await self._author_exists(author)
-                if exists is None:
-                    extra_warnings.append("author_validation_skipped")
-                elif not exists:
-                    hint = "Comprova el nom exacte del catàleg del CTILC."
-                    if candidates:
-                        hint = "Autors semblants: " + "; ".join(candidates[:5]) + "."
-                    raise InvalidQueryError(
-                        f"L'autor «{author}» no és al catàleg del CTILC.",
-                        hint=hint,
-                        source=OBRES_AUT_URL,
-                    )
-                else:
-                    validated_authors.add(normalize_key(author))
+        validated_authors, extra_warnings = await self._validate_filter_authors(filter_query)
 
         compiled = compile_pattern(elements)
         body = compiled.body(start=start, offset=offset, filters=filters)
@@ -470,9 +484,11 @@ class CtilcAdapter:
                 )
         elif page.total is not None and page.total > 0 and not page.occurrences:
             if filters and page.filtered_total is not None:
-                if authors_verified:
-                    # L'autor existeix al catàleg i els filtres s'han verificat:
-                    # el total 1 és el valor de control del portal, no una fila.
+                if authors_verified and page.filtered_total == 1:
+                    # L'autor existeix al catàleg, els filtres s'han verificat
+                    # i la quantitat filtrada és el valor de control 1: no és
+                    # una fila. Un total més gran sense files és un desquadre,
+                    # no una absència, i no s'ha de convertir en zero.
                     status = "no_matches"
                     total = 0
                     warnings = [w for w in warnings if w != "parse_partial"]
@@ -844,6 +860,9 @@ class CtilcAdapter:
                 phrases.append(cleaned)
 
         filter_fields, filter_query = _resolve_filters(filters)
+        # Valida els autors abans de consultar cap variant: un autor inexistent
+        # ha de donar un error net, no un resultat per variant.
+        await self._validate_filter_authors(filter_query)
         base_query = phrase_query(frase, variants)
         if filter_query:
             base_query = {**base_query, "filters": filter_query}
@@ -861,6 +880,7 @@ class CtilcAdapter:
                     limit=limit,
                     start=1,
                     filters=filter_fields,
+                    filter_query=filter_query,
                 )
             except LlenguaError as exc:
                 errors += 1

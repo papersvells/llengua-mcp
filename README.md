@@ -176,9 +176,11 @@ Variables d'entorn:
 - **Filtres del CTILC**: amb filtres, `total` és la «Quantitat filtrada» i
   `total_unfiltered` la freqüència sense filtres; `filters_verified` ha de ser
   cert. Si el portal no retorna files, el total pot ser un valor de control
-  (1): no es presenta com una absència. Si el filtre és d'autor i el nom s'ha
-  validat contra el catàleg global, es retorna `no_matches` amb
-  `filtered_empty_verified`. `classtem` filtra les obres no literàries per tema
+  (1): no es presenta com una absència. Si el filtre és d'autor, el nom s'ha
+  validat contra el catàleg global i la quantitat filtrada és exactament el
+  valor de control 1, es retorna `no_matches` amb `filtered_empty_verified`;
+  un total més gran sense files és `unexpected_response` amb
+  `filtered_empty_unverified`. `classtem` filtra les obres no literàries per tema
   (grup `3` o subtema `3.2`); no es combina amb `genere` ni amb `tipus=LIT`.
   Un valor de filtre inventat pot donar el total de control; comprova'l amb
   `filtres_disponibles`.

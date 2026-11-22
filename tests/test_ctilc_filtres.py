@@ -74,6 +74,21 @@ def _page(
     return html
 
 
+def _phrase_page(
+    *,
+    autor: str,
+    filtered: int,
+    with_rows: bool = False,
+) -> str:
+    """Adapta la fixture de dos elements a la frase `somriure maliciós`."""
+
+    html = _page(autor=autor, filtered=filtered, with_rows=with_rows)
+    html = html.replace(">adj:-</span>", ">maliciós</span>")
+    html = html.replace("00*lema=somriure", "00*forma=somriure")
+    html = html.replace("01*cg=adj%3A-", "01*forma=malici%C3%B3s")
+    return html
+
+
 class SearchClient:
     """Respon la cerca i el catàleg d'autors (Aut1) amb fixtures."""
 
@@ -224,3 +239,83 @@ async def test_autor_no_validat_no_bloqueja_la_cerca(tmp_path) -> None:
 
     assert result["status"] == "ok"
     assert "author_validation_skipped" in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_filtrat_42_sense_files_no_es_un_fals_zero(tmp_path) -> None:
+    client = SearchClient(_page(autor="@Sagarra, Xavier", filtered=42, with_rows=False))
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+
+    result = await adapter.search_pattern(ELEMENTS, filters=CtilcFilters(autor=["Sagarra, Xavier"]))
+
+    assert result["status"] == "unexpected_response"
+    assert result["total"] == 42
+    assert result["total_unfiltered"] == 2136
+    assert result["filters_verified"] is True
+    assert "filtered_empty_unverified" in result["warnings"]
+    assert "filtered_empty_verified" not in result["warnings"]
+    assert result["error"]["code"] == "unexpected_response"
+
+
+@pytest.mark.asyncio
+async def test_autor_no_validat_i_total_sense_files_es_unexpected(tmp_path) -> None:
+    client = SearchClient(
+        _page(autor="@Sagarra, Xavier", filtered=42, with_rows=False),
+        fail_authors=True,
+    )
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+
+    result = await adapter.search_pattern(ELEMENTS, filters=CtilcFilters(autor=["Sagarra, Xavier"]))
+
+    assert result["status"] == "unexpected_response"
+    assert result["total"] == 42
+    assert "author_validation_skipped" in result["warnings"]
+    assert "filtered_empty_unverified" in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_cerca_frase_autor_inexistent_es_invalid_query(tmp_path) -> None:
+    client = SearchClient(_page(autor="@Inventat, Pere", filtered=1, with_rows=False))
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+
+    with pytest.raises(InvalidQueryError, match="catàleg"):
+        await adapter.search_phrase(
+            "somriure maliciós", filters=CtilcFilters(autor=["Inventat, Pere"])
+        )
+
+    assert any("CTILCCorpus_Aut1" in url for url in client.urls)
+    assert not any("CTILCQConc_Coocur2" in url for url in client.urls)
+
+
+@pytest.mark.asyncio
+async def test_cerca_frase_autor_valid_i_zero_verificat(tmp_path) -> None:
+    client = SearchClient(_phrase_page(autor="@Sagarra, Xavier", filtered=1))
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+
+    result = await adapter.search_phrase(
+        "somriure maliciós", filters=CtilcFilters(autor=["Sagarra, Xavier"])
+    )
+
+    assert result["status"] == "no_matches"
+    variant = result["variants"][0]
+    assert variant["status"] == "no_matches"
+    assert variant["total"] == 0
+    assert "filtered_empty_verified" in variant["warnings"]
+    assert any("CTILCCorpus_Aut1" in url for url in client.urls)
+    assert any("autSelec=%40Sagarra%2C%20Xavier" in body for body in client.bodies)
+
+
+@pytest.mark.asyncio
+async def test_cerca_frase_cataleg_indisponible_avisa(tmp_path) -> None:
+    client = SearchClient(
+        _phrase_page(autor="@Sagarra, Xavier", filtered=32, with_rows=True),
+        fail_authors=True,
+    )
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+
+    result = await adapter.search_phrase(
+        "somriure maliciós", filters=CtilcFilters(autor=["Sagarra, Xavier"])
+    )
+
+    assert result["status"] == "ok"
+    assert "author_validation_skipped" in result["variants"][0]["warnings"]

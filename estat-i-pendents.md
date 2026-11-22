@@ -2,7 +2,7 @@
 
 Document de seguiment. Recull què està implementat i verificat, quins límits
 coneixem i què queda per fer. No és un pla tancat: les prioritats poden
-canviar. Data de la darrera actualització: **19/11/2026**.
+canviar. Data de la darrera actualització: **22/11/2026**.
 
 Fonts de veritat per al protocol: `pla-mcp-ctilc-critiques.md` (correccions
 verificades) i, per a l'abast, `AGENTS.md`.
@@ -14,8 +14,8 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 234 passats, 19 omesos (els live).
-- **Tests en directe:** 19, opcionals amb `LLENGUA_LIVE=1`; tots passen.
+- **Tests sense xarxa:** 278 passats, 20 omesos (els live).
+- **Tests en directe:** 20, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
   `.github/workflows/live.yml` executa les proves en directe cada dilluns a les
@@ -62,8 +62,10 @@ verificades) i, per a l'abast, `AGENTS.md`.
   i els grups sencers van a `classtemGSelec`. És incompatible amb `genere` i
   amb `tipus=LIT`.
 - Amb filtre d'autor validat al catàleg global, un resultat sense files és
-  `no_matches` (`filtered_empty_verified`); un autor inexistent és
-  `invalid_query`. Si la validació falla, la cerca continua amb
+  `no_matches` (`filtered_empty_verified`) només si la quantitat filtrada és el
+  valor de control 1; un total més gran sense files és `unexpected_response`
+  (`filtered_empty_unverified`). Un autor inexistent és `invalid_query`, també
+  a `cerca_frase`. Si la validació falla, la cerca continua amb
   `author_validation_skipped`.
 - Rate limit per host, cache TTL en memòria, User-Agent identificable.
 - `opencode.jsonc` és local i està ignorat; l'exemple és
@@ -200,8 +202,10 @@ directe amb `somriure` (lema) el 18/11/2026 i amb `somriures` (forma) el
   resultat). `genere` i `classtem` són excloents.
   La validació d'autors consulta el catàleg global (`CTILCCorpus_Aut1.asp`):
   un autor inexistent dona `invalid_query` amb suggeriments, i un autor real
-  sense cap ocurrència dona `no_matches` amb `filtered_empty_verified` (el
-  total de control 1 ja no es confon amb una absència). Si la validació no es
+  sense cap ocurrència dona `no_matches` amb `filtered_empty_verified` quan la
+  quantitat filtrada és el valor de control 1 (un total més gran sense files és
+  `unexpected_response` amb `filtered_empty_unverified`). La validació també
+  s'aplica a `cerca_frase`. Si la validació no es
   pot fer, la cerca continua amb l'avís `author_validation_skipped`.
 - **Obres descarregables: descartat (issue #1 tancada el 19/11/2026).** No es
   farà cap eina de descàrrega d'obres: l'MCP no baixa textos sencers. Les
@@ -465,6 +469,24 @@ Issue [#10](https://github.com/papersvells/llengua-mcp/issues/10).
 - **Guia d'ús eficient** a `AGENTS.md` §15: agrupar consultes independents,
   evitar `salut` per sistema i no repetir cerques equivalents.
 
+
+### 2.16 Fals zero amb filtres d'autor (resolt el 22/11/2026)
+
+Issue [#11](https://github.com/papersvells/llengua-mcp/issues/11).
+`search()` convertia qualsevol total filtrat positiu sense files en
+`no_matches` amb `total: 0` si l'autor s'havia validat, no només el valor de
+control 1.
+
+- Ara només el total 1 es converteix en `no_matches`
+  (`filtered_empty_verified`); un total més gran sense files és
+  `unexpected_response` amb `filtered_empty_unverified`.
+- `cerca_frase` valida l'autor abans de consultar cap variant i passa
+  `filter_query` a `search()`, així que un autor inexistent dona
+  `invalid_query` amb suggeriments i el zero filtrat es pot verificar.
+
+Comprovat en directe el 22/11/2026: `Sagarra, Xavier` → `no_matches` (0 de
+2.136); `Sagarra, Josep M. de` → 42; `cerca_frase("somriure maliciós")` amb
+aquest autor → 1 ocurrència; autor inventat → `invalid_query`.
 
 ---
 
