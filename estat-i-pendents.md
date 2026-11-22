@@ -14,7 +14,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 314 passats, 20 omesos (els live).
+- **Tests sense xarxa:** 316 passats, 20 omesos (els live).
 - **Tests en directe:** 20, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
@@ -630,6 +630,20 @@ avís de manteniment amb comptador 0 es presentava com a `no_matches`.
   `unexpected_response`, conservant el text a `zero_message`.
 - Comprovat en directe el 22/11/2026: `tenir foc al ulls` continua donant
   `no_matches` amb `zero_results`; `somriure` + adjectiu, 2.136, continua `ok`.
+
+### 2.27 Un catàleg il·legible no invalida l’autor (resolt el 22/11/2026)
+
+Issue [#23](https://github.com/papersvells/llengua-mcp/issues/23). Una pàgina
+de manteniment a `CTILCCorpus_Aut1.asp` es llegia com una llista buida i la
+cerca responia `invalid_query`, com si l’autor no existís.
+
+- `_author_exists` retorna `(None, [])` si la resposta té avisos de transport
+  o de parser. La cerca continua amb `author_validation_skipped`.
+- Amb el catàleg il·legible, un total de control 1 no es converteix en
+  `no_matches`: queda `unexpected_response` amb `filtered_empty_unverified`.
+- Una pàgina vàlida que no troba l’autor continua donant `invalid_query`.
+- Comprovat en directe el 22/11/2026: `Sagarra, Xavier` → `no_matches`
+  verificat i `Sagarra, Josep M. de` → 42, sense avisos.
 
 ---
 

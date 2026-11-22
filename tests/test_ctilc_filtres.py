@@ -241,6 +241,40 @@ async def test_autor_no_validat_no_bloqueja_la_cerca(tmp_path) -> None:
     assert "author_validation_skipped" in result["warnings"]
 
 
+MAINTENANCE = "<html><body><h1>Servei temporalment indisponible</h1></body></html>"
+
+
+@pytest.mark.asyncio
+async def test_cataleg_illegible_no_invalida_l_autor(tmp_path) -> None:
+    client = SearchClient(
+        _page(autor="@Sagarra, Xavier", filtered=42),
+        authors=MAINTENANCE,
+    )
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+
+    result = await adapter.search_pattern(ELEMENTS, filters=CtilcFilters(autor=["Sagarra, Xavier"]))
+
+    assert result["status"] == "ok"
+    assert result["total"] == 42
+    assert "author_validation_skipped" in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_cataleg_illegible_i_total_1_no_es_verificat(tmp_path) -> None:
+    client = SearchClient(
+        _page(autor="@Sagarra, Xavier", filtered=1, with_rows=False),
+        authors=MAINTENANCE,
+    )
+    adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
+
+    result = await adapter.search_pattern(ELEMENTS, filters=CtilcFilters(autor=["Sagarra, Xavier"]))
+
+    assert result["status"] == "unexpected_response"
+    assert "author_validation_skipped" in result["warnings"]
+    assert "filtered_empty_unverified" in result["warnings"]
+    assert "filtered_empty_verified" not in result["warnings"]
+
+
 @pytest.mark.asyncio
 async def test_filtrat_42_sense_files_no_es_un_fals_zero(tmp_path) -> None:
     client = SearchClient(_page(autor="@Sagarra, Xavier", filtered=42, with_rows=False))

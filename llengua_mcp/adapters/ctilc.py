@@ -374,6 +374,10 @@ class CtilcAdapter:
             parsed = parse_authors(result.text)
         except LlenguaError:
             return None, []
+        if result.warnings or parsed["warnings"]:
+            # Una pàgina de manteniment o trencada no demostra que l'autor no
+            # existeixi: la cerca continua sense validar-lo.
+            return None, []
         names = [author["name"] for author in parsed["authors"]]
         exists = any(normalize_key(candidate) == normalize_key(name) for candidate in names)
         return exists, names
