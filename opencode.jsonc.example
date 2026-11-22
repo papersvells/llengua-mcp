@@ -5,14 +5,13 @@
       "llengua": {
         "type": "local",
         "command": [
-          "/RUTA/AL/PROJECTE/.venv/bin/python",
-          "-m",
-          "llengua_mcp.server"
+          "uvx",
+          "--from",
+          "git+https://github.com/papersvells/llengua-mcp.git",
+          "llengua-mcp"
         ],
-        "cwd": ".",
         "environment": {
-          "LLENGUA_USER_AGENT": "llengua-mcp/0.1 (recerca; contacte)",
-          "LLENGUA_DATA_DIR": "/RUTA/AL/PROJECTE/data"
+          "LLENGUA_USER_AGENT": "llengua-mcp/0.1"
         },
         "timeout": { "execution": 60000 },
         "codemode": false

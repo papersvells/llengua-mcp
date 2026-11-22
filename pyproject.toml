@@ -28,6 +28,7 @@ dev = [
 
 [project.scripts]
 llengua-mcp = "llengua_mcp.server:main"
+llengua-mcp-fetch-sinonims = "llengua_mcp.fetch_sinonims:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["llengua_mcp"]

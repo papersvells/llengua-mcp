@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import shutil
 import sys
 
 import pytest
@@ -12,9 +13,10 @@ from llengua_mcp.server import INSTRUCTIONS, mcp
 
 @pytest.mark.asyncio
 async def test_stdio_initialize_list_and_call_tool(tmp_path) -> None:
+    executable = shutil.which("llengua-mcp")
     params = StdioServerParameters(
-        command=sys.executable,
-        args=["-m", "llengua_mcp.server"],
+        command=executable or sys.executable,
+        args=[] if executable else ["-m", "llengua_mcp.server"],
         env={
             "LLENGUA_DATA_DIR": str(tmp_path / "data"),
             "LLENGUA_CACHE_DIR": str(tmp_path / "cache"),
