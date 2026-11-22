@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -106,6 +107,9 @@ class SinonimsIndex:
                 source=SOURCE_URL,
             )
         raw = self.data_file.read_text(encoding="utf-8")
+        # La mateixa forma apareix sovint en diversos grups. La cau és local a
+        # aquesta càrrega i acotada: no conserva dades després de construir l'índex.
+        normalize_cached = lru_cache(maxsize=8192)(normalize_key)
         for line in raw.splitlines():
             line = line.strip()
             if not line or not line.startswith("-"):
@@ -135,9 +139,9 @@ class SinonimsIndex:
                 if not item:
                     continue
                 synonym = Synonym(form=item, note=note)
-                normalized_note = normalize_key(note or "")
                 if note and (
-                    normalized_note in {"anto", "antonim", "antonims"} or "antònim" in note.lower()
+                    normalize_cached(note) in {"anto", "antonim", "antonims"}
+                    or "antònim" in note.lower()
                 ):
                     group.antonyms.append(synonym)
                 else:
@@ -150,7 +154,7 @@ class SinonimsIndex:
                 exact = normalize_exact_key(term.form)
                 if exact:
                     self._index_exact.setdefault(exact, []).append(index)
-                key = normalize_key(term.form)
+                key = normalize_cached(term.form)
                 if key:
                     self._index.setdefault(key, []).append(index)
 

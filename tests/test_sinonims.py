@@ -23,6 +23,73 @@ def test_lookup_and_annotations(tmp_path) -> None:
     assert group["antonyms"][0]["form"] == "burleta"
 
 
+def test_load_memoitza_i_conserva_indexos_i_resultats(tmp_path, monkeypatch) -> None:
+    import llengua_mcp.sinonims as sinonims
+
+    (tmp_path / "sinonims.txt").write_text(
+        "-adj (cel): clar, serè (col·loquial), fosc (antònim)\n"
+        "-adj (color): clar, viu, fosc (antònim)\n"
+        "-adv: més, clar, com més va\\, més\n"
+        "-n: mes, mesada #comentari\n",
+        encoding="utf-8",
+    )
+    original = sinonims.normalize_key
+    calls: list[str] = []
+
+    def counted(value: str) -> str:
+        calls.append(value)
+        return original(value)
+
+    monkeypatch.setattr(sinonims, "normalize_key", counted)
+    cached = SinonimsIndex(tmp_path)
+    cached.load()
+    assert calls.count("clar") == 1
+    assert calls.count("antònim") == 1
+    assert "" not in calls
+
+    # Una segona càrrega no comparteix la cau de normalització de la primera.
+    calls.clear()
+    second = SinonimsIndex(tmp_path)
+    second.load()
+    assert calls.count("clar") == 1
+
+    monkeypatch.setattr(sinonims, "lru_cache", lambda **kwargs: lambda function: function)
+    baseline = SinonimsIndex(tmp_path)
+    baseline.load()
+    assert cached.groups == baseline.groups
+    assert cached._index == baseline._index
+    assert cached._index_exact == baseline._index_exact
+    for term in ("clar", "fosc", "més", "mes", "com més va, més"):
+        assert cached.lookup(term, context="cel clar") == baseline.lookup(term, context="cel clar")
+
+
+def test_cau_de_normalitzacio_no_es_rete_després_de_carregar(tmp_path, monkeypatch) -> None:
+    import gc
+    import weakref
+
+    import llengua_mcp.sinonims as sinonims
+
+    (tmp_path / "sinonims.txt").write_text("-adj: clar, serè\n", encoding="utf-8")
+    original_cache = sinonims.lru_cache
+    caches = []
+
+    def tracked_cache(*, maxsize):
+        def decorate(function):
+            cached = original_cache(maxsize=maxsize)(function)
+            caches.append(weakref.ref(cached))
+            return cached
+
+        return decorate
+
+    monkeypatch.setattr(sinonims, "lru_cache", tracked_cache)
+    index = SinonimsIndex(tmp_path)
+    index.load()
+    gc.collect()
+    assert len(caches) == 1
+    assert caches[0]() is None
+    assert index.lookup("clar")["status"] == "ok"
+
+
 def test_expression_is_not_split_into_components(tmp_path) -> None:
     (tmp_path / "sinonims.txt").write_text("-n: fe, creença\n", encoding="utf-8")
     index = SinonimsIndex(tmp_path)
