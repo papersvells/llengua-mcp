@@ -14,7 +14,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 312 passats, 20 omesos (els live).
+- **Tests sense xarxa:** 314 passats, 20 omesos (els live).
 - **Tests en directe:** 20, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
@@ -617,6 +617,19 @@ el servidor es desvincula l'`App` global i es tanca el client HTTP. El cicle
 següent crea una instància nova. La suite habitual de CI comprova dos cicles
 consecutius i també arrenca el procés real per `stdio`, inicialitza la sessió,
 llista les eines i crida `etiquetes`, sense xarxa ni dades de sinònims.
+
+### 2.26 Un avís del servei no és una absència (resolt el 22/11/2026)
+
+Issue [#22](https://github.com/papersvells/llengua-mcp/issues/22). Qualsevol
+text dins de `div.tvermell` es prenia com el missatge de cap coincidència; un
+avís de manteniment amb comptador 0 es presentava com a `no_matches`.
+
+- El parser només marca `explicit_zero` si la pàgina conté el missatge
+  reconegut («No s'han trobat ocurrències per al patró seleccionat»).
+- Un text vermell diferent dona `zero_unverified` i l'adaptador retorna
+  `unexpected_response`, conservant el text a `zero_message`.
+- Comprovat en directe el 22/11/2026: `tenir foc al ulls` continua donant
+  `no_matches` amb `zero_results`; `somriure` + adjectiu, 2.136, continua `ok`.
 
 ---
 

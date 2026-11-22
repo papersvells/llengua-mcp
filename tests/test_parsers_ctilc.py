@@ -89,6 +89,26 @@ def test_zero_page_without_chtml1_container() -> None:
     assert page.zero_message
 
 
+def test_zero_page_with_an_unrecognized_warning_is_not_verified() -> None:
+    html = _html("ctilc_zero.html")
+    html = html.replace(
+        "No s'han trobat ocurrències per al patró seleccionat: somriure (amb | de) mala fe",
+        "Servei temporalment indisponible",
+    )
+    expected = {
+        "00*lema": "somriure",
+        "01*forma": "amb|de",
+        "02*forma": "mala",
+        "03*forma": "fe",
+    }
+    page = parse_ctilc_page(html, expected=expected)
+
+    assert page.total == 0
+    assert page.explicit_zero is False
+    assert page.zero_message == "Servei temporalment indisponible"
+    assert "zero_unverified" in page.warnings
+
+
 def test_filtered_page_uses_filtered_total_and_echo() -> None:
     html = _html("ctilc_two_rows.html")
     html = html.replace(

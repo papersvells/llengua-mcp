@@ -8,7 +8,7 @@ from urllib.parse import parse_qsl
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from llengua_mcp.models import CtilcPage, Occurrence
-from llengua_mcp.text import clean_text
+from llengua_mcp.text import clean_text, normalize_key
 
 _PATTERN_RE = re.compile(
     r"Patró seleccionat\s*:\s*(.*?)\s*(?:CTILC1\s*)?Freqüència total\s*:\s*([\d.]+)",
@@ -33,6 +33,9 @@ _ZERO_RE = re.compile(
     r"No s'han trobat ocurrències per al patró seleccionat\s*:\s*([^<]{0,300})",
     re.DOTALL,
 )
+# Missatge reconegut de cap coincidència; qualsevol altre text vermell pot ser
+# un avís del servei i no demostra una absència.
+_ZERO_MESSAGE = "no s'han trobat ocurrencies per al patro seleccionat"
 _FITXA_RE = re.compile(
     r"CTILCQFitxaLocalitzacio\.asp\?id=(\d+)&(?:amp;)?tok=([^&'\"]+)"
     r"&(?:amp;)?seccio=([^&'\"]+)&(?:amp;)?obra=(\d+)"
@@ -88,14 +91,12 @@ def parse_ctilc_page(
 
     pattern_echo = ""
     total: int | None = None
-    explicit_zero = False
     whole_text = clean_text(doc.body.text(separator="") if doc.body else "")
     header_text = clean_text(header.text(separator="")) if header is not None else whole_text
     match = _PATTERN_RE.search(header_text)
     if match:
         pattern_echo = clean_text(match.group(1))
         total = _int_from_dots(match.group(2))
-        explicit_zero = total == 0
     else:
         fallback = _PATTERN_FALLBACK_RE.search(header_text)
         if fallback:
@@ -103,7 +104,6 @@ def parse_ctilc_page(
         total_match = _TOTAL_RE.search(header_text)
         if total_match:
             total = _int_from_dots(total_match.group(1))
-            explicit_zero = total == 0
 
     total_unfiltered = total
     filtered_total = None
@@ -111,7 +111,6 @@ def parse_ctilc_page(
     if filtered_match:
         filtered_total = _int_from_dots(filtered_match.group(1))
         total = filtered_total
-        explicit_zero = total == 0
 
     filters_echo: dict[str, str] = {}
     for name in _FILTER_FIELDS:
@@ -140,6 +139,11 @@ def parse_ctilc_page(
 
     if not pattern_echo and zero_message and ":" in zero_message:
         pattern_echo = zero_message.split(":", 1)[-1].strip()
+
+    zero_recognized = _ZERO_MESSAGE in normalize_key(whole_text)
+    explicit_zero = total == 0 and zero_recognized
+    if total == 0 and not zero_recognized:
+        warnings.append("zero_unverified")
 
     formdata_node = doc.css_first("input#formdata")
     server_fields: dict[str, str] = {}

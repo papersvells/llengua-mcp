@@ -330,6 +330,32 @@ async def test_zero_message_without_counter_is_unexpected(tmp_path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_zero_amb_avis_del_servei_no_es_una_absencia(tmp_path) -> None:
+    page = (FIXTURES / "ctilc_zero.html").read_text(encoding="utf-8")
+    page = re.sub(
+        r"(?<=CLASS='tvermell'>).*?(?=</DIV>)",
+        "Servei temporalment indisponible",
+        page,
+    )
+    adapter = CtilcAdapter(FakeClient(page), _settings(tmp_path), CursorStore())
+    result = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="forma", value="amb", alternatives=["de"]),
+            PatternElement(type="forma", value="mala"),
+            PatternElement(type="forma", value="fe"),
+        ]
+    )
+
+    assert result["status"] == "unexpected_response"
+    assert result["total"] == 0
+    assert "zero_unverified" in result["warnings"]
+    assert "zero_results" not in result["warnings"]
+    assert result["zero_message"] == "Servei temporalment indisponible"
+    assert result["error"]["code"] == "unexpected_response"
+
+
+@pytest.mark.asyncio
 async def test_salut_does_not_create_a_cursor(tmp_path) -> None:
     page = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
     page = page.replace(
