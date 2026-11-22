@@ -47,6 +47,12 @@ def normalize_key(value: str) -> str:
     return _WHITESPACE.sub(" ", text)
 
 
+def normalize_exact_key(value: str) -> str:
+    """Clau de comparació que conserva els accents: minúscules i espais."""
+
+    return _WHITESPACE.sub(" ", clean_text(value).casefold()).strip()
+
+
 def contains_words(haystack: str, needle: str) -> bool:
     """Comprova si una paraula o una frase apareix com a paraules senceres."""
 

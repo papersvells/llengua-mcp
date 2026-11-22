@@ -109,3 +109,57 @@ def test_context_no_confon_una_etiqueta_amb_un_tros_de_mot(tmp_path) -> None:
     result = index.lookup("clar", context="Un excel·lent vestit")
     assert result["context_matches"] == 0
     assert "context_no_match" in result["warnings"]
+
+
+def test_mes_i_mes_no_comparteixen_grups(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text(
+        "-conj: però, mes, emperò\n"
+        "-n: mes, mesada\n"
+        "-adv: més, pus\n"
+        "-adv: cada vegada més, més i més\n",
+        encoding="utf-8",
+    )
+    index = SinonimsIndex(tmp_path)
+
+    mes = index.lookup("mes", limit=10)
+    assert mes["match"] == "exact"
+    assert "accent_insensitive_match" not in mes["warnings"]
+    assert {group["pos"] for group in mes["groups"]} == {"conj", "n"}
+
+    mes_accent = index.lookup("més", limit=10)
+    assert mes_accent["match"] == "exact"
+    assert {group["pos"] for group in mes_accent["groups"]} == {"adv"}
+
+
+def test_dona_i_dona_queden_separats(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text(
+        "-n: dona, senyora\n-v: dóna, obsequia\n",
+        encoding="utf-8",
+    )
+    index = SinonimsIndex(tmp_path)
+
+    dona = index.lookup("dona")
+    assert dona["match"] == "exact"
+    assert {group["pos"] for group in dona["groups"]} == {"n"}
+
+    dona_verb = index.lookup("dóna")
+    assert dona_verb["match"] == "exact"
+    assert {group["pos"] for group in dona_verb["groups"]} == {"v"}
+
+
+def test_cerca_sense_accents_avisa_de_la_coincidencia_aproximada(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text("-n: opinió, parer\n", encoding="utf-8")
+    index = SinonimsIndex(tmp_path)
+    result = index.lookup("opinio")
+    assert result["status"] == "ok"
+    assert result["match"] == "accent_insensitive"
+    assert "accent_insensitive_match" in result["warnings"]
+    assert {item["form"] for item in result["groups"][0]["synonyms"]} == {"parer"}
+
+
+def test_cerca_amb_accent_inesistent_no_cau_a_la_variant_sense_accent(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text("-n: mes, mesada\n", encoding="utf-8")
+    index = SinonimsIndex(tmp_path)
+    result = index.lookup("més")
+    assert result["status"] == "no_results"
+    assert result["match"] is None

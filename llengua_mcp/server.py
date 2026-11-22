@@ -407,12 +407,15 @@ async def cerca_sinonims(
 ) -> dict[str, Any]:
     """Cerca sinònims al diccionari de Softcatalà (dades locals, CC BY 4.0).
 
-    Cerca la paraula o la locució sencera. Si no hi ha entrada per a una
-    expressió, no en busca els components per separat, perquè els sinònims
-    d'una part no equivalen als de l'expressió. Si dones un `context`, les
-    agrupacions que hi coincideixen (etiqueta de sentit o formes que hi surten)
-    es retornen primer; el diccionari no porta definicions, així que el model
-    ha de triar les opcions que hi encaixen i explicar-ne el matís.
+    Cerca la paraula o la locució sencera. Distingeix els accents: si la forma
+    exacta no hi és i només es troba una coincidència sense accents, ho indica
+    amb `match: "accent_insensitive"` i l'avís `accent_insensitive_match`, i no
+    barreja els grups de dues formes que només difereixen en el diacrític. Si no
+    hi ha entrada per a una expressió, no en busca els components per separat,
+    perquè els sinònims d'una part no equivalen als de l'expressió. Si dones un
+    `context`, les agrupacions que hi coincideixen (etiqueta de sentit o formes
+    que hi surten) es retornen primer; el diccionari no porta definicions, així
+    que el model ha de triar les opcions que hi encaixen i explicar-ne el matís.
     """
     app = await get_app()
     return await _call(

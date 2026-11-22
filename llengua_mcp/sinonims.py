@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from llengua_mcp.errors import DataUnavailableError
-from llengua_mcp.text import clean_text, contains_words, normalize_key
+from llengua_mcp.text import clean_text, contains_words, normalize_exact_key, normalize_key
 
 DATA_FILE = "sinonims.txt"
 META_FILE = "sinonims.meta.json"
@@ -57,6 +57,7 @@ class SinonimsIndex:
         self.meta_file = data_dir / META_FILE
         self.groups: list[SynonymGroup] = []
         self._index: dict[str, list[int]] = {}
+        self._index_exact: dict[str, list[int]] = {}
         self.meta: dict[str, Any] = {}
         self._loaded = False
 
@@ -115,6 +116,9 @@ class SinonimsIndex:
             index = len(self.groups)
             self.groups.append(group)
             for term in group.synonyms + group.antonyms:
+                exact = normalize_exact_key(term.form)
+                if exact:
+                    self._index_exact.setdefault(exact, []).append(index)
                 key = normalize_key(term.form)
                 if key:
                     self._index.setdefault(key, []).append(index)
@@ -165,12 +169,20 @@ class SinonimsIndex:
 
     def lookup(self, term: str, *, context: str | None = None, limit: int = 15) -> dict[str, Any]:
         self.load()
+        exact_key = normalize_exact_key(term)
         key = normalize_key(term)
-        group_indexes = self._index.get(key, [])
+        group_indexes = self._index_exact.get(exact_key, [])
+        accent_fallback = False
+        if not group_indexes and exact_key == key:
+            # Només quan la consulta no porta accents: si l'usuari n'ha escrit,
+            # no els ignorem, perquè `més` no ha de retornar els grups de `mes`.
+            group_indexes = self._index.get(key, [])
+            accent_fallback = bool(group_indexes)
         if not group_indexes:
             return {
                 "status": "no_results",
                 "entry": clean_text(term),
+                "match": None,
                 "groups": [],
                 "warnings": ["not_found"],
                 "note": (
@@ -259,6 +271,8 @@ class SinonimsIndex:
                 break
 
         warnings: list[str] = []
+        if accent_fallback:
+            warnings.append("accent_insensitive_match")
         if truncated:
             warnings.append("truncated")
         if context_key and matched_groups == 0:
@@ -266,6 +280,7 @@ class SinonimsIndex:
         return {
             "status": "ok",
             "entry": clean_text(term),
+            "match": "accent_insensitive" if accent_fallback else "exact",
             "groups": groups,
             "warnings": warnings,
             "context_ranked": bool(context_key),
