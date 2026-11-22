@@ -110,3 +110,18 @@ def test_total_sense_comptador_amb_files_usa_el_nombre_de_files() -> None:
     assert data["total"] == len(data["results"])
     assert data["total"] > 0
     assert "records_filtered_missing" in data["warnings"]
+
+
+@pytest.mark.parametrize("comptador", [None, False, 0.4, -1, "1,176", "  "])
+def test_comptador_invalid_no_es_un_zero(comptador) -> None:
+    data = parse_rows({"recordsTotal": 27547, "recordsFiltered": comptador, "data": []})
+
+    assert data["total"] is None
+    assert "records_filtered_invalid" in data["warnings"]
+
+
+def test_comptador_zero_en_text_es_valid() -> None:
+    data = parse_rows({"recordsTotal": 27547, "recordsFiltered": "0", "data": []})
+
+    assert data["total"] == 0
+    assert data["warnings"] == []

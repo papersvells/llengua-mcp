@@ -137,6 +137,18 @@ async def test_sense_comptador_amb_files_ho_avisa() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("comptador", [False, 0.4, -1])
+async def test_comptador_invalid_no_es_un_zero(comptador) -> None:
+    payload = {"recordsTotal": 27547, "recordsFiltered": comptador, "data": []}
+    result = await JaneAdapter(FakeClient(payload)).cerca("maliciós")
+
+    assert result["status"] == "unexpected_response"
+    assert result["total"] is None
+    assert "records_filtered_invalid" in result["warnings"]
+    assert "zero_results" not in result["warnings"]
+
+
+@pytest.mark.asyncio
 async def test_nonce_is_refreshed_once_on_failure() -> None:
     client = FakeClient(LEMA, fail_first=True)
     result = await JaneAdapter(client).cerca("maliciós")

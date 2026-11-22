@@ -138,6 +138,18 @@ async def test_sense_comptador_amb_files_ho_avisa() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("comptador", [False, 0.4, -1])
+async def test_comptador_invalid_no_es_un_zero(comptador) -> None:
+    payload = {"recordsTotal": 1176, "recordsFiltered": comptador, "data": []}
+    result = await ConsultesAdapter(FakeClient(payload)).cerca("tenir")
+
+    assert result["status"] == "unexpected_response"
+    assert result["total"] is None
+    assert "records_filtered_invalid" in result["warnings"]
+    assert "zero_results" not in result["warnings"]
+
+
+@pytest.mark.asyncio
 async def test_nonce_caducat_reintenta_un_cop() -> None:
     client = FakeClient(ROWS, fail_first=True)
     result = await ConsultesAdapter(client).cerca("tenir")

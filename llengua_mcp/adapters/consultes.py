@@ -217,7 +217,7 @@ class ConsultesAdapter:
             error = {
                 "code": status,
                 "message": (
-                    "El portal no ha retornat el comptador de resultats i no hi ha "
+                    "El comptador de resultats falta o no és vàlid i no hi ha "
                     "cap fila: no es pot afirmar que no hi hagi consultes."
                 ),
                 "hint": (
