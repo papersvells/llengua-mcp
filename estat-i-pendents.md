@@ -14,7 +14,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 278 passats, 20 omesos (els live).
+- **Tests sense xarxa:** 282 passats, 20 omesos (els live).
 - **Tests en directe:** 20, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
@@ -487,6 +487,25 @@ control 1.
 Comprovat en directe el 22/11/2026: `Sagarra, Xavier` → `no_matches` (0 de
 2.136); `Sagarra, Josep M. de` → 42; `cerca_frase("somriure maliciós")` amb
 aquest autor → 1 ocurrència; autor inventat → `invalid_query`.
+
+### 2.17 Eco de les cerques bàsiques (resolt el 22/11/2026)
+
+Issue [#12](https://github.com/papersvells/llengua-mcp/issues/12). Els modes
+positius de `cerca_forma` i `cerca_lema` validaven l'eco amb una comprovació
+de subcadena sobre un text sense accents: `somriure` acceptava un eco de
+`somriures` i el zero es presentava com a verificat.
+
+- Ara es comparen els camps ocults de `fConc` (`cadforma`/`cadlema`, la
+  condició i `cg`) i el text visible ha d'acabar exactament amb la consulta,
+  amb accents; la comparació de majúscules no distingeix.
+- Sense camps ocults, o amb un mode o una categoria diferents, l'eco no es
+  considera verificat (`echo_unexpected`); el zero passa a
+  `unexpected_response`.
+- Les fixtures positives inclouen ara el formulari `fConc`, com la pàgina real.
+
+Comprovat en directe el 22/11/2026: `somriu` (2.019), `Somriu` (2.019),
+`somriures` (605), `somri` amb `comença per` (14.731) i `somriure` com a lema
+(14.290) donen `echo_verified: true`; `zzzz` dona `no_matches` verificat.
 
 ---
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -18,7 +19,22 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 ZERO = (
     "<html><body>Forma : Coincident amb zzzz Freqüència total : 0 "
-    "No hi ha cap forma que compleixi aquestes condicions</body></html>"
+    "No hi ha cap forma que compleixi aquestes condicions"
+    '<form name="fConc">'
+    '<input type="hidden" name="cadforma" value="zzzz">'
+    '<input type="hidden" name="cadformacond" value="0">'
+    '<input type="hidden" name="cg" value="">'
+    "</form></body></html>"
+)
+
+SUFFIX_ZERO = (
+    "<html><body>Forma : Coincident amb somriures Freqüència total : 0 "
+    "No hi ha cap forma que compleixi aquestes condicions"
+    '<form name="fConc">'
+    '<input type="hidden" name="cadforma" value="somriures">'
+    '<input type="hidden" name="cadformacond" value="0">'
+    '<input type="hidden" name="cg" value="">'
+    "</form></body></html>"
 )
 
 
@@ -206,5 +222,59 @@ async def test_eco_divergent(tmp_path) -> None:
     page = _forma().replace("Coincident amb somriu", "Coincident amb cantava")
     client = FakeClient({FORMES2_URL: page})
     result = await _adapter(client, tmp_path).cerca_forma("somriu")
+    assert result["echo_verified"] is False
+    assert "echo_unexpected" in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_eco_d_una_altra_forma_no_valida_el_zero(tmp_path) -> None:
+    client = FakeClient({FORMES2_URL: SUFFIX_ZERO})
+    result = await _adapter(client, tmp_path).cerca_forma("somriure")
+    assert result["status"] == "unexpected_response"
+    assert result["echo_verified"] is False
+    assert result["total"] is None
+    assert "echo_unexpected" in result["warnings"]
+    assert "zero_results" not in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_eco_amb_accent_diferent_no_es_cola(tmp_path) -> None:
+    page = (
+        "<html><body>Forma : Coincident amb més Freqüència total : 0 "
+        "No hi ha cap forma que compleixi aquestes condicions"
+        '<form name="fConc">'
+        '<input type="hidden" name="cadforma" value="més">'
+        '<input type="hidden" name="cadformacond" value="0">'
+        '<input type="hidden" name="cg" value="">'
+        "</form></body></html>"
+    )
+    client = FakeClient({FORMES2_URL: page})
+    result = await _adapter(client, tmp_path).cerca_forma("mes")
+    assert result["status"] == "unexpected_response"
+    assert result["echo_verified"] is False
+    assert "zero_results" not in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_mode_divergent_en_eco_positiu(tmp_path) -> None:
+    page = (
+        _forma()
+        .replace("Coincident amb somriu", "Començada per somriu")
+        .replace('name="cadformacond" value="0"', 'name="cadformacond" value="1"')
+    )
+    client = FakeClient({FORMES2_URL: page})
+    result = await _adapter(client, tmp_path).cerca_forma("somriu")
+    assert result["status"] == "ok"
+    assert result["total"] == 2019
+    assert result["echo_verified"] is False
+    assert "echo_unexpected" in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_eco_sense_camps_ocults_no_es_verificat(tmp_path) -> None:
+    page = re.sub(r'<form name="fConc">.*?</form>', "", _forma(), flags=re.DOTALL)
+    client = FakeClient({FORMES2_URL: page})
+    result = await _adapter(client, tmp_path).cerca_forma("somriu")
+    assert result["status"] == "ok"
     assert result["echo_verified"] is False
     assert "echo_unexpected" in result["warnings"]

@@ -171,7 +171,10 @@ Variables d'entorn:
   desglossament `forms` (lema, categoria, forma i morfologia) i una pàgina
   d'`occurrences`. `mode` pot ser `coincident`, `comença per`, `acaba en`,
   `conté`, `no comença per`, `no acaba en` o `no conté`; els modes negatius
-  requereixen `cg`. Per paginar, passa `offset`.
+  requereixen `cg`. Per paginar, passa `offset`. L'eco es valida amb els camps
+  ocults (`cadforma`/`cadlema`, condició i `cg`) i amb el text visible, que ha
+  d'acabar exactament amb la consulta, accents inclosos: un eco de `somriures`
+  no valida una cerca de `somriure` ni un zero verificat.
   Aquestes pàgines no apliquen els filtres de `cerca`/`cerca_patro`.
 - **Filtres del CTILC**: amb filtres, `total` és la «Quantitat filtrada» i
   `total_unfiltered` la freqüència sense filtres; `filters_verified` ha de ser

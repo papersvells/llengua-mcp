@@ -660,16 +660,26 @@ class CtilcAdapter:
         forms = data["forms"]
         prefix = _NEGATIVE_BASIC_ECHO[kind].get(condition)
         negative = prefix is not None
+        field = f"cad{kind}"
+        visible_echo = data["echo"].split(" (Categoria lèxica:", 1)[0]
         if negative:
-            field = f"cad{kind}"
-            visible_query = data["echo"].split(" (Categoria lèxica:", 1)[0]
             echo_verified = (
                 data["echo_fields"] == {field: query, f"{field}cond": condition, "cg": cg}
-                and visible_query == f"{prefix} {query}"
+                and visible_echo == f"{prefix} {query}"
             )
         else:
-            echo_verified = bool(data["echo"]) and normalize_key(query) in normalize_key(
-                data["echo"]
+            # Els camps ocults proven que el servidor ha entès la consulta i
+            # el text visible ha d'acabar amb la forma o el lema, accents
+            # inclosos: `somriure` no valida un eco de `somriures`.
+            expected_fields = {field: query, f"{field}cond": condition}
+            if cg:
+                expected_fields["cg"] = cg
+            echoed_fields = {key: value for key, value in data["echo_fields"].items() if value}
+            visible = clean_text(visible_echo).casefold()
+            echo_verified = (
+                bool(visible)
+                and echoed_fields == expected_fields
+                and visible.endswith(clean_text(query).casefold())
             )
         if not echo_verified and (data["echo"] or negative):
             warnings.append("echo_unexpected")
