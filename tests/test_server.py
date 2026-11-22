@@ -33,6 +33,12 @@ async def test_stdio_initialize_list_and_call_tool(tmp_path) -> None:
             assert not result.is_error
             assert result.structured_content is not None
             assert result.structured_content["status"] == "ok"
+            timing = result.structured_content["timing"]
+            assert set(timing) == {"elapsed_ms", "upstream_requests", "cache_hits", "from_cache"}
+            assert timing["upstream_requests"] == 0
+            assert timing["cache_hits"] == 0
+            assert timing["from_cache"] is False
+            assert timing["elapsed_ms"] >= 0
 
 
 @pytest.mark.asyncio

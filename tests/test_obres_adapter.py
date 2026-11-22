@@ -279,3 +279,25 @@ async def test_cau_obres_te_mida_acotada(tmp_path, monkeypatch) -> None:
         assert len(adapter._works_cache._data) == 4
     finally:
         await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_obres_detecta_renovacio_feta_per_una_altra_crida(tmp_path, monkeypatch) -> None:
+    client = HttpClient(_settings(tmp_path))
+    client.limiter.interval = 0
+    html = _resultats()
+
+    async def request(method, url, *, body, headers):
+        return html, 200, [], len(html.encode()), {}
+
+    monkeypatch.setattr(client, "_one_request", request)
+    adapter = _adapter(client, tmp_path)
+    try:
+        await adapter.obres(titol="vida")
+        client.cache.clear()
+        html = html.replace("Blat, Leopoldo", "Autor nou")
+        await client.post_text(OBRES_TITOL_URL, "obra=vida")
+        refreshed = await adapter.obres(titol="vida")
+        assert refreshed["works"][0]["author"].startswith("Autor nou")
+    finally:
+        await client.aclose()

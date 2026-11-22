@@ -876,7 +876,11 @@ async def etiquetes() -> dict[str, Any]:
     el formulari del CTILC. No inventis el significat d'un codi desconegut.
     """
     app = await get_app()
-    return app.ctilc.etiquetes()
+
+    async def local() -> dict[str, Any]:
+        return app.ctilc.etiquetes()
+
+    return await _call("https://ctilc.iec.cat/", local())
 
 
 @mcp.tool()
