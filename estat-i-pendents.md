@@ -563,6 +563,19 @@ consulta o cap entrada.
 Comprovat en directe el 22/11/2026: `consultes_iec("tenir")` → 257 i
 `jane_cerca("maliciós")` → 1, sense avisos; el comptador hi és.
 
+### 2.21 Resultats i codis de l'OIEC (resolt el 22/11/2026)
+
+Issue [#16](https://github.com/papersvells/llengua-mcp/issues/16). Una cerca
+amb nodes de títol (sense `contingut`) es presentava com a `no_results`, i
+`oiec_text` no comprovava que el `codiText` retornat fos el sol·licitat.
+
+- Si hi ha `total_hits > 0` però cap apartat llegible, l'estat és `partial` amb
+  l'avís `no_readable_sections`. Una llista buida continua sent `no_results`.
+- `parse_text` compara el codi retornat amb l'esperat. Si en falta o és
+  diferent, és `unexpected_response`; no es presenta un altre apartat.
+- Comprovat en directe el 22/11/2026: `4.2.1` retorna el seu text; `4.1`, que
+  l'API retorna tot nul, dona l'error accionable en lloc d'un text buit.
+
 ---
 
 ## 3. Comandes útils

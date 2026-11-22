@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from llengua_mcp.adapters.oiec import OiecAdapter
-from llengua_mcp.errors import InvalidQueryError
+from llengua_mcp.errors import InvalidQueryError, UnexpectedResponseError
 from llengua_mcp.http import HttpResult
 
 SEARCH_PAYLOAD = (
@@ -69,6 +69,18 @@ async def test_cerca_empty_results() -> None:
 
 
 @pytest.mark.asyncio
+async def test_cerca_nomes_amb_titols_es_partial() -> None:
+    client = FakeClient('[{"codiText": "4", "titol": "L’apòstrof", "contingut": null}]')
+    adapter = OiecAdapter(client)
+    result = await adapter.cerca("apòstrof")
+
+    assert result["status"] == "partial"
+    assert result["total_hits"] == 1
+    assert result["hits"] == []
+    assert "no_readable_sections" in result["warnings"]
+
+
+@pytest.mark.asyncio
 async def test_cerca_rejects_bad_mode_and_empty_query() -> None:
     adapter = OiecAdapter(FakeClient("[]"))
     with pytest.raises(InvalidQueryError, match="coincidència"):
@@ -96,3 +108,10 @@ async def test_text_rejects_bad_codes() -> None:
         await adapter.text("")
     with pytest.raises(InvalidQueryError):
         await adapter.text("4/1; DROP TABLE")
+
+
+@pytest.mark.asyncio
+async def test_text_rebutja_un_altre_codi() -> None:
+    adapter = OiecAdapter(FakeClient(TEXT_PAYLOAD))
+    with pytest.raises(UnexpectedResponseError, match="no correspon"):
+        await adapter.text("4.1.2a")

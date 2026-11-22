@@ -91,6 +91,18 @@ def test_parse_text_without_content_is_actionable() -> None:
         parse_text({"codiText": "4", "titol": "La grafia dels mots", "contingut": None})
 
 
+def test_parse_text_rebutja_un_altre_codi() -> None:
+    payload = {"codiText": "4.2", "titolText": "Altre apartat", "contingut": "<p>Text</p>"}
+    with pytest.raises(UnexpectedResponseError, match="no correspon"):
+        parse_text(payload, expected="4.1")
+
+
+def test_parse_text_sense_codi_no_es_pot_verificar() -> None:
+    payload = {"titolText": "Sense codi", "contingut": "<p>Text</p>"}
+    with pytest.raises(UnexpectedResponseError, match="no identifica"):
+        parse_text(payload, expected="4.1")
+
+
 def test_hit_url_is_a_working_deep_link() -> None:
     data = parse_search(_payload(), "apostrofa")
     first = data["hits"][0]

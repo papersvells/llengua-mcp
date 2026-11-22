@@ -92,13 +92,32 @@ def parse_search(payload: Any, paraula: str) -> dict[str, Any]:
     }
 
 
-def parse_text(payload: Any) -> dict[str, Any]:
+def parse_text(payload: Any, *, expected: str | None = None) -> dict[str, Any]:
     """Converteix un text sol (/TextOrtografia/{codi}) en un apartat llegible."""
 
     if not isinstance(payload, dict):
         raise UnexpectedResponseError(
             "La resposta de l'OIEC no té el format esperat.",
             hint="L'API pot haver canviat; cal revisar el parser.",
+            source=API_URL,
+        )
+    codi_text = payload.get("codiText")
+    if expected and str(codi_text or "") != expected:
+        if not codi_text:
+            raise UnexpectedResponseError(
+                f"La resposta no identifica cap codi; s'ha demanat «{expected}».",
+                hint=(
+                    "El codi pot no existir o l'API pot haver canviat. "
+                    "Comprova'l amb `oiec_cerca` abans de citar-lo."
+                ),
+                source=API_URL,
+            )
+        raise UnexpectedResponseError(
+            f"El codi retornat («{codi_text}») no correspon al sol·licitat («{expected}»).",
+            hint=(
+                "L'API pot haver canviat o haver retornat un altre apartat. "
+                "No es presenta com el text demanat."
+            ),
             source=API_URL,
         )
     contingut = payload.get("contingut")
@@ -112,7 +131,7 @@ def parse_text(payload: Any) -> dict[str, Any]:
             source=API_URL,
         )
     return {
-        "codi_text": payload.get("codiText"),
+        "codi_text": codi_text,
         "titol": clean_text(payload.get("titolText") or payload.get("titol") or ""),
         "content": strip_tags(contingut),
         "prev": payload.get("codiAnterior"),

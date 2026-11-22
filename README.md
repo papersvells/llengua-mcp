@@ -214,7 +214,9 @@ Variables d'entorn:
   [DDLC](https://dcc.iec.cat/ddlcI/scripts/index.html) és un recurs separat:
   BDLex es va fer servir per redactar-lo, però `bdlex_consulta` no el consulta.
 - **OIEC**: l'ortografia normativa. Cita sempre el codi d'apartat (`codi_text`)
-  i el títol de la secció.
+  i el títol de la secció. Un resultat amb només títols és `partial` (no
+  `no_results`), i `oiec_text` valida que el codi retornat coincideixi amb el
+  sol·licitat: si no, dona error en lloc de presentar un altre apartat.
 - **Gramàtiques**: per a un dubte d'ús, la GBU; la GEIEC és la versió en línia;
   la GIEC, la descripció exhaustiva. Cita el codi i el títol. Si el codi retornat
   no coincideix amb el sol·licitat, l'eina dona error; un total sense cap apartat

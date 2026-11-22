@@ -43,7 +43,7 @@ class OiecAdapter:
         result = await self.client.get_text(API_URL + path, params=params, cache_ttl=86400)
         data = parse_search(_loads(result.text), term)
 
-        status = "ok" if data["hits"] else "no_results"
+        status = "ok" if data["hits"] else ("partial" if data["total_hits"] > 0 else "no_results")
         return {
             "status": status,
             "query": {"paraula": term, "coincidencia": mode},
@@ -75,7 +75,7 @@ class OiecAdapter:
             )
 
         result = await self.client.get_text(f"{API_URL}/TextOrtografia/{codi}", cache_ttl=86400)
-        data = parse_text(_loads(result.text))
+        data = parse_text(_loads(result.text), expected=codi)
         return {
             "status": "ok",
             **data,
