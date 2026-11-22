@@ -100,13 +100,20 @@ async def _warm_indexes(app: App) -> None:
 
 @asynccontextmanager
 async def _lifespan(_server: MCPServer):
+    global _app
     app = await get_app()
     warm = asyncio.create_task(_warm_indexes(app))
     try:
         yield {}
     finally:
-        warm.cancel()
-        await app.aclose()
+        async with _app_lock:
+            if _app is app:
+                _app = None
+        try:
+            warm.cancel()
+            await asyncio.gather(warm, return_exceptions=True)
+        finally:
+            await app.aclose()
 
 
 async def _call(source: str, awaitable) -> dict[str, Any]:

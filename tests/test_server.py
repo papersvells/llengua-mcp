@@ -1,8 +1,58 @@
 from __future__ import annotations
 
+import asyncio
+import sys
+
 import pytest
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
 from llengua_mcp.server import mcp
+
+
+@pytest.mark.asyncio
+async def test_stdio_initialize_list_and_call_tool(tmp_path) -> None:
+    params = StdioServerParameters(
+        command=sys.executable,
+        args=["-m", "llengua_mcp.server"],
+        env={
+            "LLENGUA_DATA_DIR": str(tmp_path / "data"),
+            "LLENGUA_CACHE_DIR": str(tmp_path / "cache"),
+        },
+    )
+    async with asyncio.timeout(20):
+        async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
+            initialized = await session.initialize()
+            assert initialized.server_info.name == "llengua"
+
+            tools = {tool.name for tool in (await session.list_tools()).tools}
+            assert tools == {tool.name for tool in await mcp.list_tools()}
+            assert "etiquetes" in tools
+
+            result = await session.call_tool("etiquetes", {})
+            assert not result.is_error
+            assert result.structured_content is not None
+            assert result.structured_content["status"] == "ok"
+
+
+@pytest.mark.asyncio
+async def test_lifespan_opens_a_new_http_client_on_restart(tmp_path, monkeypatch) -> None:
+    import llengua_mcp.server as server
+
+    monkeypatch.setattr(server, "_app", None)
+    monkeypatch.setenv("LLENGUA_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("LLENGUA_CACHE_DIR", str(tmp_path / "cache"))
+
+    async with server._lifespan(mcp):
+        first = await server.get_app()
+        assert not first.http._client.is_closed
+    assert first.http._client.is_closed
+
+    async with server._lifespan(mcp):
+        second = await server.get_app()
+        assert second is not first
+        assert not second.http._client.is_closed
+    assert second.http._client.is_closed
 
 
 @pytest.mark.asyncio

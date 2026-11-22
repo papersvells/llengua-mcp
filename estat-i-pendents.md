@@ -14,7 +14,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 310 passats, 20 omesos (els live).
+- **Tests sense xarxa:** 312 passats, 20 omesos (els live).
 - **Tests en directe:** 20, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
@@ -609,6 +609,14 @@ fitxer: `com més va\, més` es trencava en `com més va\` i un `més` inventat.
   més` es indexa sencer i `més` deixa de rebre aquest grup per un terme fals.
 - `#separar` continua tractant-se com a text del terme: és una anotació del
   projecte original, no un escape, i queda fora d'aquest canvi.
+
+### 2.25 Arrencada per stdio i reinici del servidor
+
+Issue [#20](https://github.com/papersvells/llengua-mcp/issues/20). En tancar
+el servidor es desvincula l'`App` global i es tanca el client HTTP. El cicle
+següent crea una instància nova. La suite habitual de CI comprova dos cicles
+consecutius i també arrenca el procés real per `stdio`, inicialitza la sessió,
+llista les eines i crida `etiquetes`, sense xarxa ni dades de sinònims.
 
 ---
 
