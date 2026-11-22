@@ -30,6 +30,7 @@ class HttpResult:
     from_cache: bool = False
     bytes_received: int = 0
     _cacheable: bool = field(default=False, repr=False, compare=False)
+    _cache_token: object | None = field(default=None, repr=False, compare=False)
 
 
 @dataclass
@@ -137,13 +138,14 @@ class HttpClient:
         if cached is None:
             return None
         _count(upstream=False)
-        text, status = cached
+        text, status, token = cached
         return HttpResult(
             text=text,
             status=status,
             url=url,
             from_cache=True,
             bytes_received=len(text.encode("utf-8")),
+            _cache_token=token,
         )
 
     async def get_text(
@@ -222,7 +224,8 @@ class HttpClient:
                 source=url,
             )
         if result._cacheable:
-            self.cache.set(key, (result.text, result.status), ttl=cache_ttl)
+            result._cache_token = object()
+            self.cache.set(key, (result.text, result.status, result._cache_token), ttl=cache_ttl)
         return payload, result
 
     async def _request(
@@ -294,7 +297,8 @@ class HttpClient:
             )
             # No cachegem respostes amb transport incomplet.
             if use_cache and result._cacheable:
-                self.cache.set(key, (text, status), ttl=cache_ttl)
+                result._cache_token = object()
+                self.cache.set(key, (text, status, result._cache_token), ttl=cache_ttl)
             return result
 
         raise UpstreamError(

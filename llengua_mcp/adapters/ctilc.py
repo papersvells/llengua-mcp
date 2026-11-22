@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote, quote_plus
 
+from llengua_mcp.cache import TTLCache
 from llengua_mcp.compiler import (
     compile_pattern,
     patro_query,
@@ -21,7 +22,7 @@ from llengua_mcp.errors import (
     StaleSearchError,
     UpstreamError,
 )
-from llengua_mcp.http import HttpClient
+from llengua_mcp.http import HttpClient, HttpResult
 from llengua_mcp.models import CtilcFilters, CursorPayload, PatternElement
 from llengua_mcp.parsers.basiques import parse_basiques
 from llengua_mcp.parsers.collocacions import (
@@ -357,6 +358,23 @@ class CtilcAdapter:
         self.client = client
         self.settings = settings
         self.cursors = cursors
+        self._works_cache = TTLCache(max_entries=4, default_ttl=settings.cache_ttl_seconds)
+
+    def _parse_works_cached(self, result: HttpResult, *, body: str) -> dict[str, Any]:
+        """Reutilitza el parser només mentre la resposta vingui de la cau HTTP."""
+
+        key = f"{result.url}|{body}"
+        if result.from_cache:
+            cached = self._works_cache.get(key)
+            if cached is not None and cached[0] is result._cache_token:
+                return cached[1]
+        else:
+            # Una resposta nova, també no-store, invalida qualsevol anàlisi antiga.
+            self._works_cache.discard(key)
+        parsed = parse_works(result.text)
+        if result._cache_token is not None:
+            self._works_cache.set(key, (result._cache_token, parsed))
+        return parsed
 
     async def _author_exists(self, name: str) -> tuple[bool | None, list[str]]:
         """Comprova un autor al catàleg global del CTILC.
@@ -1744,7 +1762,8 @@ class CtilcAdapter:
         warnings: list[str] | None = None,
         error: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        page = works[offset : offset + limit]
+        # Les pàgines retornades no han de poder modificar l'anàlisi compartida.
+        page = [work.copy() for work in works[offset : offset + limit]]
         has_more = bool(page) and offset + len(page) < len(works)
         parts = []
         if query.get("autor"):
@@ -1917,14 +1936,13 @@ class CtilcAdapter:
 
         if autor_id:
             try:
-                result = await self.client.post_text(
-                    OBRES_AUT2_URL, f"autorL={quote_plus(autor_id)}"
-                )
+                body = f"autorL={quote_plus(autor_id)}"
+                result = await self.client.post_text(OBRES_AUT2_URL, body)
             except UpstreamError as exc:
                 if "supera el límit" in exc.message:
                     return too_many(OBRES_AUT2_URL)
                 raise
-            parsed = parse_works(result.text)
+            parsed = self._parse_works_cached(result, body=body)
             warnings.extend(result.warnings + parsed["warnings"])
             if selected_name and parsed["works"]:
                 needle = normalize_key(selected_name)
@@ -1934,12 +1952,13 @@ class CtilcAdapter:
             source = OBRES_AUT2_URL
         else:
             try:
-                result = await self.client.post_text(OBRES_TITOL_URL, f"obra={quote_plus(titol)}")
+                body = f"obra={quote_plus(titol)}"
+                result = await self.client.post_text(OBRES_TITOL_URL, body)
             except UpstreamError as exc:
                 if "supera el límit" in exc.message:
                     return too_many(OBRES_TITOL_URL)
                 raise
-            parsed = parse_works(result.text)
+            parsed = self._parse_works_cached(result, body=body)
             warnings.extend(result.warnings + parsed["warnings"])
             echo_verified = normalize_key(parsed["echo"]) == normalize_key(titol)
             if not echo_verified:

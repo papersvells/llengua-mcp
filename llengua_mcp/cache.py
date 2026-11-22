@@ -44,3 +44,6 @@ class TTLCache:
 
     def clear(self) -> None:
         self._data.clear()
+
+    def discard(self, key: str) -> None:
+        self._data.pop(key, None)
