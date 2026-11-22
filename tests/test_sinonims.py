@@ -163,3 +163,32 @@ def test_cerca_amb_accent_inesistent_no_cau_a_la_variant_sense_accent(tmp_path) 
     result = index.lookup("més")
     assert result["status"] == "no_results"
     assert result["match"] is None
+
+
+def test_comes_escapades_formen_un_sol_terme(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text(
+        "-adv: cada vegada més, com més va\\, més, més i més, cada volta més\n",
+        encoding="utf-8",
+    )
+    index = SinonimsIndex(tmp_path)
+
+    result = index.lookup("cada vegada més", limit=10)
+    forms = [item["form"] for item in result["groups"][0]["synonyms"]]
+    assert "com més va, més" in forms
+    assert "més i més" in forms
+    assert "més" not in forms
+    assert all("\\" not in form for form in forms)
+
+
+def test_dos_punts_escapats_formen_part_del_terme(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text(
+        "-loc: li diu el mort al degollat\\: qui t'ha fet eixe forat?, "
+        "cap geperut no es veu la gepa\n",
+        encoding="utf-8",
+    )
+    index = SinonimsIndex(tmp_path)
+
+    result = index.lookup("li diu el mort al degollat: qui t'ha fet eixe forat?", limit=10)
+    forms = [item["form"] for item in result["groups"][0]["synonyms"]]
+    assert "cap geperut no es veu la gepa" in forms
+    assert all("\\" not in form for form in forms)

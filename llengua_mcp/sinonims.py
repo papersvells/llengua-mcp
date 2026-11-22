@@ -28,6 +28,34 @@ LICENSE = "CC BY 4.0"
 _LINE_RE = re.compile(r"^-(?P<head>[^:]+):\s*(?P<body>.+)$")
 _HEAD_RE = re.compile(r"^(?P<pos>[\w/]+)\s*(?:\((?P<context>[^)]*)\))?$")
 _NOTE_RE = re.compile(r"^(?P<term>.*?)\s*\((?P<note>[^()]*)\)$")
+_ESCAPES = {",": ",", ":": ":"}
+
+
+def _split_terms(body: str) -> list[str]:
+    """Separa els termes per comes no escapades.
+
+    El fitxer escapa amb una barra les comes i els dos punts que formen part
+    d'una expressió (`com més va\\, més`, `degollat\\: qui t'ha fet…`).
+    """
+
+    items: list[str] = []
+    current: list[str] = []
+    index = 0
+    while index < len(body):
+        char = body[index]
+        if char == "\\" and index + 1 < len(body) and body[index + 1] in _ESCAPES:
+            current.append(_ESCAPES[body[index + 1]])
+            index += 2
+            continue
+        if char == ",":
+            items.append("".join(current))
+            current = []
+            index += 1
+            continue
+        current.append(char)
+        index += 1
+    items.append("".join(current))
+    return [item.strip() for item in items if item.strip()]
 
 
 @dataclass
@@ -92,7 +120,7 @@ class SinonimsIndex:
             pos = head_match.group("pos")
             context = clean_text(head_match.group("context") or "")
             group = SynonymGroup(pos=pos, context=context)
-            for item in match.group("body").split(", "):
+            for item in _split_terms(match.group("body")):
                 item = clean_text(item)
                 if not item:
                     continue

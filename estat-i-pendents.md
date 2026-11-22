@@ -14,7 +14,7 @@ verificades) i, per a l'abast, `AGENTS.md`.
 - **Repositori:** `https://github.com/papersvells/llengua-mcp.git`, branca
   `main`; els canvis del 18/11/2026 (validacions, dispersió, Corpus i filtres)
   ja són committats i pujats a `origin/main`.
-- **Tests sense xarxa:** 308 passats, 20 omesos (els live).
+- **Tests sense xarxa:** 310 passats, 20 omesos (els live).
 - **Tests en directe:** 20, opcionals amb `LLENGUA_LIVE=1`; tots passen.
 - **CI:** `.github/workflows/ci.yml` executa `ruff` i els tests sense xarxa a
   Python 3.11, 3.12 i 3.13 a cada push i pull request.
@@ -596,6 +596,19 @@ Issue [#18](https://github.com/papersvells/llengua-mcp/issues/18).
 Un HTTP 200 amb HTML o amb un JSON que no sigui un objecte no queda desat:
 la crida següent torna a la font. Els objectes vàlids es desen en un espai
 separat dels POST de text cru, respectant `no-store` i els avisos de transport.
+
+### 2.24 Comes i dos punts escapats al diccionari de Softcatalà (resolt el 22/11/2026)
+
+Issue [#19](https://github.com/papersvells/llengua-mcp/issues/19). El parser
+separava els termes amb `split(", ")` i no tenia en compte els escapes del
+fitxer: `com més va\, més` es trencava en `com més va\` i un `més` inventat.
+
+- `_split_terms()` separa només per comes no escapades i desescapa `\,` i
+  `\:`, les dues seqüències que apareixen al fitxer.
+- Amb les dades locals, cap terme conserva barres invertides; `com més va,
+  més` es indexa sencer i `més` deixa de rebre aquest grup per un terme fals.
+- `#separar` continua tractant-se com a text del terme: és una anotació del
+  projecte original, no un escape, i queda fora d'aquest canvi.
 
 ---
 

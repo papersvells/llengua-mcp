@@ -237,10 +237,11 @@ Variables d'entorn:
   distingeix els accents: `mes` i `més` no comparteixen grups. Si només hi ha
   una coincidència sense accents, `match` és `accent_insensitive` i hi ha
   l'avís `accent_insensitive_match`; si la forma accentuada no existeix, no es
-  cau a la variant sense accent. Amb `context`, els grups que hi coincideixen
-  (etiqueta de sentit o formes que hi surten) es retornen primer;
-  `context_no_match` vol dir que no s'ha pogut prioritzar cap grup. Cal triar
-  les opcions segons la frase i explicar-ne el matís.
+  cau a la variant sense accent. Les comes i els dos punts escapats del fitxer
+  (`com més va\, més`) es llegeixen com a part del terme. Amb `context`, els
+  grups que hi coincideixen (etiqueta de sentit o formes que hi surten) es
+  retornen primer; `context_no_match` vol dir que no s'ha pogut prioritzar cap
+  grup. Cal triar les opcions segons la frase i explicar-ne el matís.
 - **Jané**: les accepcions numerades (`1.`, `2.`) separen sentits; tria la que
   encaixa en la frase. `mode="general"` cerca el mot també dins les llistes de
   sinònims (no és una cerca per frases) i `mode="funcio"` el cerca per funció
