@@ -173,7 +173,7 @@ El servidor s'executa a l'ordinador de l'usuari, però consulta fonts externes
 per Internet. Les dades de sinònims de Softcatalà són locals un cop baixades.
 El codi es distribueix sota llicència MIT; les dades i els serveis consultats
 poden tenir condicions diferents. Consulta [`NOTICE`](NOTICE) per les fonts,
-llicències i atribucions. Llengua no és un producte oficial de l'IEC, la CCMA
+llicències i atribucions. Llengua-mcp no és un producte oficial de l'IEC, la CCMA
 ni Softcatalà.
 
 ## Desenvolupament
