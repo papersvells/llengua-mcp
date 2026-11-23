@@ -12,7 +12,7 @@
 | `LLENGUA_MAX_BYTES` | `4000000` | Mida màxima d'una resposta |
 | `LLENGUA_MAX_OCCURRENCES` | `50` | Files màximes per pàgina del CTILC |
 | `LLENGUA_CACHE_TTL` | `3600` | Validesa de la cache i dels cursors |
-| `LLENGUA_DATA_DIR` | dades d'usuari | Fitxers de sinònims |
+| `LLENGUA_DATA_DIR` | dades d'usuari | Fitxers locals de sinònims i índex anglès-català |
 | `LLENGUA_CACHE_DIR` | cache d'usuari | Reservat per a cache persistent |
 
 ## Exemples d'ús
@@ -33,6 +33,10 @@ peticions només per afegir detall ni es confon la freqüència amb la correcci�
   `cerca_patro` amb `lema=somriure@subst` + `cg=adj` per als contextos reals.
 - **Trobar alternatives**: `cerca_sinonims("maliciós", context="un somriure maliciós")`
   i triar les opcions que conserven el sentit.
+- **Trobar un equivalent anglès → català**: `engcat_cerca("bank")` i triar
+  l'accepció segons el context. Cerca la forma sencera, sense descompondre
+  locucions ni traduir frases. Si no coincideixen les majúscules i minúscules,
+  prova sense distingir-les i ho indica amb `match: "case_insensitive"`.
 - **Documentar una forma antiga o dialectal**: `bdlex_consulta("engrunar")`, o
   cercar per definició: `bdlex_consulta(definicio="esclafar")`.
 - **Explicar una regla d'ortografia**: `oiec_cerca("guionet")` i, amb el codi,
@@ -72,6 +76,10 @@ peticions només per afegir detall ni es confon la freqüència amb la correcci�
   `upstream_error`, `unexpected_response`, `stale_search`, `ambiguous_author`,
   `too_many_results` o `unavailable`.
   Un error no es converteix mai en `total: 0`.
+- **Anglès-català**: `total` i `returned` compten accepcions, no equivalents.
+  `no_matches` vol dir que no hi ha coincidències a la revisió consultada;
+  `unavailable` indica que l'índex no està instal·lat o no es pot llegir.
+  Es conserva el text literal dels equivalents i el resultat inclou `data_revision`.
 - **CTILC**: `echo_verified` exigeix que coincideixin els camps enviats i el
   patró visible. Un zero només és `no_matches` si la pàgina en dona el comptador
   explícit i el missatge de cap coincidència; si no, és `unexpected_response`.

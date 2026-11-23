@@ -8,8 +8,10 @@ from typing import Any
 
 from mcp.server.mcpserver import MCPServer
 
+from llengua_mcp import __version__
 from llengua_mcp.app import App
 from llengua_mcp.config import Settings
+from llengua_mcp.engcat import SOURCE_URL as ENGCAT_SOURCE
 from llengua_mcp.errors import (
     LlenguaError,
     UnexpectedResponseError,
@@ -68,6 +70,10 @@ autoritat diferent i no les confonguis mai:
   autors, cal triar-ne un amb `autor_id`.
 - Softcatalà: sinònims. Són propostes de significat; tria les que encaixen en
   la frase i explica'n el matís.
+- Diccionari anglès-català de Softcatalà: `engcat_cerca` consulta un mot o
+  una locució anglesa. Fes servir el context per triar l'accepció, no per
+  traduir el text sencer. Cita els equivalents i les marques de la font;
+  distingeix-los de qualsevol proposta teva.
 - Jané (IEC): diccionari de sinònims amb accepcions numerades. Si una paraula
   té diversos sentits, tria el número que encaixa en la frase abans de
   substituir res; `mode="general"` cerca dins les llistes de sinònims i
@@ -172,7 +178,7 @@ async def _call(source: str, awaitable) -> dict[str, Any]:
         reset_meter(token)
 
 
-mcp = MCPServer("llengua", instructions=INSTRUCTIONS, version="0.1.0", lifespan=_lifespan)
+mcp = MCPServer("llengua", instructions=INSTRUCTIONS, version=__version__, lifespan=_lifespan)
 
 
 @mcp.tool()
@@ -529,6 +535,20 @@ async def cerca_sinonims(
             limit=limit,
         ),
     )
+
+
+@mcp.tool()
+async def engcat_cerca(terme: str, limit: int = 15) -> dict[str, Any]:
+    """Cerca un mot o una locució al diccionari anglès-català de Softcatalà.
+
+    La cerca és per forma completa, amb preferència per la grafia amb les
+    mateixes majúscules i minúscules. Retorna accepcions separades amb els
+    equivalents originals, marques d'ús i exemples quan consten. `limit`
+    limita les accepcions (1–50), no els equivalents de cadascuna.
+    No tradueix frases. Usa dades locals opcionals amb llicència CC BY 4.0.
+    """
+    app = await get_app()
+    return await _call(ENGCAT_SOURCE, app.engcat.cerca(terme, limit=limit))
 
 
 @mcp.tool()

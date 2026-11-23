@@ -27,6 +27,7 @@ oficial de l'IEC. Revisa sempre les fonts i els matisos de la resposta.
 | [OIEC](https://oiec.iec.cat/) i gramàtiques de l'IEC | Ortografia, gramàtica bàsica i gramàtiques de referència |
 | [CTILC](https://ctilc.iec.cat/) | Ús escrit, contextos, col·locacions i dispersió |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) i [Jané](https://sinonims.iec.cat/) | Sinònims; Jané separa accepcions numerades |
+| [Diccionari anglès-català de Softcatalà](https://github.com/Softcatala/diccionari-angles-catala) | Equivalents per a mots i locucions anglesos, amb accepcions i marques d'ús |
 | [PCCD](https://pccd.dites.cat/) | Paremiotipus, variants i fonts de dites i refranys; dades sota CC BY-NC-SA 4.0 |
 | [Conjugador de Softcatalà](https://www.softcatala.org/conjugador-de-verbs/) | Formes verbals amb marques territorials |
 
@@ -158,6 +159,21 @@ La baixada usa una revisió fixada de les dades de Softcatalà (llicència CC BY
 4.0). Es desen al directori de dades de l'usuari. Per personalitzar-lo, defineix
 `LLENGUA_DATA_DIR` tant al client MCP com a la comanda de baixada.
 
+## Diccionari anglès-català de Softcatalà (opcional)
+
+Instal·la les dades locals per activar `engcat_cerca`:
+
+```sh
+uvx --from git+https://github.com/papersvells/llengua-mcp.git@v0.4.0 llengua-mcp-fetch-engcat
+```
+
+La comanda crea un índex local a partir de l'XML d'una revisió fixada. Si fas
+servir `LLENGUA_DATA_DIR`, configura el mateix directori al client MCP i a la
+comanda d'instal·lació. Les cerques no fan peticions de xarxa.
+
+Per exemple, pregunta «Com en dic, de *bank*, si parlo de la vora d'un riu?».
+L'eina cerca el mot o la locució sencera; no tradueix frases ni documents.
+
 ## Consells i límits
 
 - Dona la frase sencera i explica el registre o el matís que busques.
@@ -172,7 +188,7 @@ La baixada usa una revisió fixada de les dades de Softcatalà (llicència CC BY
 ## Privacitat, fonts i llicència
 
 El servidor s'executa a l'ordinador de l'usuari, però consulta fonts externes
-per Internet. Les dades de sinònims de Softcatalà són locals un cop baixades.
+per Internet. Les dades dels diccionaris de Softcatalà són locals un cop baixades.
 El codi es distribueix sota llicència MIT; les dades i els serveis consultats
 poden tenir condicions diferents. Consulta [`NOTICE`](NOTICE) per les fonts,
 llicències i atribucions. Llengua-mcp no és un producte oficial de l'IEC, la CCMA

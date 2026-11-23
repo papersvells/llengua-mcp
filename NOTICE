@@ -25,6 +25,13 @@ Fonts consultades
   <https://www.softcatala.org/diccionari-de-sinonims/>
   Dades amb llicència Creative Commons Reconeixement 4.0 (CC BY 4.0).
   <https://github.com/softcatala/sinonims-cat>
+- Diccionari anglès-català de Softcatalà (David Cànovas, Jaume Ortolà
+  i Marc Riera). <https://github.com/Softcatala/diccionari-angles-catala>
+  Dades amb llicència Creative Commons Reconeixement 4.0 (CC BY 4.0).
+  <https://creativecommons.org/licenses/by/4.0/>
+  L'instal·lador converteix una revisió fixada de l'XML en un índex local
+  de consulta. No incorpora el programari de Softcatalà (GPL-2.0) i conserva
+  el text dels equivalents tal com consta a les dades.
 - Diccionari de sinònims d'Albert Jané, Institut d'Estudis Catalans.
   <https://sinonims.iec.cat/>
   Tercera edició en línia (2015); © Albert Jané i Riera i © IEC per a l'edició

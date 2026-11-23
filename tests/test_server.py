@@ -8,6 +8,7 @@ import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+from llengua_mcp import __version__
 from llengua_mcp.server import INSTRUCTIONS, mcp
 
 
@@ -26,6 +27,7 @@ async def test_stdio_initialize_list_and_call_tool(tmp_path) -> None:
         async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
             initialized = await session.initialize()
             assert initialized.server_info.name == "llengua"
+            assert initialized.server_info.version == __version__
             assert initialized.instructions == INSTRUCTIONS
 
             tools = {tool.name for tool in (await session.list_tools()).tools}
@@ -42,6 +44,11 @@ async def test_stdio_initialize_list_and_call_tool(tmp_path) -> None:
             assert timing["cache_hits"] == 0
             assert timing["from_cache"] is False
             assert timing["elapsed_ms"] >= 0
+
+            missing = await session.call_tool("engcat_cerca", {"terme": "bank"})
+            assert not missing.is_error
+            assert missing.structured_content["status"] == "unavailable"
+            assert missing.structured_content["timing"]["upstream_requests"] == 0
 
 
 @pytest.mark.asyncio
@@ -80,6 +87,7 @@ async def test_tools_are_registered() -> None:
         "gramatica_cerca",
         "gramatica_text",
         "cerca_sinonims",
+        "engcat_cerca",
         "jane_cerca",
         "cerca",
         "cerca_frase",
