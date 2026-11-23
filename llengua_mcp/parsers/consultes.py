@@ -149,7 +149,7 @@ def parse_rows(payload: Any) -> dict[str, Any]:
             continue
         results.append(_row(raw))
 
-    total, _, total_warning = resolve_filtered_total(payload, results)
+    total, total_verified, total_warning = resolve_filtered_total(payload, results)
     warnings = []
     if partial:
         warnings.append("parse_partial")
@@ -158,6 +158,8 @@ def parse_rows(payload: Any) -> dict[str, Any]:
 
     return {
         "total": total,
+        "total_verified": total_verified,
+        "rows_received": len(raw_rows),
         "corpus_total": count_value(payload.get("recordsTotal")),
         "results": results,
         "warnings": warnings,

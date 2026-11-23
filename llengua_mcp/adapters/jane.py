@@ -284,7 +284,13 @@ class JaneAdapter:
                 "hint": "La taula pot haver canviat de format; no és una absència.",
             }
 
-        has_more = total is not None and total > offset + len(results)
+        rows_received = data["rows_received"]
+        has_more = (
+            data["total_verified"]
+            and total is not None
+            and bool(results)
+            and total > offset + rows_received
+        )
         if has_more:
             warnings.append("truncated")
 
@@ -301,7 +307,7 @@ class JaneAdapter:
             "catalog_total": data["catalog_total"],
             "returned": len(results),
             "has_more": has_more,
-            "next_offset": offset + len(results) if has_more else None,
+            "next_offset": offset + rows_received if has_more else None,
             "results": results,
             "modes": list(MODES),
             "funcions": list(FUNCIONS_LABELS),

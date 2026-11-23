@@ -95,6 +95,28 @@ async def test_paginacio() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("data", [[], [["només una columna"]]])
+async def test_no_ofereix_paginacio_si_no_ha_llegit_cap_fila(data) -> None:
+    payload = {**ROWS, "recordsFiltered": 6, "data": data}
+    result = await ConsultesAdapter(FakeClient(payload)).cerca("tenir", limit=4)
+
+    assert result["status"] == "unexpected_response"
+    assert result["has_more"] is False
+    assert result["next_offset"] is None
+
+
+@pytest.mark.asyncio
+async def test_paginacio_parcial_avanca_segons_files_consumides() -> None:
+    payload = {**ROWS, "recordsFiltered": 6, "data": [["mal formada"], ROWS["data"][0]]}
+    result = await ConsultesAdapter(FakeClient(payload)).cerca("tenir", limit=4, offset=1)
+
+    assert result["returned"] == 1
+    assert result["has_more"] is True
+    assert result["next_offset"] == 3
+    assert "parse_partial" in result["warnings"]
+
+
+@pytest.mark.asyncio
 async def test_zero_resultats() -> None:
     adapter = ConsultesAdapter(FakeClient({"recordsTotal": 1176, "recordsFiltered": 0, "data": []}))
     result = await adapter.cerca("zzzzinexistent")

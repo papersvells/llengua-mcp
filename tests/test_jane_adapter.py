@@ -81,6 +81,28 @@ async def test_mode_general_uses_its_page_and_variable() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("data", [[], [["només una columna"]]])
+async def test_no_ofereix_paginacio_si_no_ha_llegit_cap_fila(data) -> None:
+    payload = {**LEMA, "recordsFiltered": 6, "data": data}
+    result = await JaneAdapter(FakeClient(payload)).cerca("maliciós", limit=4)
+
+    assert result["status"] == "unexpected_response"
+    assert result["has_more"] is False
+    assert result["next_offset"] is None
+
+
+@pytest.mark.asyncio
+async def test_paginacio_parcial_avanca_segons_files_consumides() -> None:
+    payload = {**LEMA, "recordsFiltered": 6, "data": [["mal formada"], LEMA["data"][0]]}
+    result = await JaneAdapter(FakeClient(payload)).cerca("maliciós", limit=4, offset=1)
+
+    assert result["returned"] == 1
+    assert result["has_more"] is True
+    assert result["next_offset"] == 3
+    assert "parse_partial" in result["warnings"]
+
+
+@pytest.mark.asyncio
 async def test_funcio_mode_requires_and_maps_the_function() -> None:
     adapter = JaneAdapter(FakeClient(FUNCIO))
 
