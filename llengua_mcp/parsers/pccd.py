@@ -8,10 +8,15 @@ from urllib.parse import urljoin, urlsplit
 
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
-from llengua_mcp.text import clean_text
+from llengua_mcp.text import clean_text, normalize_exact_key
 
 BASE_URL = "https://pccd.dites.cat"
-_COUNT_RE = re.compile(r"S'ha trobat\s+([\d.]+)\s+paremiotipus")
+_COUNT_RE = re.compile(r"S[’']ha trobat\s+([\d.]+)\s+paremiotipus", re.IGNORECASE)
+_HEADING_RE = re.compile(r"^Cerca\s+[«\"](.*)[»\"]$")
+_NO_RESULTS_RE = re.compile(
+    r"No s[’']ha trobat cap resultat coincident amb\s+(.+?)[.!?…]*$",
+    re.IGNORECASE,
+)
 _STATS_RE = re.compile(r"([\d.]+)\s+recurrènci(?:a|es)(?:\s+en\s+([\d.]+)\s+variants?)?")
 _EARLIEST_RE = re.compile(r"Primera\s+citació:\s*([\d]{3,4})")
 
@@ -32,8 +37,11 @@ def parse_search(html: str, query: str) -> dict[str, Any]:
     doc = HTMLParser(html)
     heading = doc.css_first("main h1") or doc.css_first("h1")
     heading_text = clean_text(heading.text()) if heading else ""
-    query_key = clean_text(query).casefold()
-    echoed = heading_text.startswith("Cerca") and query_key in heading_text.casefold()
+    heading_match = _HEADING_RE.fullmatch(heading_text)
+    echoed_query = heading_match.group(1) if heading_match else ""
+    echoed = bool(echoed_query) and normalize_exact_key(echoed_query) == normalize_exact_key(
+        query
+    )
     text = clean_text(doc.body.text(separator=" ") if doc.body else "")
     match = _COUNT_RE.search(text)
     count = _number(match.group(1)) if match else None
@@ -47,8 +55,20 @@ def parse_search(html: str, query: str) -> dict[str, Any]:
             seen.add(url)
             results.append({"title": title, "url": url})
 
-    no_results = "No s'ha trobat cap resultat coincident amb" in text
-    if no_results and count is None:
+    zero_message = next(
+        (
+            match
+            for paragraph in doc.css("main p, p")
+            if (match := _NO_RESULTS_RE.fullmatch(clean_text(paragraph.text())))
+        ),
+        None,
+    )
+    no_results_query = zero_message.group(1).strip() if zero_message else ""
+    no_results = (
+        bool(no_results_query)
+        and normalize_exact_key(no_results_query) == normalize_exact_key(query)
+    )
+    if zero_message and count is None:
         count = 0
     warnings = [] if count is not None else ["parse_partial"]
     return {
@@ -56,6 +76,7 @@ def parse_search(html: str, query: str) -> dict[str, Any]:
         "results": results,
         "query_echo_verified": echoed,
         "no_results_message": no_results,
+        "no_results_query_verified": no_results,
         "warnings": warnings,
     }
 

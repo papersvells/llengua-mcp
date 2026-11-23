@@ -38,6 +38,31 @@ async def test_cerca_i_zero_verificat() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "html",
+    [
+        (
+            '<main><h1>Cerca «ferament»</h1>'
+            '<p>No s’ha trobat cap resultat coincident amb ferament.</p></main>'
+        ),
+        (
+            '<main><h1>Cerca «fera»</h1>'
+            '<p>No s’ha trobat cap resultat coincident amb ferament.</p></main>'
+        ),
+        '<main><h1>Cerca «fera»</h1><p>No s’ha trobat cap resultat coincident amb fera.</p>'
+        '<ol><li><a href="/p/Cuca_fera">Cuca fera</a></li></ol></main>',
+        '<main><h1>Cerca «fera»</h1><p>No s’ha trobat cap resultat coincident amb fera.</p>'
+        '<p>S’ha trobat 1 paremiotipus per a la cerca fera.</p></main>',
+    ],
+)
+async def test_cerca_no_certifica_zero_amb_eco_o_resultats_contradictoris(html: str) -> None:
+    result = await PccdAdapter(FakeClient(html)).cerca("fera")
+    assert result["status"] == "unexpected_response"
+    assert result["result_count"] is None
+    assert "zero_results" not in result["warnings"]
+
+
+@pytest.mark.asyncio
 async def test_cerca_html_inesperat_no_es_zero() -> None:
     result = await PccdAdapter(FakeClient("<html><body>error</body></html>")).cerca("fera")
     assert result["status"] == "unexpected_response"

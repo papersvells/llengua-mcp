@@ -56,16 +56,31 @@ class PccdAdapter:
         parsed = parse_search(result.text, consulta)
         warnings = list(dict.fromkeys(result.warnings + parsed["warnings"]))
         verified_zero = (
-            parsed["count"] == 0 and parsed["no_results_message"] and parsed["query_echo_verified"]
+            parsed["count"] == 0
+            and parsed["no_results_message"]
+            and parsed["query_echo_verified"]
+            and parsed["no_results_query_verified"]
+            and not parsed["results"]
         )
         status = "ok"
         if verified_zero:
             status = "no_results"
             warnings.append("zero_results")
-        elif not parsed["query_echo_verified"] or parsed["count"] is None:
+        elif (
+            not parsed["query_echo_verified"]
+            or parsed["count"] is None
+            or parsed["no_results_message"]
+            or (parsed["count"] > 0 and parsed["no_results_query_verified"])
+            or parsed["count"] == 0
+        ):
             status = "unexpected_response"
             warnings.append(
-                "query_echo_unverified" if not parsed["query_echo_verified"] else "count_unverified"
+                "query_echo_unverified"
+                if not parsed["query_echo_verified"]
+                else "zero_unverified"
+                if parsed["no_results_message"] or parsed["count"] == 0
+                or parsed["no_results_query_verified"]
+                else "count_unverified"
             )
 
         count = parsed["count"] if status in {"ok", "no_results"} else None
