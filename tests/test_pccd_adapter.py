@@ -43,17 +43,17 @@ async def test_cerca_i_zero_verificat() -> None:
     "html",
     [
         (
-            '<main><h1>Cerca «ferament»</h1>'
-            '<p>No s’ha trobat cap resultat coincident amb ferament.</p></main>'
+            "<main><h1>Cerca «ferament»</h1>"
+            "<p>No s’ha trobat cap resultat coincident amb ferament.</p></main>"
         ),
         (
-            '<main><h1>Cerca «fera»</h1>'
-            '<p>No s’ha trobat cap resultat coincident amb ferament.</p></main>'
+            "<main><h1>Cerca «fera»</h1>"
+            "<p>No s’ha trobat cap resultat coincident amb ferament.</p></main>"
         ),
-        '<main><h1>Cerca «fera»</h1><p>No s’ha trobat cap resultat coincident amb fera.</p>'
+        "<main><h1>Cerca «fera»</h1><p>No s’ha trobat cap resultat coincident amb fera.</p>"
         '<ol><li><a href="/p/Cuca_fera">Cuca fera</a></li></ol></main>',
-        '<main><h1>Cerca «fera»</h1><p>No s’ha trobat cap resultat coincident amb fera.</p>'
-        '<p>S’ha trobat 1 paremiotipus per a la cerca fera.</p></main>',
+        "<main><h1>Cerca «fera»</h1><p>No s’ha trobat cap resultat coincident amb fera.</p>"
+        "<p>S’ha trobat 1 paremiotipus per a la cerca fera.</p></main>",
     ],
 )
 async def test_cerca_no_certifica_zero_amb_eco_o_resultats_contradictoris(html: str) -> None:
@@ -77,7 +77,7 @@ async def test_cerca_html_inesperat_no_es_zero() -> None:
 )
 async def test_fitxa_extreu_variants_i_citacions(separator: str) -> None:
     html = (
-        '<main><h1>Parèmia de prova</h1>'
+        "<main><h1>Parèmia de prova</h1>"
         '<div class="description">3 recurrències en 2 variants. Primera citació: 1815.</div>'
         "<h2>Variant de prova</h2>"
         f"{separator}"

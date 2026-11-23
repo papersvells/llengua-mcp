@@ -39,9 +39,7 @@ def parse_search(html: str, query: str) -> dict[str, Any]:
     heading_text = clean_text(heading.text()) if heading else ""
     heading_match = _HEADING_RE.fullmatch(heading_text)
     echoed_query = heading_match.group(1) if heading_match else ""
-    echoed = bool(echoed_query) and normalize_exact_key(echoed_query) == normalize_exact_key(
-        query
-    )
+    echoed = bool(echoed_query) and normalize_exact_key(echoed_query) == normalize_exact_key(query)
     text = clean_text(doc.body.text(separator=" ") if doc.body else "")
     match = _COUNT_RE.search(text)
     count = _number(match.group(1)) if match else None
@@ -64,10 +62,9 @@ def parse_search(html: str, query: str) -> dict[str, Any]:
         None,
     )
     no_results_query = zero_message.group(1).strip() if zero_message else ""
-    no_results = (
-        bool(no_results_query)
-        and normalize_exact_key(no_results_query) == normalize_exact_key(query)
-    )
+    no_results = bool(no_results_query) and normalize_exact_key(
+        no_results_query
+    ) == normalize_exact_key(query)
     if zero_message and count is None:
         count = 0
     warnings = [] if count is not None else ["parse_partial"]

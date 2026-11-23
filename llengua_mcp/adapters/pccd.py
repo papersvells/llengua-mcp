@@ -78,7 +78,8 @@ class PccdAdapter:
                 "query_echo_unverified"
                 if not parsed["query_echo_verified"]
                 else "zero_unverified"
-                if parsed["no_results_message"] or parsed["count"] == 0
+                if parsed["no_results_message"]
+                or parsed["count"] == 0
                 or parsed["no_results_query_verified"]
                 else "count_unverified"
             )
