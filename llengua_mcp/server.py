@@ -38,6 +38,10 @@ autoritat diferent i no les confonguis mai:
   cercar per definició o exemple. És descriptiu: una forma hi pot constar i
   no ser adequada avui. Cita sempre el diccionari concret. El DDLC té un
   portal propi; no es consulta per BDLex.
+- PCCD: font descriptiva de parèmies catalanes. `pccd_cerca` permet cercar
+  paremiotipus i, opcionalment, variants; `pccd_fitxa` mostra variants i fonts.
+  La datació més antiga del recull no és necessàriament la primera documentació
+  absoluta i els recomptes de fitxa no indiquen freqüència d'ús.
 - ésAdir: estil de la CCMA, pronunciació i noms propis. No és la norma de l'IEC.
 - OIEC: ortografia normativa (apòstrofs, guionets, accents, dièresi). Cita
   sempre el codi d'apartat i el títol de la secció.
@@ -266,6 +270,44 @@ async def diec_consulta(paraula: str, limit: int = 3, max_senses: int = 20) -> d
     return await _call(
         "https://dlc.iec.cat/Results",
         app.diec.consulta(paraula, limit=limit, max_senses=max_senses),
+    )
+
+
+@mcp.tool()
+async def pccd_cerca(
+    consulta: str,
+    inclou_variants: bool = False,
+    condicio: str = "conté",
+    limit: int = 10,
+) -> dict[str, Any]:
+    """Cerca parèmies a la PCCD.
+
+    Args:
+        consulta: Paremiotipus o fragment de la parèmia.
+        inclou_variants: Amplia la cerca a les variants formals.
+        condicio: `conté` (per defecte) o `coincident`.
+        limit: Màxim de resultats retornats (1-50).
+    """
+    app = await get_app()
+    return await _call(
+        "https://pccd.dites.cat/",
+        app.pccd.cerca(consulta, inclou_variants=inclou_variants, condicio=condicio, limit=limit),
+    )
+
+
+@mcp.tool()
+async def pccd_fitxa(entrada: str, limit: int = 20) -> dict[str, Any]:
+    """Obre una fitxa de la PCCD per títol o URL retornat per `pccd_cerca`.
+
+    Retorna els recomptes de la fitxa, les variants disponibles, la datació
+    més antiga del recull i les citacions de les fonts. Per controlar la mida
+    de la resposta, `limit` restringeix les variants retornades (1-50), amb
+    fins a cinc citacions per variant.
+    """
+    app = await get_app()
+    return await _call(
+        "https://pccd.dites.cat/",
+        app.pccd.fitxa(entrada, limit=limit),
     )
 
 

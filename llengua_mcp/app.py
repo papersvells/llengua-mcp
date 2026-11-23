@@ -12,6 +12,7 @@ from llengua_mcp.adapters import (
     JaneAdapter,
     OiecAdapter,
     OptimotAdapter,
+    PccdAdapter,
     SoftcatalaAdapter,
 )
 from llengua_mcp.config import Settings
@@ -35,6 +36,7 @@ class App:
         self.gramatiques = GramatiquesAdapter(self.http)
         self.jane = JaneAdapter(self.http)
         self.softcatala = SoftcatalaAdapter(settings)
+        self.pccd = PccdAdapter(self.http)
 
     async def aclose(self) -> None:
         await self.http.aclose()

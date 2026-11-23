@@ -9,6 +9,7 @@ from llengua_mcp.adapters.gramatiques import GramatiquesAdapter
 from llengua_mcp.adapters.jane import JaneAdapter
 from llengua_mcp.adapters.oiec import OiecAdapter
 from llengua_mcp.adapters.optimot import OptimotAdapter
+from llengua_mcp.adapters.pccd import PccdAdapter
 from llengua_mcp.adapters.softcatala import SoftcatalaAdapter
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     "JaneAdapter",
     "OiecAdapter",
     "OptimotAdapter",
+    "PccdAdapter",
     "SoftcatalaAdapter",
 ]

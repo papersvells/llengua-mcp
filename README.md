@@ -27,6 +27,7 @@ oficial de l'IEC. Revisa sempre les fonts i els matisos de la resposta.
 | [OIEC](https://oiec.iec.cat/) i gramàtiques de l'IEC | Ortografia, gramàtica bàsica i gramàtiques de referència |
 | [CTILC](https://ctilc.iec.cat/) | Ús escrit, contextos, col·locacions i dispersió |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) i [Jané](https://sinonims.iec.cat/) | Sinònims; Jané separa accepcions numerades |
+| [PCCD](https://pccd.dites.cat/) | Paremiotipus, variants i fonts de dites i refranys; dades sota CC BY-NC-SA 4.0 |
 
 ## Instal·lació ràpida
 
