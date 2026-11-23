@@ -16,6 +16,7 @@ from llengua_mcp.adapters import (
     PccdAdapter,
     SoftcatalaAdapter,
 )
+from llengua_mcp.adapters.pamies import PamiesAdapter
 from llengua_mcp.config import Settings
 from llengua_mcp.cursors import CursorStore
 from llengua_mcp.direlex import DirelexIndex
@@ -42,6 +43,7 @@ class App:
         self.engcat = EngCatIndex(settings.data_dir)
         self.direlex = DirelexIndex(settings.data_dir)
         self.pccd = PccdAdapter(self.http)
+        self.pamies = PamiesAdapter(self.http)
         self.conjugador = ConjugadorAdapter(self.http)
 
     async def aclose(self) -> None:

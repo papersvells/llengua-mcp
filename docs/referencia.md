@@ -40,6 +40,9 @@ peticions només per afegir detall ni es confon la freqüència amb la correcci�
 - **Triar alternatives lèxiques**: `direlex_cerca("alegria")` retorna les
   accepcions i els apartats de l'article. Les dades locals del DIRELEX tenen
   llicència CC BY-NC 4.0, per a ús no comercial; no és una font normativa.
+- **Consultar solucions de traducció**: `pamies_cerca("bank", glossaris=true)`
+  cerca la llista de Xavier Pàmies i, opcionalment, els glossaris literaris.
+  Pot retornar compostos; els fragments limitats no substitueixen la font.
 - **Documentar una forma antiga o dialectal**: `bdlex_consulta("engrunar")`, o
   cercar per definició: `bdlex_consulta(definicio="esclafar")`.
 - **Explicar una regla d'ortografia**: `oiec_cerca("guionet")` i, amb el codi,

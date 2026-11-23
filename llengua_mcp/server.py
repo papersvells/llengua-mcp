@@ -75,6 +75,10 @@ autoritat diferent i no les confonguis mai:
   una locució anglesa. Fes servir el context per triar l'accepció, no per
   traduir el text sencer. Cita els equivalents i les marques de la font;
   distingeix-los de qualsevol proposta teva.
+- Llista anglès-català de Xavier Pàmies: `pamies_cerca` retorna fragments de
+  consulta puntual i, opcionalment, glossaris literaris. Distingeix els compostos
+  del lema cercat, respecta el context i cita l'autor i la consulta. No la
+  confonguis amb el diccionari de Softcatalà ni la presentis com a normativa.
 - DIRELEX: `direlex_cerca` consulta articles de recursos lexicals de Carles
   Castellanos i Llorenç i Agustí Mayor i Lloret, CC BY-NC 4.0. Conserva el
   sentit, les marques i els apartats; no tractis els antònims com a sinònims.
@@ -539,6 +543,23 @@ async def cerca_sinonims(
             context=context,
             limit=limit,
         ),
+    )
+
+
+@mcp.tool()
+async def pamies_cerca(terme: str, glossaris: bool = False, limit: int = 5) -> dict[str, Any]:
+    """Cerca un mot o una locució a la llista anglès-català de Xavier Pàmies.
+
+    La cerca pot incloure compostos: `coincidencia_exacta` només indica un
+    encapçalament exactament identificat. Els glossaris literaris són opcionals
+    i es retornen a part. Retorna fragments breus, no entrades completes; si un
+    fragment queda truncat cal llegir la font abans de treure conclusions.
+    `limit` limita resultats entre 1 i 20. No admet comodins ni cerca inversa.
+    """
+    app = await get_app()
+    return await _call(
+        "https://diccxpamies.xarxa.cat/",
+        app.pamies.cerca(terme, glossaris=glossaris, limit=limit),
     )
 
 
