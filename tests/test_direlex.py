@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import gzip
 import json
 
 import pytest
 
-from llengua_mcp import fetch_direlex
+from llengua_mcp import direlex, fetch_direlex
 from llengua_mcp.direlex import DATA_FILE, DirelexIndex, parse_article
 from llengua_mcp.errors import DataUnavailableError, InvalidQueryError
 
@@ -69,6 +70,55 @@ async def test_exact_accent_and_redirect(index):
     assert result["status"] == "ok"
     assert result["articles"][0]["remissions"][0]["url"].endswith("/lema/fosc")
     assert (await index.cerca("no existeix"))["status"] == "no_matches"
+
+
+async def test_index_is_reused_for_successive_and_concurrent_queries(index, monkeypatch):
+    original = direlex.read_entries
+    calls = 0
+
+    def counted(path):
+        nonlocal calls
+        calls += 1
+        return original(path)
+
+    monkeypatch.setattr(direlex, "read_entries", counted)
+    await index.cerca("fosc")
+    await index.cerca("fosca")
+    await asyncio.gather(*(index.cerca("fosc") for _ in range(8)))
+    assert calls == 1
+
+
+async def test_index_rebuilds_after_atomic_file_replacement(index, tmp_path, monkeypatch):
+    original = direlex.read_entries
+    calls = 0
+
+    def counted(path):
+        nonlocal calls
+        calls += 1
+        return original(path)
+
+    monkeypatch.setattr(direlex, "read_entries", counted)
+    assert (await index.cerca("fosca"))["total"] == 1
+    replacement = tmp_path / "replacement.gz"
+    replacement.write_bytes(
+        gzip.compress(
+            json.dumps(
+                {
+                    "entries": [
+                        {
+                            "title": "nou",
+                            "title_display": "nou",
+                            "content": "<p>adj.</p><p><strong>1</strong>. recent</p>",
+                        }
+                    ]
+                }
+            ).encode()
+        )
+    )
+    replacement.replace(index.path)
+    assert (await index.cerca("nou"))["total"] == 1
+    assert (await index.cerca("fosca"))["total"] == 0
+    assert calls == 2
 
 
 async def test_missing_corrupt_and_empty_query(tmp_path):

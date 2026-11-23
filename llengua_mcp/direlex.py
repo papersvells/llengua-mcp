@@ -6,6 +6,7 @@ import asyncio
 import gzip
 import json
 import re
+import threading
 import unicodedata
 from pathlib import Path
 from typing import Any
@@ -117,6 +118,38 @@ def parse_article(content: str) -> dict[str, Any]:
 class DirelexIndex:
     def __init__(self, data_dir: Path) -> None:
         self.path = data_dir / DATA_FILE
+        self._lock = threading.Lock()
+        self._signature: tuple[int, int, int, int, int] | None = None
+        self._entries_by_key: dict[str, list[tuple[dict[str, str], str]]] = {}
+
+    def _file_signature(self) -> tuple[int, int, int, int, int]:
+        stat = self.path.stat()
+        return stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns
+
+    def _index(self) -> dict[str, list[tuple[dict[str, str], str]]]:
+        signature = self._file_signature()
+        if signature == self._signature:
+            return self._entries_by_key
+        with self._lock:
+            signature = self._file_signature()
+            if signature == self._signature:
+                return self._entries_by_key
+            while True:
+                entries = read_entries(self.path)
+                index: dict[str, list[tuple[dict[str, str], str]]] = {}
+                for entry in entries:
+                    title = text(LexborHTMLParser(entry["title_display"]).body)
+                    forms = [title, entry["title"].replace("_", " ")]
+                    if "|" in title:
+                        forms.extend(title.split("|"))
+                    for form_key in dict.fromkeys(key(form) for form in forms):
+                        if form_key:
+                            index.setdefault(form_key, []).append((entry, title))
+                if self._file_signature() == signature:
+                    self._entries_by_key = index
+                    self._signature = signature
+                    return self._entries_by_key
+                signature = self._file_signature()
 
     async def cerca(self, lema: str) -> dict[str, Any]:
         lema = unicodedata.normalize("NFC", " ".join(lema.split()))
@@ -126,7 +159,7 @@ class DirelexIndex:
 
     def _lookup(self, lema: str) -> dict[str, Any]:
         try:
-            entries = read_entries(self.path)
+            matches = self._index().get(key(lema), [])
         except (OSError, EOFError, ValueError, TypeError) as exc:
             raise DataUnavailableError(
                 "Les dades locals del DIRELEX no estan disponibles o són il·legibles.",
@@ -135,22 +168,12 @@ class DirelexIndex:
                     "(o afegeix `--force` per reinstal·lar-les)."
                 ),
             ) from exc
-        wanted = key(lema)
-        matches = []
-        for entry in entries:
-            title = text(LexborHTMLParser(entry["title_display"]).body)
-            # Només les formes separades per una barra vertical són àlies explícits.
-            forms = [title, entry["title"].replace("_", " ")]
-            if "|" in title:
-                forms.extend(title.split("|"))
-            if any(key(form) == wanted for form in forms):
-                matches.append(entry)
         articles = []
-        for entry in matches:
+        for entry, title in matches:
             parsed = parse_article(entry["content"])
             articles.append(
                 {
-                    "lema": text(LexborHTMLParser(entry["title_display"]).body),
+                    "lema": title,
                     "url": f"{SOURCE}/lema/{quote(entry['title'], safe='')}",
                     **parsed,
                 }
