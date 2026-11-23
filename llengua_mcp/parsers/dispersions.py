@@ -71,6 +71,12 @@ def parse_cronologia(html: str) -> dict[str, Any]:
             )
         hits = _int(tip.group("hits"))
         corpus_units = _int(tip.group("units"))
+        if hits > 0 and corpus_units == 0:
+            raise UnexpectedResponseError(
+                f"El tram {label} té ocurrències però el corpus té zero paraules.",
+                hint="La resposta de dispersió és inconsistent; no es pot calcular la taxa.",
+                source=CRON_URL,
+            )
         from_year, to_year = label.split("-", 1)
         periods.append(
             {
@@ -79,7 +85,9 @@ def parse_cronologia(html: str) -> dict[str, Any]:
                 "to_year": int(to_year),
                 "hits": hits,
                 "corpus_units": corpus_units,
-                "per_million": round(hits / corpus_units * 1_000_000, 2),
+                "per_million": (
+                    round(hits / corpus_units * 1_000_000, 2) if corpus_units else None
+                ),
             }
         )
 
@@ -93,7 +101,11 @@ def parse_cronologia(html: str) -> dict[str, Any]:
     total_hits = sum(item["hits"] for item in periods)
     total_units = sum(item["corpus_units"] for item in periods)
     by_hits = max(periods, key=lambda item: item["hits"])
-    by_rate = max(periods, key=lambda item: item["per_million"])
+    by_rate = max(
+        (item for item in periods if item["per_million"] is not None),
+        key=lambda item: item["per_million"],
+        default=None,
+    )
 
     pattern_echo = ""
     search_total: int | None = None
@@ -115,10 +127,11 @@ def parse_cronologia(html: str) -> dict[str, Any]:
             "label": by_hits["label"],
             "hits": by_hits["hits"],
         },
-        "peak_relative": {
-            "label": by_rate["label"],
-            "per_million": by_rate["per_million"],
-        },
+        "peak_relative": (
+            {"label": by_rate["label"], "per_million": by_rate["per_million"]}
+            if by_rate is not None
+            else None
+        ),
         "source": CRON_URL,
     }
 

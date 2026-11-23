@@ -41,6 +41,42 @@ def test_percentatge_del_graf_no_es_fa_servir() -> None:
     assert first["per_million"] == round(45 / 13001158 * 1_000_000, 2)
 
 
+def test_tram_amb_ocurrències_i_denominador_zero_es_error() -> None:
+    html = (
+        "<script>var chartData = [['Grup cronològic','Proporció'],"
+        "['x'],"
+        "['1832-1913',0.1,'1832-1913\\nTotal tram a la cerca: 45"
+        "\\nTotal tram al corpus: 0\\n0,1%']];</script>"
+    )
+    with pytest.raises(UnexpectedResponseError, match="zero paraules"):
+        parse_cronologia(html)
+
+
+def test_tram_zero_sobre_zero_no_participa_al_pic_relatiu() -> None:
+    html = (
+        "<script>var chartData = [['Grup cronològic','Proporció']"
+        ",['1832-1913',0,'1832-1913\\nTotal tram a la cerca: 0"
+        "\\nTotal tram al corpus: 0\\n0%']"
+        ",['1914-1933',0,'1914-1933\\nTotal tram a la cerca: 1"
+        "\\nTotal tram al corpus: 1000000\\n0%']];</script>"
+    )
+    data = parse_cronologia(html)
+    assert data["periods"][0]["per_million"] is None
+    assert data["periods"][1]["per_million"] == 1.0
+    assert data["peak_relative"] == {"label": "1914-1933", "per_million": 1.0}
+
+
+def test_pic_relatiu_null_si_cap_tram_te_taxa_calculable() -> None:
+    html = (
+        "<script>var chartData = [['Grup cronològic','Proporció']"
+        ",['1832-1913',0,'1832-1913\\nTotal tram a la cerca: 0"
+        "\\nTotal tram al corpus: 0\\n0%']];</script>"
+    )
+    data = parse_cronologia(html)
+    assert data["periods"][0]["per_million"] is None
+    assert data["peak_relative"] is None
+
+
 def test_sense_grafic_es_error() -> None:
     with pytest.raises(UnexpectedResponseError):
         parse_cronologia("<html><body>error intern</body></html>")

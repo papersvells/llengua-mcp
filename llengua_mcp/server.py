@@ -809,7 +809,8 @@ async def dispersio_cronologica(cursor: str) -> dict[str, Any]:
     distribució només és vàlida vinculada a aquella consulta. Retorna per tram
     `from_year`, `to_year`, `hits`, `corpus_units` i `per_million` (ocurrències
     per milió de paraules, derivades dels enters), i destaca els pics absolut i
-    relatiu.
+    relatiu. Si un tram té 0 ocurrències i 0 paraules, `per_million` és `null`;
+    si cap tram té una taxa calculable, `peak_relative` és `null`.
 
     Les dades es validen: si el patró de la pàgina no és el de la cerca o la
     suma dels trams no coincideix amb el total, `data_valid` és fals, `periods`
