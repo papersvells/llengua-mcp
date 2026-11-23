@@ -87,9 +87,43 @@ async def test_irregular_imperatiu_no_aplicable_i_formes_no_personals() -> None:
 
 @pytest.mark.asyncio
 async def test_pronominal_es_resol_a_la_fitxa_base() -> None:
-    client = FakeClient(SAMPLE.replace("<h3>cantar</h3>", "<h3>cantar-se</h3>"))
-    result = await ConjugadorAdapter(client).consulta("cantar-se")
+    client = FakeClient(
+        SAMPLE.replace("<h3>cantar</h3>", "<h3>cantar-se</h3>").replace("canto", "em canto")
+    )
+    result = await ConjugadorAdapter(client).consulta(
+        "cantar-se", mode="indicatiu", temps="Present", persona="jo"
+    )
     assert result["status"] == "ok"
+    assert result["requested_verb"] == result["verb"] == "cantar-se"
+    assert "pronominal_base_only" not in result["warnings"]
+    assert "fallback_note" not in result
+    assert result["sections"][0]["rows"][0]["persons"][0]["forms"][0]["form"] == "em canto"
+    assert client.urls[0].endswith("/verb/cantar/")
+
+
+@pytest.mark.asyncio
+async def test_pronominal_amb_fitxa_simple_es_resultat_parcial() -> None:
+    client = FakeClient(SAMPLE)
+    result = await ConjugadorAdapter(client).consulta(
+        "cantar-se", mode="indicatiu", temps="Present", persona="jo"
+    )
+    assert result["status"] == "partial"
+    assert result["requested_verb"] == "cantar-se"
+    assert result["verb"] == "cantar"
+    assert "pronominal_base_only" in result["warnings"]
+    assert "no són una conjugació pronominal" in result["fallback_note"]
+    assert result["sections"][0]["rows"][0]["persons"][0]["forms"][0]["form"] == "canto"
+    assert "«cantar»" in result["citation"]
+    assert client.urls[0].endswith("/verb/cantar/")
+
+
+@pytest.mark.asyncio
+async def test_pronominal_diferent_no_coincideix_encara_que_la_base_sigui_la_mateixa() -> None:
+    client = FakeClient(SAMPLE.replace("<h3>cantar</h3>", "<h3>cantar-se</h3>"))
+    result = await ConjugadorAdapter(client).consulta("cantar-se’n")
+    assert result["status"] == "unexpected_response"
+    assert "infinitive_mismatch" in result["warnings"]
+    assert "sections" not in result
     assert client.urls[0].endswith("/verb/cantar/")
 
 

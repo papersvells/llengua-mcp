@@ -37,31 +37,18 @@ _MODES = {
     "imperatiu": "Imperatiu",
     "formes no personals": "Formes no personals",
 }
+_PRONOMINAL_ENDINGS = ("-se'n", "-se", "-s")
 
 
 def _now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _slug(verb: str) -> str:
-    # The source routes pronominal verbs by their base infinitive
-    # (e.g. «abstenir-se» is /verb/abstenir/).
-    for ending in ("-se'n", "-se’n", "-se"):
+def _without_pronoun(verb: str) -> str:
+    for ending in _PRONOMINAL_ENDINGS:
         if verb.casefold().endswith(ending):
-            verb = verb[: -len(ending)]
-            break
-    return quote(verb, safe="-")
-
-
-def _same_lemma(expected: str, found: str) -> bool:
-    def base(value: str) -> str:
-        key = normalize_key(value)
-        for ending in ("-se'n", "-se’n", "-se", "-s"):
-            if key.endswith(ending):
-                return key[: -len(ending)].strip()
-        return key
-
-    return base(expected) == base(found)
+            return verb[: -len(ending)]
+    return verb
 
 
 class ConjugadorAdapter:
@@ -101,7 +88,9 @@ class ConjugadorAdapter:
                     hint="Indica jo, tu, ell/ella/vostè, nosaltres, vosaltres o ells/elles/vostès.",
                 )
         temps_key = normalize_key(temps) if temps else None
-        url = f"{BASE_URL}/conjugador-de-verbs/verb/{_slug(verb)}/"
+        # La ruta fa servir l'infinitiu base, però això no identifica la fitxa.
+        base = _without_pronoun(verb)
+        url = f"{BASE_URL}/conjugador-de-verbs/verb/{quote(base, safe='-')}/"
         try:
             result = await self.client.get_text(url, cache_ttl=86400)
         except UpstreamError as exc:
@@ -130,11 +119,14 @@ class ConjugadorAdapter:
                 "retrieved_at": _now(),
             }
 
-        if not _same_lemma(verb, parsed["infinitive"]):
+        infinitive = parsed["infinitive"]
+        found_key = normalize_key(infinitive)
+        base_only = base != verb and found_key == normalize_key(base)
+        if found_key != normalize_key(verb) and not base_only:
             return {
                 "status": "unexpected_response",
                 "verb": verb,
-                "title": parsed["infinitive"],
+                "title": infinitive,
                 "url": url,
                 "warnings": list(dict.fromkeys(result.warnings + ["infinitive_mismatch"])),
                 "source": url,
@@ -173,16 +165,28 @@ class ConjugadorAdapter:
             )
 
         warnings = list(result.warnings + parsed["warnings"])
+        if base_only:
+            warnings.append("pronominal_base_only")
         return {
-            "status": "ok",
-            "verb": parsed["infinitive"],
+            "status": "partial" if base_only else "ok",
+            "requested_verb": verb,
+            "verb": infinitive,
+            **(
+                {
+                    "fallback_note": (
+                        f"La font mostra la fitxa del verb simple «{infinitive}», "
+                        f"no la de «{verb}». Les formes següents corresponen "
+                        "al verb simple; no són una conjugació pronominal."
+                    )
+                }
+                if base_only
+                else {}
+            ),
             "note": parsed["note"],
             "sections": output_sections,
             "url": url,
             "warnings": list(dict.fromkeys(warnings)),
             "source": url,
             "retrieved_at": _now(),
-            "citation": (
-                f"Conjugador de Softcatalà, «{parsed['infinitive']}», consultat el {_now()}."
-            ),
+            "citation": f"Conjugador de Softcatalà, «{infinitive}», consultat el {_now()}.",
         }

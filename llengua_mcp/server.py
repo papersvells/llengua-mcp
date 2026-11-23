@@ -312,6 +312,8 @@ async def conjugador_consulta(
 
     Les marques de varietat es retornen amb cada forma. Els buits de la taula
     es distingeixen de les formes no aplicables; no són un judici de correcció.
+    Si la fitxa només correspon al verb simple, es retorna `partial` amb
+    `pronominal_base_only`: no citis les formes com a conjugació pronominal.
     """
     app = await get_app()
     return await _call(
