@@ -28,6 +28,7 @@ oficial de l'IEC. Revisa sempre les fonts i els matisos de la resposta.
 | [CTILC](https://ctilc.iec.cat/) | Ús escrit, contextos, col·locacions i dispersió |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) i [Jané](https://sinonims.iec.cat/) | Sinònims; Jané separa accepcions numerades |
 | [Diccionari anglès-català de Softcatalà](https://github.com/Softcatala/diccionari-angles-catala) | Equivalents per a mots i locucions anglesos, amb accepcions i marques d'ús |
+| [DIRELEX](https://direlex.softcatala.org/) | Alternatives lèxiques contextualitzades, notes d'ús i fraseologia; dades CC BY-NC 4.0 |
 | [PCCD](https://pccd.dites.cat/) | Paremiotipus, variants i fonts de dites i refranys; dades sota CC BY-NC-SA 4.0 |
 | [Conjugador de Softcatalà](https://www.softcatala.org/conjugador-de-verbs/) | Formes verbals amb marques territorials |
 
@@ -174,6 +175,20 @@ comanda d'instal·lació. Les cerques no fan peticions de xarxa.
 Per exemple, pregunta «Com en dic, de *bank*, si parlo de la vora d'un riu?».
 L'eina cerca el mot o la locució sencera; no tradueix frases ni documents.
 
+## DIRELEX (opcional)
+
+Per consultar el Diccionari de recursos lexicals, instal·la les dades locals:
+
+```sh
+uvx --from git+https://github.com/papersvells/llengua-mcp.git@v0.5.0 llengua-mcp-fetch-direlex
+```
+
+Les dades són de Carles Castellanos i Llorenç i Agustí Mayor i Lloret,
+[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.ca):
+**només per a ús no comercial**. Es descarreguen separadament del paquet MIT,
+en una revisió fixada. Configura el mateix `LLENGUA_DATA_DIR` a la comanda
+i al client MCP. La consulta `direlex_cerca` no fa xarxa ni cerca al glossari.
+
 ## Consells i límits
 
 - Dona la frase sencera i explica el registre o el matís que busques.
@@ -188,7 +203,8 @@ L'eina cerca el mot o la locució sencera; no tradueix frases ni documents.
 ## Privacitat, fonts i llicència
 
 El servidor s'executa a l'ordinador de l'usuari, però consulta fonts externes
-per Internet. Les dades dels diccionaris de Softcatalà són locals un cop baixades.
+per Internet. Les dades dels diccionaris de Softcatalà i del DIRELEX són locals
+un cop baixades.
 El codi es distribueix sota llicència MIT; les dades i els serveis consultats
 poden tenir condicions diferents. Consulta [`NOTICE`](NOTICE) per les fonts,
 llicències i atribucions. Llengua-mcp no és un producte oficial de l'IEC, la CCMA

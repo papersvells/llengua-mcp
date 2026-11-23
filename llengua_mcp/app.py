@@ -18,6 +18,7 @@ from llengua_mcp.adapters import (
 )
 from llengua_mcp.config import Settings
 from llengua_mcp.cursors import CursorStore
+from llengua_mcp.direlex import DirelexIndex
 from llengua_mcp.engcat import EngCatIndex
 from llengua_mcp.http import HttpClient
 
@@ -39,6 +40,7 @@ class App:
         self.jane = JaneAdapter(self.http)
         self.softcatala = SoftcatalaAdapter(settings)
         self.engcat = EngCatIndex(settings.data_dir)
+        self.direlex = DirelexIndex(settings.data_dir)
         self.pccd = PccdAdapter(self.http)
         self.conjugador = ConjugadorAdapter(self.http)
 

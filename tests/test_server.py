@@ -49,6 +49,8 @@ async def test_stdio_initialize_list_and_call_tool(tmp_path) -> None:
             assert not missing.is_error
             assert missing.structured_content["status"] == "unavailable"
             assert missing.structured_content["timing"]["upstream_requests"] == 0
+            missing_direlex = await session.call_tool("direlex_cerca", {"lema": "alegria"})
+            assert missing_direlex.structured_content["status"] == "unavailable"
 
 
 @pytest.mark.asyncio
@@ -88,6 +90,7 @@ async def test_tools_are_registered() -> None:
         "gramatica_text",
         "cerca_sinonims",
         "engcat_cerca",
+        "direlex_cerca",
         "jane_cerca",
         "cerca",
         "cerca_frase",

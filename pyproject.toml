@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "llengua-mcp"
-version = "0.4.0"
+version = "0.5.0"
 description = "Servidor MCP d'assessorament sobre la llengua catalana"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -30,6 +30,7 @@ dev = [
 llengua-mcp = "llengua_mcp.server:main"
 llengua-mcp-fetch-sinonims = "llengua_mcp.fetch_sinonims:main"
 llengua-mcp-fetch-engcat = "llengua_mcp.fetch_engcat:main"
+llengua-mcp-fetch-direlex = "llengua_mcp.fetch_direlex:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["llengua_mcp"]

@@ -12,7 +12,7 @@
 | `LLENGUA_MAX_BYTES` | `4000000` | Mida màxima d'una resposta |
 | `LLENGUA_MAX_OCCURRENCES` | `50` | Files màximes per pàgina del CTILC |
 | `LLENGUA_CACHE_TTL` | `3600` | Validesa de la cache i dels cursors |
-| `LLENGUA_DATA_DIR` | dades d'usuari | Fitxers locals de sinònims i índex anglès-català |
+| `LLENGUA_DATA_DIR` | dades d'usuari | Dades locals de sinònims, anglès-català i DIRELEX |
 | `LLENGUA_CACHE_DIR` | cache d'usuari | Reservat per a cache persistent |
 
 ## Exemples d'ús
@@ -37,6 +37,9 @@ peticions només per afegir detall ni es confon la freqüència amb la correcci�
   l'accepció segons el context. Cerca la forma sencera, sense descompondre
   locucions ni traduir frases. Si no coincideixen les majúscules i minúscules,
   prova sense distingir-les i ho indica amb `match: "case_insensitive"`.
+- **Triar alternatives lèxiques**: `direlex_cerca("alegria")` retorna les
+  accepcions i els apartats de l'article. Les dades locals del DIRELEX tenen
+  llicència CC BY-NC 4.0, per a ús no comercial; no és una font normativa.
 - **Documentar una forma antiga o dialectal**: `bdlex_consulta("engrunar")`, o
   cercar per definició: `bdlex_consulta(definicio="esclafar")`.
 - **Explicar una regla d'ortografia**: `oiec_cerca("guionet")` i, amb el codi,
@@ -80,6 +83,10 @@ peticions només per afegir detall ni es confon la freqüència amb la correcci�
   `no_matches` vol dir que no hi ha coincidències a la revisió consultada;
   `unavailable` indica que l'índex no està instal·lat o no es pot llegir.
   Es conserva el text literal dels equivalents i el resultat inclou `data_revision`.
+- **DIRELEX**: `encapcalament` manté junts els mots alternatius i les marques
+  originals de cada sentit. Els apartats `c` poden contenir antònims o mots
+  relacionats, no necessàriament sinònims. `partial` adverteix de fragments que
+  el parser no ha pogut classificar. Les remissions no es resolen automàticament.
 - **CTILC**: `echo_verified` exigeix que coincideixin els camps enviats i el
   patró visible. Un zero només és `no_matches` si la pàgina en dona el comptador
   explícit i el missatge de cap coincidència; si no, és `unexpected_response`.

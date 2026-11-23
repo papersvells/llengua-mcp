@@ -11,6 +11,7 @@ from mcp.server.mcpserver import MCPServer
 from llengua_mcp import __version__
 from llengua_mcp.app import App
 from llengua_mcp.config import Settings
+from llengua_mcp.direlex import SOURCE as DIRELEX_SOURCE
 from llengua_mcp.engcat import SOURCE_URL as ENGCAT_SOURCE
 from llengua_mcp.errors import (
     LlenguaError,
@@ -74,6 +75,10 @@ autoritat diferent i no les confonguis mai:
   una locució anglesa. Fes servir el context per triar l'accepció, no per
   traduir el text sencer. Cita els equivalents i les marques de la font;
   distingeix-los de qualsevol proposta teva.
+- DIRELEX: `direlex_cerca` consulta articles de recursos lexicals de Carles
+  Castellanos i Llorenç i Agustí Mayor i Lloret, CC BY-NC 4.0. Conserva el
+  sentit, les marques i els apartats; no tractis els antònims com a sinònims.
+  És una font descriptiva i d'ús, no un diccionari normatiu. Cita l'article.
 - Jané (IEC): diccionari de sinònims amb accepcions numerades. Si una paraula
   té diversos sentits, tria el número que encaixa en la frase abans de
   substituir res; `mode="general"` cerca dins les llistes de sinònims i
@@ -535,6 +540,20 @@ async def cerca_sinonims(
             limit=limit,
         ),
     )
+
+
+@mcp.tool()
+async def direlex_cerca(lema: str) -> dict[str, Any]:
+    """Cerca un lema al Diccionari de recursos lexicals (DIRELEX).
+
+    Retorna els articles i les accepcions amb l'encapçalament literal (alternatives
+    i marques) i els apartats d'ús, altres recursos, fraseologia i etimologia.
+    Els altres recursos poden incloure antònims: no els confonguis amb sinònims.
+    La consulta és local i per lema complet, amb accents; no cerca al glossari.
+    Les dades opcionals són CC BY-NC 4.0, només per a ús no comercial.
+    """
+    app = await get_app()
+    return await _call(DIRELEX_SOURCE, app.direlex.cerca(lema))
 
 
 @mcp.tool()

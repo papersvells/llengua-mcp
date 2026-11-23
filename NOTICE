@@ -32,6 +32,12 @@ Fonts consultades
   L'instal·lador converteix una revisió fixada de l'XML en un índex local
   de consulta. No incorpora el programari de Softcatalà (GPL-2.0) i conserva
   el text dels equivalents tal com consta a les dades.
+- Diccionari de recursos lexicals (DIRELEX), © 2025 Carles Castellanos i
+  Llorenç i Agustí Mayor i Lloret. <https://direlex.softcatala.org/credits>
+  Dades: Creative Commons Reconeixement-NoComercial 4.0 (CC BY-NC 4.0),
+  <https://creativecommons.org/licenses/by-nc/4.0/deed.ca>.
+  Ús no comercial; les dades es baixen separadament i no s'inclouen al paquet.
+  El codi del portal és AGPL-3.0 o posterior i no s'incorpora al servidor MIT.
 - Diccionari de sinònims d'Albert Jané, Institut d'Estudis Catalans.
   <https://sinonims.iec.cat/>
   Tercera edició en línia (2015); © Albert Jané i Riera i © IEC per a l'edició
