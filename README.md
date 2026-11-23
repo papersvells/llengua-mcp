@@ -222,26 +222,5 @@ poden tenir condicions diferents. Consulta [`NOTICE`](NOTICE) per les fonts,
 llicències i atribucions. Llengua-mcp no és un producte oficial de l'IEC, la CCMA
 ni Softcatalà.
 
-## Desenvolupament
-
-Per treballar des del codi font, clona el repositori i instal·la les
-dependències de desenvolupament:
-
-```sh
-git clone https://github.com/papersvells/llengua-mcp.git
-cd llengua-mcp
-uv venv
-uv pip install --python .venv/bin/python -e ".[dev]"
-.venv/bin/ruff format .
-.venv/bin/ruff check .
-.venv/bin/pytest
-```
-
-Les proves habituals no fan xarxa. Les proves en directe són opcionals:
-
-```sh
-LLENGUA_LIVE=1 .venv/bin/pytest tests/test_live.py
-```
-
 Per a la referència completa de les eines, les variables d'entorn, els formats
 de resposta i les limitacions, consulta [`docs/referencia.md`](docs/referencia.md).
