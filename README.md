@@ -148,6 +148,16 @@ Comprova que l'assistent ha fet servir les eines i cita les fonts, no només que
 ha generat una resposta. La primera execució amb `uvx` pot trigar una mica
 perquè descarrega el paquet i prepara l'entorn.
 
+## Instruccions opcionals per a l'assistent
+
+El servidor exposa eines MCP, però no determina per si sol com ha de respondre
+cada assistent. Pots copiar o adaptar el fitxer
+[`AGENTS-proposat.md`](AGENTS-proposat.md) a les instruccions del teu client
+perquè seleccioni les eines adequades, presenti les fonts consultades i
+distingeixi la informació documentada de les recomanacions. És una plantilla
+orientativa, no una configuració que s'apliqui automàticament en instal·lar
+Llengua MCP.
+
 ## Sinònims de Softcatalà (opcional)
 
 Les eines de consulta funcionen sense baixar aquestes dades; només
