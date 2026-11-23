@@ -99,6 +99,8 @@ def parse_fitxa(html: str) -> dict[str, Any]:
     for block in main.css("h2") if main else []:
         variant_title = clean_text(block.text())
         details = block.next
+        while details is not None and details.tag in {"-text", "-comment"}:
+            details = details.next
         if details is None or details.tag != "details":
             variants.append(
                 {

@@ -4,6 +4,7 @@ import pytest
 
 from llengua_mcp.adapters.pccd import PccdAdapter
 from llengua_mcp.http import HttpResult
+from llengua_mcp.parsers.pccd import parse_fitxa
 
 
 class FakeClient:
@@ -70,14 +71,20 @@ async def test_cerca_html_inesperat_no_es_zero() -> None:
 
 
 @pytest.mark.asyncio
-async def test_fitxa_extreu_variants_i_citacions() -> None:
-    html = """<main>
-      <h1>Parèmia de prova</h1>
-      <div class="description">3 recurrències en 2 variants. Primera citació: 1815.</div>
-      <h2>Variant de prova</h2><details><summary>2 fonts, 1926.</summary>
-      <div class="entry"><div class="footer">Autor (1926): Obra, p. 3.</div></div>
-      </details>
-    </main>"""
+@pytest.mark.parametrize(
+    "separator",
+    ["", " ", "\n", "<!-- comentari -->", "\n<!-- comentari -->\n"],
+)
+async def test_fitxa_extreu_variants_i_citacions(separator: str) -> None:
+    html = (
+        '<main><h1>Parèmia de prova</h1>'
+        '<div class="description">3 recurrències en 2 variants. Primera citació: 1815.</div>'
+        "<h2>Variant de prova</h2>"
+        f"{separator}"
+        "<details><summary>2 fonts, 1926.</summary>"
+        '<div class="entry"><div class="footer">Autor (1926): Obra, p. 3.</div></div>'
+        "</details></main>"
+    )
     result = await PccdAdapter(FakeClient(html)).fitxa("Parèmia de prova")
     assert result["status"] == "ok"
     assert result["recurrence_count"] == 3
@@ -90,6 +97,38 @@ async def test_fitxa_extreu_variants_i_citacions() -> None:
             "earliest_year": 1926,
             "citations": ["Autor (1926): Obra, p. 3."],
         }
+    ]
+
+
+def test_fitxa_no_associa_details_amb_una_altra_variant() -> None:
+    html = """<main>
+      <h1>Parèmia de prova</h1>
+      <div class="description">3 recurrències en 2 variants.</div>
+      <h2>Primera variant</h2>
+      <p>Contingut intermedi</p>
+      <details><summary>2 fonts, 1926.</summary>
+        <div class="entry"><div class="footer">Autor (1926): Obra, p. 3.</div></div>
+      </details>
+      <h2>Segona variant</h2>
+      <!-- només s'associen els detalls adjacents a aquesta variant -->
+      <details><summary>1 font, 1950.</summary>
+        <div class="entry"><div class="footer">Autora (1950): Obra, p. 4.</div></div>
+      </details>
+    </main>"""
+    result = parse_fitxa(html)
+    assert result["variants"] == [
+        {
+            "variant": "Primera variant",
+            "source_count": None,
+            "earliest_year": None,
+            "citations": [],
+        },
+        {
+            "variant": "Segona variant",
+            "source_count": 1,
+            "earliest_year": 1950,
+            "citations": ["Autora (1950): Obra, p. 4."],
+        },
     ]
 
 
