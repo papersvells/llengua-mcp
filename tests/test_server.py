@@ -3,13 +3,20 @@ from __future__ import annotations
 import asyncio
 import shutil
 import sys
+from importlib.metadata import version
 
 import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from llengua_mcp import __version__
+from llengua_mcp.config import Settings
 from llengua_mcp.server import INSTRUCTIONS, mcp
+
+
+def test_package_version_is_the_single_version_source() -> None:
+    assert version("llengua-mcp") == __version__
+    assert Settings.from_env().user_agent.startswith(f"llengua-mcp/{version('llengua-mcp')}")
 
 
 @pytest.mark.asyncio
@@ -27,7 +34,7 @@ async def test_stdio_initialize_list_and_call_tool(tmp_path) -> None:
         async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
             initialized = await session.initialize()
             assert initialized.server_info.name == "llengua"
-            assert initialized.server_info.version == __version__
+            assert initialized.server_info.version == version("llengua-mcp")
             assert initialized.instructions == INSTRUCTIONS
 
             tools = {tool.name for tool in (await session.list_tools()).tools}
