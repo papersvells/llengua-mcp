@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import io
+import json
+
 import pytest
 
 from llengua_mcp.errors import DataUnavailableError
-from llengua_mcp.sinonims import SinonimsIndex
+from llengua_mcp.sinonims import DATA_FILE, META_FILE, SinonimsIndex
 
 
 def test_lookup_and_annotations(tmp_path) -> None:
@@ -85,8 +89,8 @@ def test_cau_de_normalitzacio_no_es_rete_després_de_carregar(tmp_path, monkeypa
     index = SinonimsIndex(tmp_path)
     index.load()
     gc.collect()
-    assert len(caches) == 1
-    assert caches[0]() is None
+    assert len(caches) == 2
+    assert all(cache() is None for cache in caches)
     assert index.lookup("clar")["status"] == "ok"
 
 
@@ -104,6 +108,86 @@ def test_missing_data_is_actionable(tmp_path) -> None:
     with pytest.raises(DataUnavailableError) as excinfo:
         index.lookup("maliciós")
     assert "fetch_sinonims" in excinfo.value.hint
+
+
+def test_installer_sinonims_installa_fitxer_valid_i_metadades(
+    tmp_path, monkeypatch, capsys
+) -> None:
+    import llengua_mcp.fetch_sinonims as fetch
+
+    payload = b"-adj: bonic, bell\n"
+    monkeypatch.setenv("LLENGUA_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(
+        fetch.urllib.request, "urlopen", lambda *args, **kwargs: io.BytesIO(payload)
+    )
+
+    assert fetch.main([]) == 0
+    assert (tmp_path / DATA_FILE).read_bytes() == payload
+    metadata = json.loads((tmp_path / META_FILE).read_text(encoding="utf-8"))
+    assert metadata["sha256"] == hashlib.sha256(payload).hexdigest()
+    assert metadata["bytes"] == len(payload)
+    assert SinonimsIndex(tmp_path).lookup("bonic")["status"] == "ok"
+    assert "Dades desades" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("payload", "max_bytes"),
+    [
+        (b"<html>Maintenance</html>", 8_000_000),
+        (b"", 8_000_000),
+        (b"\xff", 8_000_000),
+        ("només text sense grups".encode(), 8_000_000),
+        (b"-adj: bonic, bell\n", 4),
+    ],
+)
+def test_installer_rebutja_baixada_invalida_i_conserva_dades(
+    tmp_path, monkeypatch, capsys, payload, max_bytes
+) -> None:
+    import llengua_mcp.fetch_sinonims as fetch
+
+    old_data = b"-adj: antic, vell\n"
+    old_meta = b'{"ref":"anterior"}\n'
+    (tmp_path / DATA_FILE).write_bytes(old_data)
+    (tmp_path / META_FILE).write_bytes(old_meta)
+    monkeypatch.setenv("LLENGUA_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(fetch, "MAX_BYTES", max_bytes)
+    monkeypatch.setattr(
+        fetch.urllib.request, "urlopen", lambda *args, **kwargs: io.BytesIO(payload)
+    )
+
+    assert fetch.main(["--force"]) == 1
+    assert (tmp_path / DATA_FILE).read_bytes() == old_data
+    assert (tmp_path / META_FILE).read_bytes() == old_meta
+    assert "No s'han pogut instal·lar" in capsys.readouterr().err
+
+
+def test_installer_error_de_xarxa_conserva_dades(tmp_path, monkeypatch, capsys) -> None:
+    import llengua_mcp.fetch_sinonims as fetch
+
+    old_data = b"-adj: antic, vell\n"
+    old_meta = b'{"ref":"anterior"}\n'
+    (tmp_path / DATA_FILE).write_bytes(old_data)
+    (tmp_path / META_FILE).write_bytes(old_meta)
+    monkeypatch.setenv("LLENGUA_DATA_DIR", str(tmp_path))
+
+    def fail_request(*args, **kwargs):
+        raise OSError("xarxa no disponible")
+
+    monkeypatch.setattr(fetch.urllib.request, "urlopen", fail_request)
+    assert fetch.main(["--force"]) == 1
+    assert (tmp_path / DATA_FILE).read_bytes() == old_data
+    assert (tmp_path / META_FILE).read_bytes() == old_meta
+    assert "xarxa no disponible" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [b"<html>Maintenance</html>", b"\xff", "només text".encode()],
+)
+def test_index_rebutja_dades_locals_illlegibles_o_sense_grups(tmp_path, payload) -> None:
+    (tmp_path / DATA_FILE).write_bytes(payload)
+    with pytest.raises(DataUnavailableError, match="sinònims"):
+        SinonimsIndex(tmp_path).lookup("bonic")
 
 
 def test_antonym_is_not_offered_as_synonym(tmp_path) -> None:

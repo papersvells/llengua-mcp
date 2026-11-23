@@ -79,6 +79,53 @@ class SynonymGroup:
     antonyms: list[Synonym] = field(default_factory=list)
 
 
+def parse_groups(raw: str) -> list[SynonymGroup]:
+    """Analitza els grups de sinònims que es poden indexar."""
+
+    groups: list[SynonymGroup] = []
+    normalize_cached = lru_cache(maxsize=8192)(normalize_key)
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line or not line.startswith("-"):
+            continue
+        match = _LINE_RE.match(line)
+        if not match:
+            continue
+        head = clean_text(match.group("head"))
+        head_match = _HEAD_RE.match(head)
+        if not head_match:
+            continue
+        group = SynonymGroup(
+            pos=head_match.group("pos"),
+            context=clean_text(head_match.group("context") or ""),
+        )
+        # Les anotacions editorials del fitxer comencen amb ` #` i
+        # poden contenir comes: cal retirar-les abans de separar termes.
+        body = re.split(r"\s+#", match.group("body"), maxsplit=1)[0]
+        for item in _split_terms(body):
+            item = clean_text(item)
+            if not item:
+                continue
+            note = None
+            note_match = _NOTE_RE.match(item)
+            if note_match:
+                item = clean_text(note_match.group("term"))
+                note = clean_text(note_match.group("note"))
+            if not item:
+                continue
+            synonym = Synonym(form=item, note=note)
+            if note and (
+                normalize_cached(note) in {"anto", "antonim", "antonims"}
+                or "antònim" in note.lower()
+            ):
+                group.antonyms.append(synonym)
+            else:
+                group.synonyms.append(synonym)
+        if group.synonyms or group.antonyms:
+            groups.append(group)
+    return groups
+
+
 class SinonimsIndex:
     def __init__(self, data_dir: Path) -> None:
         self.data_dir = data_dir
@@ -106,50 +153,26 @@ class SinonimsIndex:
                 ),
                 source=SOURCE_URL,
             )
-        raw = self.data_file.read_text(encoding="utf-8")
+        try:
+            raw = self.data_file.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            raise DataUnavailableError(
+                "Les dades locals del diccionari de sinònims no es poden llegir.",
+                hint="Torna a instal·lar les dades amb `llengua-mcp-fetch-sinonims`.",
+                source=SOURCE_URL,
+            ) from exc
+        groups = parse_groups(raw)
+        if not groups:
+            raise DataUnavailableError(
+                "Les dades locals del diccionari de sinònims no contenen cap grup vàlid.",
+                hint="Torna a instal·lar les dades amb `llengua-mcp-fetch-sinonims`.",
+                source=SOURCE_URL,
+            )
         # La mateixa forma apareix sovint en diversos grups. La cau és local a
         # aquesta càrrega i acotada: no conserva dades després de construir l'índex.
         normalize_cached = lru_cache(maxsize=8192)(normalize_key)
-        for line in raw.splitlines():
-            line = line.strip()
-            if not line or not line.startswith("-"):
-                continue
-            match = _LINE_RE.match(line)
-            if not match:
-                continue
-            head = clean_text(match.group("head"))
-            head_match = _HEAD_RE.match(head)
-            if not head_match:
-                continue
-            pos = head_match.group("pos")
-            context = clean_text(head_match.group("context") or "")
-            group = SynonymGroup(pos=pos, context=context)
-            # Les anotacions editorials del fitxer comencen amb ` #` i
-            # poden contenir comes: cal retirar-les abans de separar termes.
-            body = re.split(r"\s+#", match.group("body"), maxsplit=1)[0]
-            for item in _split_terms(body):
-                item = clean_text(item)
-                if not item:
-                    continue
-                note = None
-                note_match = _NOTE_RE.match(item)
-                if note_match:
-                    item = clean_text(note_match.group("term"))
-                    note = clean_text(note_match.group("note"))
-                if not item:
-                    continue
-                synonym = Synonym(form=item, note=note)
-                if note and (
-                    normalize_cached(note) in {"anto", "antonim", "antonims"}
-                    or "antònim" in note.lower()
-                ):
-                    group.antonyms.append(synonym)
-                else:
-                    group.synonyms.append(synonym)
-            if not group.synonyms and not group.antonyms:
-                continue
-            index = len(self.groups)
-            self.groups.append(group)
+        self.groups = groups
+        for index, group in enumerate(self.groups):
             for term in group.synonyms + group.antonyms:
                 exact = normalize_exact_key(term.form)
                 if exact:
