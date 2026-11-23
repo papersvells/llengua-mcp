@@ -229,6 +229,17 @@ class SinonimsIndex:
 
         context_key = normalize_key(context) if context else ""
         context_tokens = set(context_key.split()) if context_key else set()
+        query_forms = {exact_key}
+        if accent_fallback:
+            # La cerca sense accents pot haver trobat una forma accentuada.
+            # Només en aquest cas fem servir la clau tolerant per excloure-la
+            # de les alternatives; no la fem servir per fusionar altres mots.
+            query_forms.add(key)
+
+        def is_query_form(form: str) -> bool:
+            form_exact = normalize_exact_key(form)
+            return form_exact in query_forms or (accent_fallback and normalize_key(form) == key)
+
         ordered: list[tuple[int, int, int, list[str]]] = []
         for order, index in enumerate(group_indexes):
             group = self.groups[index]
@@ -247,14 +258,14 @@ class SinonimsIndex:
             if score > 0:
                 matched_groups += 1
             group = self.groups[index]
-            term_is_antonym = any(normalize_key(item.form) == key for item in group.antonyms)
+            term_is_antonym = any(is_query_form(item.form) for item in group.antonyms)
             if term_is_antonym:
                 # Si el mot cercat és l'antònim del grup, les altres formes del
                 # grup són els seus contraris, no sinònims seus.
                 opposites = []
                 for item in group.synonyms:
-                    item_key = normalize_key(item.form)
-                    if not item_key or item_key == key or item_key in seen:
+                    item_key = normalize_exact_key(item.form)
+                    if not item_key or is_query_form(item.form) or item_key in seen:
                         continue
                     if count >= limit:
                         truncated = True
@@ -278,8 +289,8 @@ class SinonimsIndex:
 
             synonyms = []
             for synonym in group.synonyms:
-                synonym_key = normalize_key(synonym.form)
-                if not synonym_key or synonym_key == key or synonym_key in seen:
+                synonym_key = normalize_exact_key(synonym.form)
+                if not synonym_key or is_query_form(synonym.form) or synonym_key in seen:
                     continue
                 if count >= limit:
                     truncated = True
@@ -287,9 +298,7 @@ class SinonimsIndex:
                 seen.add(synonym_key)
                 synonyms.append(synonym.payload())
                 count += 1
-            antonyms = [
-                item.payload() for item in group.antonyms if normalize_key(item.form) != key
-            ]
+            antonyms = [item.payload() for item in group.antonyms if not is_query_form(item.form)]
             if synonyms or antonyms:
                 payload = {
                     "pos": group.pos,

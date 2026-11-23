@@ -198,6 +198,51 @@ def test_mes_i_mes_no_comparteixen_grups(tmp_path) -> None:
     assert {group["pos"] for group in mes_accent["groups"]} == {"adv"}
 
 
+def test_variants_amb_diacritics_es_mantenen_com_a_formes_distintes(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text(
+        "-adj: falcat, falçat, mordaç\n",
+        encoding="utf-8",
+    )
+    index = SinonimsIndex(tmp_path)
+
+    for query, expected in (
+        ("falcat", {"falçat", "mordaç"}),
+        ("falçat", {"falcat", "mordaç"}),
+        ("mordaç", {"falcat", "falçat"}),
+    ):
+        result = index.lookup(query, limit=10)
+        forms = {item["form"] for item in result["groups"][0]["synonyms"]}
+        assert forms == expected
+
+
+def test_variants_amb_diacritics_no_confonen_sinonim_i_antònim(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text(
+        "-adj: falcat, net, falçat (antònim)\n",
+        encoding="utf-8",
+    )
+    index = SinonimsIndex(tmp_path)
+
+    result = index.lookup("falcat")
+    group = result["groups"][0]
+    assert group["relation"] == "synonym"
+    assert [item["form"] for item in group["synonyms"]] == ["net"]
+    assert [item["form"] for item in group["antonyms"]] == ["falçat"]
+
+
+def test_cerca_aproximada_exclou_la_grafia_trobada_com_a_si_mateixa(tmp_path) -> None:
+    (tmp_path / "sinonims.txt").write_text(
+        "-n: opinió, parer\n",
+        encoding="utf-8",
+    )
+    index = SinonimsIndex(tmp_path)
+
+    result = index.lookup("opinio", limit=10)
+    forms = {item["form"] for item in result["groups"][0]["synonyms"]}
+    assert result["match"] == "accent_insensitive"
+    assert "accent_insensitive_match" in result["warnings"]
+    assert forms == {"parer"}
+
+
 def test_dona_i_dona_queden_separats(tmp_path) -> None:
     (tmp_path / "sinonims.txt").write_text(
         "-n: dona, senyora\n-v: dóna, obsequia\n",
