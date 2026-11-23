@@ -2,7 +2,7 @@
   <img src="llengua-mcp-logo.png" alt="Logo de Llengua MCP" width="300">
 </p>
 
-# Llengua-mcp — assessorament de llengua catalana per al teu assistent
+# Llengua-mcp: assessorament de llengua catalana amb fonts verificades per al teu assistent
 
 [![CI](https://github.com/papersvells/llengua-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/papersvells/llengua-mcp/actions/workflows/ci.yml)
 
