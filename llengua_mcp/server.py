@@ -83,6 +83,9 @@ autoritat diferent i no les confonguis mai:
   Castellanos i Llorenç i Agustí Mayor i Lloret, CC BY-NC 4.0. Conserva el
   sentit, les marques i els apartats; no tractis els antònims com a sinònims.
   És una font descriptiva i d'ús, no un diccionari normatiu. Cita l'article.
+- DSFF de M. Teresa Espinal: `dsff_cerca` consulta frases fetes i els conceptes
+  corresponents. Distingeix els sinònims de les altres relacions i dels valors
+  antònims; conserva les variants i restriccions. Cita la font, CC BY-NC-SA 4.0.
 - Jané (IEC): diccionari de sinònims amb accepcions numerades. Si una paraula
   té diversos sentits, tria el número que encaixa en la frase abans de
   substituir res; `mode="general"` cerca dins les llistes de sinònims i
@@ -544,6 +547,19 @@ async def cerca_sinonims(
             limit=limit,
         ),
     )
+
+
+@mcp.tool()
+async def dsff_cerca(frase: str, mode: str = "coincident", limit: int = 10) -> dict[str, Any]:
+    """Cerca una frase feta al DSFF de M. Teresa Espinal.
+
+    `mode` és «coincident» o «conté»; retorna una pàgina de fins a 10 fitxes,
+    amb el concepte, la descripció, les relacions i les variants separades.
+    `valor_antonim` indica un valor oposat al concepte, no un sinònim. No
+    inventa un recompte total. Dades CC BY-NC-SA 4.0, per a ús no comercial.
+    """
+    app = await get_app()
+    return await _call("https://dsff.uab.cat/", app.dsff.cerca(frase, mode=mode, limit=limit))
 
 
 @mcp.tool()

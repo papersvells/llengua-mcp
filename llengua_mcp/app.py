@@ -16,10 +16,12 @@ from llengua_mcp.adapters import (
     PccdAdapter,
     SoftcatalaAdapter,
 )
+from llengua_mcp.adapters.dsff import DsffAdapter
 from llengua_mcp.adapters.pamies import PamiesAdapter
 from llengua_mcp.config import Settings
 from llengua_mcp.cursors import CursorStore
 from llengua_mcp.direlex import DirelexIndex
+from llengua_mcp.dsff_tls import dsff_ssl_context
 from llengua_mcp.engcat import EngCatIndex
 from llengua_mcp.http import HttpClient
 
@@ -29,6 +31,7 @@ class App:
         settings.ensure_dirs()
         self.settings = settings
         self.http = HttpClient(settings)
+        self.dsff_http = HttpClient(settings, verify=dsff_ssl_context(), follow_redirects=False)
         self.cursors = CursorStore(ttl_seconds=settings.cache_ttl_seconds)
         self.bdlex = BdlexAdapter(self.http)
         self.consultes = ConsultesAdapter(self.http)
@@ -44,7 +47,11 @@ class App:
         self.direlex = DirelexIndex(settings.data_dir)
         self.pccd = PccdAdapter(self.http)
         self.pamies = PamiesAdapter(self.http)
+        self.dsff = DsffAdapter(self.dsff_http)
         self.conjugador = ConjugadorAdapter(self.http)
 
     async def aclose(self) -> None:
-        await self.http.aclose()
+        try:
+            await self.http.aclose()
+        finally:
+            await self.dsff_http.aclose()

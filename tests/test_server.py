@@ -92,6 +92,7 @@ async def test_tools_are_registered() -> None:
         "engcat_cerca",
         "direlex_cerca",
         "pamies_cerca",
+        "dsff_cerca",
         "jane_cerca",
         "cerca",
         "cerca_frase",

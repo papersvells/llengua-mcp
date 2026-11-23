@@ -43,6 +43,14 @@ peticions només per afegir detall ni es confon la freqüència amb la correcci�
 - **Consultar solucions de traducció**: `pamies_cerca("bank", glossaris=true)`
   cerca la llista de Xavier Pàmies i, opcionalment, els glossaris literaris.
   Pot retornar compostos; els fragments limitats no substitueixen la font.
+- **Consultar frases fetes**: `dsff_cerca("fet una fera")` cerca una expressió
+  al DSFF de M. Teresa Espinal. Separa sinònims, altres relacions i variants;
+  `valor_antonim` indica un sentit oposat al concepte. La llicència de l'edició
+  electrònica és CC BY-NC-SA 4.0 (ús no comercial).
+- **TLS del DSFF**: el client dedicat incorpora l'intermediari GEANT TLS RSA 1
+  que el servidor no envia. La verificació del domini i de la cadena fins a
+  una arrel del sistema continua activa, sense acceptar cadenes parcials.
+  No afecta les altres fonts ni segueix redireccions.
 - **Documentar una forma antiga o dialectal**: `bdlex_consulta("engrunar")`, o
   cercar per definició: `bdlex_consulta(definicio="esclafar")`.
 - **Explicar una regla d'ortografia**: `oiec_cerca("guionet")` i, amb el codi,

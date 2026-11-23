@@ -30,6 +30,7 @@ oficial de l'IEC. Revisa sempre les fonts i els matisos de la resposta.
 | [Diccionari anglès-català de Softcatalà](https://github.com/Softcatala/diccionari-angles-catala) | Equivalents per a mots i locucions anglesos, amb accepcions i marques d'ús |
 | [Llista de Xavier Pàmies](https://diccxpamies.xarxa.cat/) | Solucions de traducció anglès-català i glossaris literaris |
 | [DIRELEX](https://direlex.softcatala.org/) | Alternatives lèxiques contextualitzades, notes d'ús i fraseologia; dades CC BY-NC 4.0 |
+| [DSFF](https://dsff.uab.cat/) | Frases fetes, conceptes i relacions de sentit; dades CC BY-NC-SA 4.0 |
 | [PCCD](https://pccd.dites.cat/) | Paremiotipus, variants i fonts de dites i refranys; dades sota CC BY-NC-SA 4.0 |
 | [Conjugador de Softcatalà](https://www.softcatala.org/conjugador-de-verbs/) | Formes verbals amb marques territorials |
 

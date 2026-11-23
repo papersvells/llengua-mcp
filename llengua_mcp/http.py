@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import random
+import ssl
 import time
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
@@ -112,14 +113,21 @@ class RateLimiter:
 
 
 class HttpClient:
-    def __init__(self, settings: Settings) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        verify: ssl.SSLContext | bool = True,
+        follow_redirects: bool = True,
+    ) -> None:
         self.settings = settings
         self.cache = TTLCache(default_ttl=settings.cache_ttl_seconds)
         self.limiter = RateLimiter(settings.rate_per_second)
         self._cache_locks: dict[str, tuple[asyncio.Lock, int]] = {}
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(settings.timeout_seconds),
-            follow_redirects=True,
+            follow_redirects=follow_redirects,
+            verify=verify,
             headers={
                 "User-Agent": settings.user_agent,
                 "Accept-Language": "ca",
