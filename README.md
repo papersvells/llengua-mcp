@@ -28,6 +28,7 @@ oficial de l'IEC. Revisa sempre les fonts i els matisos de la resposta.
 | [CTILC](https://ctilc.iec.cat/) | Ús escrit, contextos, col·locacions i dispersió |
 | [Softcatalà](https://www.softcatala.org/diccionari-de-sinonims/) i [Jané](https://sinonims.iec.cat/) | Sinònims; Jané separa accepcions numerades |
 | [PCCD](https://pccd.dites.cat/) | Paremiotipus, variants i fonts de dites i refranys; dades sota CC BY-NC-SA 4.0 |
+| [Conjugador de Softcatalà](https://www.softcatala.org/conjugador-de-verbs/) | Formes verbals amb marques territorials |
 
 ## Instal·lació ràpida
 

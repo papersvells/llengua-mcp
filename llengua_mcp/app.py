@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from llengua_mcp.adapters import (
     BdlexAdapter,
+    ConjugadorAdapter,
     ConsultesAdapter,
     CtilcAdapter,
     DiecAdapter,
@@ -37,6 +38,7 @@ class App:
         self.jane = JaneAdapter(self.http)
         self.softcatala = SoftcatalaAdapter(settings)
         self.pccd = PccdAdapter(self.http)
+        self.conjugador = ConjugadorAdapter(self.http)
 
     async def aclose(self) -> None:
         await self.http.aclose()

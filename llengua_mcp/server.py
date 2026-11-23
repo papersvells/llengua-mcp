@@ -42,6 +42,9 @@ autoritat diferent i no les confonguis mai:
   paremiotipus i, opcionalment, variants; `pccd_fitxa` mostra variants i fonts.
   La datació més antiga del recull no és necessàriament la primera documentació
   absoluta i els recomptes de fitxa no indiquen freqüència d'ús.
+- Conjugador de Softcatalà: `conjugador_consulta` retorna les formes verbals i
+  les marques territorials de la fitxa. Les cel·les buides no són necessàriament
+  formes incorrectes o inexistents; conserva les notes i els límits de la font.
 - ésAdir: estil de la CCMA, pronunciació i noms propis. No és la norma de l'IEC.
 - OIEC: ortografia normativa (apòstrofs, guionets, accents, dièresi). Cita
   sempre el codi d'apartat i el títol de la secció.
@@ -270,6 +273,32 @@ async def diec_consulta(paraula: str, limit: int = 3, max_senses: int = 20) -> d
     return await _call(
         "https://dlc.iec.cat/Results",
         app.diec.consulta(paraula, limit=limit, max_senses=max_senses),
+    )
+
+
+@mcp.tool()
+async def conjugador_consulta(
+    verb: str,
+    mode: str | None = None,
+    temps: str | None = None,
+    persona: str | None = None,
+) -> dict[str, Any]:
+    """Consulta la conjugació d'un verb al conjugador de Softcatalà.
+
+    Args:
+        verb: Infinitiu, també pronominal (p. ex. `abstenir-se`).
+        mode: Opcional: `indicatiu`, `subjuntiu`, `imperatiu` o `formes no personals`.
+        temps: Opcional: nom del temps tal com apareix a la fitxa (p. ex. `Present`).
+        persona: Opcional: `jo`, `tu`, `ell`, `ella`, `vostè`, `nosaltres`,
+            `vosaltres`, `vós`, `ells`, `elles` o `vostès`. També admet `1sg`–`3pl`.
+
+    Les marques de varietat es retornen amb cada forma. Els buits de la taula
+    es distingeixen de les formes no aplicables; no són un judici de correcció.
+    """
+    app = await get_app()
+    return await _call(
+        "https://www.softcatala.org/conjugador-de-verbs/",
+        app.conjugador.consulta(verb, mode=mode, temps=temps, persona=persona),
     )
 
 

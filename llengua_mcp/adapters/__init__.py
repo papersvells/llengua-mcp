@@ -1,6 +1,7 @@
 """Adaptadors de les fonts lingüístiques."""
 
 from llengua_mcp.adapters.bdlex import BdlexAdapter
+from llengua_mcp.adapters.conjugador import ConjugadorAdapter
 from llengua_mcp.adapters.consultes import ConsultesAdapter
 from llengua_mcp.adapters.ctilc import CtilcAdapter
 from llengua_mcp.adapters.diec import DiecAdapter
@@ -15,6 +16,7 @@ from llengua_mcp.adapters.softcatala import SoftcatalaAdapter
 __all__ = [
     "BdlexAdapter",
     "ConsultesAdapter",
+    "ConjugadorAdapter",
     "CtilcAdapter",
     "DiecAdapter",
     "EsadirAdapter",
