@@ -150,6 +150,40 @@ async def test_zero_is_no_matches(tmp_path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_continuation_of_zero_result_does_not_repeat_request(tmp_path) -> None:
+    client = FakeClient((FIXTURES / "ctilc_zero.html").read_text(encoding="utf-8"))
+    store = CursorStore()
+    adapter = CtilcAdapter(client, _settings(tmp_path), store)
+    start = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="forma", value="amb", alternatives=["de"]),
+            PatternElement(type="forma", value="mala"),
+            PatternElement(type="forma", value="fe"),
+        ]
+    )
+    cursor = start["search_cursor"]
+    assert start["status"] == "no_matches"
+    assert start["total"] == 0
+    assert cursor
+    payload_before = store.get(cursor)
+    assert payload_before is not None
+
+    result = await adapter.continue_search(cursor)
+
+    payload_after = store.get(cursor)
+    assert result["status"] == "ok"
+    assert result["total"] == 0
+    assert result["returned"] == 0
+    assert result["has_more"] is False
+    assert result["search_cursor"] == cursor
+    assert result["next_cursor"] is None
+    assert result["occurrences"] == []
+    assert len(client.bodies) == 1
+    assert payload_after == payload_before
+
+
+@pytest.mark.asyncio
 async def test_unknown_cursor_is_stale(tmp_path) -> None:
     adapter = CtilcAdapter(FakeClient(""), _settings(tmp_path), CursorStore())
     with pytest.raises(StaleSearchError):

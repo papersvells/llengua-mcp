@@ -1030,7 +1030,7 @@ class CtilcAdapter:
     async def _continue_locked(
         self, cursor: str, payload: CursorPayload, limit: int | None
     ) -> dict[str, Any]:
-        if payload.total and payload.next_start > payload.total:
+        if payload.next_start > payload.total:
             return {
                 "status": "ok",
                 "query": payload.query,
@@ -1076,7 +1076,7 @@ class CtilcAdapter:
                 "hint": "Torna a executar la cerca original per obtenir un resultat nou.",
             }
         stale_reason = None
-        total_changed = payload.total and result.get("total") not in (None, payload.total)
+        total_changed = result.get("total") not in (None, payload.total)
         pattern_changed = (
             payload.pattern_echo
             and result.get("pattern_echo")
