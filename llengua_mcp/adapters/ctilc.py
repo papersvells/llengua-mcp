@@ -48,7 +48,7 @@ from llengua_mcp.parsers.filtres import (
 from llengua_mcp.parsers.fitxa import parse_fitxa
 from llengua_mcp.parsers.obres import parse_authors, parse_works
 from llengua_mcp.tagset import tagset_payload
-from llengua_mcp.text import clean_text, normalize_key
+from llengua_mcp.text import clean_text, normalize_exact_key, normalize_key
 
 BASE = "https://ctilc.iec.cat/scripts"
 COOCUR_URL = f"{BASE}/CTILCQConc_Coocur2.asp"
@@ -274,6 +274,21 @@ _BASIC_MODES = {
 _NEGATIVE_BASIC_ECHO = {
     "forma": {"4": "No començada per", "5": "No acabada en", "6": "Que no contingui"},
     "lema": {"4": "No començat per", "5": "No acabat en", "6": "Que no contingui"},
+}
+
+_POSITIVE_BASIC_ECHO = {
+    "forma": {
+        "0": "Coincident amb",
+        "1": "Començada per",
+        "2": "Acabada en",
+        "3": "Que contingui",
+    },
+    "lema": {
+        "0": "Coincident amb",
+        "1": "Començat per",
+        "2": "Acabat en",
+        "3": "Que contingui",
+    },
 }
 
 
@@ -688,35 +703,30 @@ class CtilcAdapter:
         total = data["total"]
         occurrences = data["occurrences"]
         forms = data["forms"]
+        page = data["page"]
+        pages = data["pages"]
         prefix = _NEGATIVE_BASIC_ECHO[kind].get(condition)
         negative = prefix is not None
         field = f"cad{kind}"
         visible_echo = data["echo"].split(" (Categoria lèxica:", 1)[0]
-        if negative:
-            echo_verified = (
-                data["echo_fields"] == {field: query, f"{field}cond": condition, "cg": cg}
-                and visible_echo == f"{prefix} {query}"
-            )
-        else:
-            # Els camps ocults proven que el servidor ha entès la consulta i
-            # el text visible ha d'acabar amb la forma o el lema, accents
-            # inclosos: `somriure` no valida un eco de `somriures`.
-            expected_fields = {field: query, f"{field}cond": condition}
-            if cg:
-                expected_fields["cg"] = cg
-            echoed_fields = {key: value for key, value in data["echo_fields"].items() if value}
-            visible = clean_text(visible_echo).casefold()
-            echo_verified = (
-                bool(visible)
-                and echoed_fields == expected_fields
-                and visible.endswith(clean_text(query).casefold())
-            )
-        if not echo_verified and (data["echo"] or negative):
+        expected_fields = {field: query, f"{field}cond": condition}
+        if cg or negative:
+            expected_fields["cg"] = cg
+        echoed_fields = {key: value for key, value in data["echo_fields"].items() if value}
+        label = (_NEGATIVE_BASIC_ECHO if negative else _POSITIVE_BASIC_ECHO)[kind][condition]
+        expected_echo = f"{label} {query}"
+        echo_verified = (
+            echoed_fields == expected_fields
+            and normalize_exact_key(visible_echo) == normalize_exact_key(expected_echo)
+            and bool(visible_echo)
+        )
+        if not echo_verified:
             warnings.append("echo_unexpected")
 
-        if negative and not echo_verified:
+        if not echo_verified:
             status = "unexpected_response"
             total, forms, occurrences = None, [], []
+            page = pages = None
         elif data["explicit_zero"] or total == 0:
             if (
                 total == 0
@@ -762,8 +772,8 @@ class CtilcAdapter:
             "returned": returned,
             "has_more": has_more,
             "next_offset": offset + returned if has_more else None,
-            "page": data["page"],
-            "pages": data["pages"],
+            "page": page,
+            "pages": pages,
             "forms": forms,
             "forms_truncated": forms_truncated,
             "occurrences": occurrences,

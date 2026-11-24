@@ -218,12 +218,113 @@ async def test_zero_no_verificat(tmp_path, page) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("kind", "url", "page"),
+    [
+        ("forma", FORMES2_URL, ZERO.replace("Coincident amb zzzz", "Coincident amb altre")),
+        (
+            "lema",
+            FORMESLEMA2_URL,
+            ZERO.replace("forma", "lema")
+            .replace("Coincident amb zzzz", "Coincident amb altre"),
+        ),
+    ],
+)
+async def test_zero_amb_eco_incorrect_no_es_no_matches(tmp_path, kind, url, page) -> None:
+    result = await getattr(_adapter(FakeClient({url: page}), tmp_path), f"cerca_{kind}")("zzzz")
+    assert result["status"] == "unexpected_response"
+    assert result["echo_verified"] is False
+    assert result["total"] is None
+    assert result["returned"] == 0
+    assert result["forms"] == []
+    assert result["occurrences"] == []
+    assert result["next_offset"] is None
+    assert "zero_results" not in result["warnings"]
+
+
+@pytest.mark.asyncio
 async def test_eco_divergent(tmp_path) -> None:
     page = _forma().replace("Coincident amb somriu", "Coincident amb cantava")
     client = FakeClient({FORMES2_URL: page})
     result = await _adapter(client, tmp_path).cerca_forma("somriu")
     assert result["echo_verified"] is False
+    assert result["status"] == "unexpected_response"
+    assert result["total"] is None
+    assert result["forms"] == []
+    assert result["occurrences"] == []
+    assert result["page"] is None
+    assert result["pages"] is None
+    assert result["next_offset"] is None
     assert "echo_unexpected" in result["warnings"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("kind", "url", "term"),
+    [
+        ("forma", FORMES2_URL, "somriu"),
+        ("lema", FORMESLEMA2_URL, "somriure"),
+    ],
+)
+@pytest.mark.parametrize(
+    ("visible", "condition"),
+    [
+        ("Coincident amb altre", "0"),
+        ("Coincident amb presufix", "0"),
+        ("Començada per {term}", "1"),
+    ],
+)
+async def test_eco_positiu_exacte_per_forma_i_mode(tmp_path, kind, url, term, visible, condition):
+    base = _forma() if kind == "forma" else _lema()
+    if kind == "lema":
+        base = base.replace("Coincident amb somriu", "Coincident amb somriure")
+    page = base.replace(
+        f"Coincident amb {term}",
+        visible.format(term=term) if "{term}" in visible else visible,
+    )
+    page = page.replace(
+        f'name="cad{kind}cond" value="0"',
+        f'name="cad{kind}cond" value="{condition}"',
+    )
+    result = await getattr(_adapter(FakeClient({url: page}), tmp_path), f"cerca_{kind}")(
+        term, mode="coincident"
+    )
+
+    assert result["status"] == "unexpected_response"
+    assert result["echo_verified"] is False
+    assert result["total"] is None
+    assert result["returned"] == 0
+    assert result["has_more"] is False
+    assert result["next_offset"] is None
+    assert result["page"] is None
+    assert result["pages"] is None
+    assert result["forms"] == []
+    assert result["occurrences"] == []
+    assert "echo_unexpected" in result["warnings"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("kind", "url", "term", "label"),
+    [
+        ("forma", FORMES2_URL, "somriu", "Començada per"),
+        ("lema", FORMESLEMA2_URL, "somriure", "Començat per"),
+    ],
+)
+async def test_mode_positiu_correcte_es_verifica(tmp_path, kind, url, term, label) -> None:
+    page = _forma() if kind == "forma" else _lema()
+    page = page.replace(f"Coincident amb {term}", f"{label} {term}")
+    page = page.replace(
+        f'name="cad{kind}cond" value="0"',
+        f'name="cad{kind}cond" value="1"',
+    )
+    result = await getattr(_adapter(FakeClient({url: page}), tmp_path), f"cerca_{kind}")(
+        term, mode="comença per", limit=2
+    )
+    assert result["status"] == "ok"
+    assert result["echo_verified"] is True
+    assert result["total"] > 0
+    assert result["returned"] == 2
 
 
 @pytest.mark.asyncio
@@ -264,17 +365,29 @@ async def test_mode_divergent_en_eco_positiu(tmp_path) -> None:
     )
     client = FakeClient({FORMES2_URL: page})
     result = await _adapter(client, tmp_path).cerca_forma("somriu")
-    assert result["status"] == "ok"
-    assert result["total"] == 2019
+    assert result["status"] == "unexpected_response"
+    assert result["total"] is None
     assert result["echo_verified"] is False
+    assert result["occurrences"] == []
+    assert result["forms"] == []
     assert "echo_unexpected" in result["warnings"]
 
 
 @pytest.mark.asyncio
-async def test_eco_sense_camps_ocults_no_es_verificat(tmp_path) -> None:
-    page = re.sub(r'<form name="fConc">.*?</form>', "", _forma(), flags=re.DOTALL)
-    client = FakeClient({FORMES2_URL: page})
-    result = await _adapter(client, tmp_path).cerca_forma("somriu")
-    assert result["status"] == "ok"
+@pytest.mark.parametrize(
+    ("kind", "url", "term"),
+    [
+        ("forma", FORMES2_URL, "somriu"),
+        ("lema", FORMESLEMA2_URL, "somriure"),
+    ],
+)
+async def test_eco_sense_camps_ocults_no_es_verificat(tmp_path, kind, url, term) -> None:
+    page = _forma() if kind == "forma" else _lema()
+    page = re.sub(r'<form name="fConc">.*?</form>', "", page, flags=re.DOTALL)
+    result = await getattr(_adapter(FakeClient({url: page}), tmp_path), f"cerca_{kind}")(term)
+    assert result["status"] == "unexpected_response"
     assert result["echo_verified"] is False
+    assert result["total"] is None
+    assert result["occurrences"] == []
+    assert result["forms"] == []
     assert "echo_unexpected" in result["warnings"]
