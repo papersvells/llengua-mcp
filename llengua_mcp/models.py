@@ -116,6 +116,7 @@ class CtilcPage(BaseModel):
     server_fields: dict[str, str] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
     has_results_container: bool = False
+    has_occurrence_rows: bool = False
 
 
 class CursorPayload(BaseModel):

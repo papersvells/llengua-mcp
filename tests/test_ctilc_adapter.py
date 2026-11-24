@@ -15,6 +15,12 @@ from llengua_mcp.http import HttpResult
 from llengua_mcp.models import CtilcFilters, PatternElement
 
 FIXTURES = Path(__file__).parent / "fixtures"
+ZERO_ELEMENTS = [
+    PatternElement(type="lema", value="somriure"),
+    PatternElement(type="forma", value="amb", alternatives=["de"]),
+    PatternElement(type="forma", value="mala"),
+    PatternElement(type="forma", value="fe"),
+]
 
 
 class FakeClient:
@@ -139,17 +145,52 @@ async def test_echo_mismatch_is_not_ok(tmp_path) -> None:
 async def test_zero_is_no_matches(tmp_path) -> None:
     client = FakeClient((FIXTURES / "ctilc_zero.html").read_text(encoding="utf-8"))
     adapter = CtilcAdapter(client, _settings(tmp_path), CursorStore())
-    result = await adapter.search_pattern(
-        [
-            PatternElement(type="lema", value="somriure"),
-            PatternElement(type="forma", value="amb", alternatives=["de"]),
-            PatternElement(type="forma", value="mala"),
-            PatternElement(type="forma", value="fe"),
-        ]
-    )
+    result = await adapter.search_pattern(ZERO_ELEMENTS)
     assert result["status"] == "no_matches"
     assert result["total"] == 0
     assert "zero_results" in result["warnings"]
+
+
+@pytest.mark.asyncio
+async def test_comptador_mal_format_no_certifica_un_zero(tmp_path) -> None:
+    page = (FIXTURES / "ctilc_zero.html").read_text(encoding="utf-8")
+    page = page.replace("total</b>:&nbsp;&nbsp;0", "total</b>:&nbsp;&nbsp;0,5")
+    adapter = CtilcAdapter(FakeClient(page), _settings(tmp_path), CursorStore())
+
+    result = await adapter.search_pattern(ZERO_ELEMENTS)
+
+    assert result["status"] == "unexpected_response"
+    assert result["total"] is None
+    assert result["echo_verified"] is True
+    assert "counter_invalid" in result["warnings"]
+    assert "zero_results" not in result["warnings"]
+    assert result["search_cursor"] is result["next_cursor"] is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "row",
+    [
+        '<tr><td>abans</td><td><a class="pclau">nucli</a></td><td>després</td></tr>',
+        '<tr><td><a class="pclau">incompleta</a></td></tr>',
+    ],
+    ids=["full_row", "incomplete_row"],
+)
+async def test_zero_amb_files_no_es_una_absencia(tmp_path, row: str) -> None:
+    page = (FIXTURES / "ctilc_zero.html").read_text(encoding="utf-8")
+    page = page.replace("</body>", f'<div id="cHTML2"><table>{row}</table></div></body>')
+    adapter = CtilcAdapter(FakeClient(page), _settings(tmp_path), CursorStore())
+
+    result = await adapter.search_pattern(ZERO_ELEMENTS)
+
+    assert result["status"] == "unexpected_response"
+    assert result["total"] is None
+    assert result["echo_verified"] is True
+    assert result["returned"] == 0
+    assert result["occurrences"] == []
+    assert "zero_unverified" in result["warnings"]
+    assert "zero_results" not in result["warnings"]
+    assert result["search_cursor"] is result["next_cursor"] is None
 
 
 @pytest.mark.asyncio

@@ -507,7 +507,12 @@ class CtilcAdapter:
                 filters_ok = False
                 warnings.append("filters_echo_unexpected")
 
-        if not filters_ok:
+        contradictory_zero = page.total == 0 and page.has_occurrence_rows
+        if contradictory_zero:
+            status = "unexpected_response"
+            total = None
+            error_note = "El comptador és zero però la pàgina conté files de concordança."
+        elif not filters_ok:
             status = "unexpected_response"
             error_note = (
                 "Els filtres enviats no s'han pogut verificar a la pàgina del CTILC. "
@@ -535,7 +540,7 @@ class CtilcAdapter:
                 )
         elif page.total is not None and page.total > 0 and not page.occurrences:
             if filters and page.filtered_total is not None:
-                if authors_verified and page.filtered_total == 1:
+                if authors_verified and page.filtered_total == 1 and not page.has_occurrence_rows:
                     # L'autor existeix al catàleg, els filtres s'han verificat
                     # i la quantitat filtrada és el valor de control 1: no és
                     # una fila. Un total més gran sense files és un desquadre,
@@ -564,7 +569,11 @@ class CtilcAdapter:
             warnings.append("page_echo_unexpected")
             error_note = "La pàgina retornada no confirma la posició demanada."
 
-        returned = len(page.occurrences)
+        occurrences = [
+            item.model_dump(exclude_none=True)
+            for item in ([] if contradictory_zero else page.occurrences)
+        ]
+        returned = len(occurrences)
         # Avancem la mida de pàgina demanada, no les files parsejades: una fila
         # mal formada no ha de fer saltar la posició següent.
         next_start = start + offset
@@ -605,7 +614,6 @@ class CtilcAdapter:
         if "transport_eof" in result.warnings:
             warnings.append("transport_eof")
 
-        occurrences = [item.model_dump(exclude_none=True) for item in page.occurrences]
         response: dict[str, Any] = {
             "status": status,
             "query": {**query, "limit": offset, "start": start},

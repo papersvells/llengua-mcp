@@ -107,8 +107,9 @@ peticions només per afegir detall ni es confon la freqüència amb la correcci�
   relacionats, no necessàriament sinònims. `partial` adverteix de fragments que
   el parser no ha pogut classificar. Les remissions no es resolen automàticament.
 - **CTILC**: `echo_verified` exigeix que coincideixin els camps enviats i el
-  patró visible. Un zero només és `no_matches` si la pàgina en dona el comptador
-  explícit i el missatge de cap coincidència; si no, és `unexpected_response`.
+  patró visible. Un zero explícit només és `no_matches` si el comptador sencer
+  és vàlid, la pàgina dona el missatge de cap coincidència i no hi ha files de
+  concordança, ni tan sols d'incompletes. Si no, és `unexpected_response`.
   Si és `false`, el resultat no es pot presentar com una absència lingüística.
 - **`timing`**: cada resposta, també les d'error, porta un bloc amb
   `elapsed_ms`, `upstream_requests` (intents de xarxa, reintents inclosos),

@@ -228,6 +228,52 @@ async def test_autor_valid_sense_files_es_zero_verificat(tmp_path) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("counter", "valid", "invalid"),
+    [
+        ("Quantitat filtrada", "1", "1,5"),
+        ("Freqüència total", "2136", "2,136"),
+    ],
+)
+async def test_comptador_invalid_no_activa_el_control_d_autor(
+    tmp_path, counter: str, valid: str, invalid: str
+) -> None:
+    html = _page(autor="@Sagarra, Xavier", filtered=1, with_rows=False)
+    html = html.replace(
+        f"{counter}</b>:&nbsp;&nbsp;{valid}", f"{counter}</b>:&nbsp;&nbsp;{invalid}"
+    )
+    adapter = CtilcAdapter(SearchClient(html), _settings(tmp_path), CursorStore())
+
+    result = await adapter.search_pattern(ELEMENTS, filters=CtilcFilters(autor=["Sagarra, Xavier"]))
+
+    assert result["status"] == "unexpected_response"
+    assert result["total"] is None
+    assert "counter_invalid" in result["warnings"]
+    assert "filtered_empty_verified" not in result["warnings"]
+    assert "zero_results" not in result["warnings"]
+    assert result["search_cursor"] is result["next_cursor"] is None
+
+
+@pytest.mark.asyncio
+async def test_control_d_autor_amb_fila_incompleta_no_es_un_zero(tmp_path) -> None:
+    html = _page(autor="@Sagarra, Xavier", filtered=1, with_rows=False)
+    html = html.replace(
+        "</body>",
+        '<div id="cHTML2"><table><tr><td><a class="pclau">incompleta</a></td></tr></table></div>'
+        "</body>",
+    )
+    adapter = CtilcAdapter(SearchClient(html), _settings(tmp_path), CursorStore())
+
+    result = await adapter.search_pattern(ELEMENTS, filters=CtilcFilters(autor=["Sagarra, Xavier"]))
+
+    assert result["status"] == "unexpected_response"
+    assert result["returned"] == 0
+    assert "filtered_empty_unverified" in result["warnings"]
+    assert "zero_results" not in result["warnings"]
+    assert result["search_cursor"] is result["next_cursor"] is None
+
+
+@pytest.mark.asyncio
 async def test_autor_no_validat_no_bloqueja_la_cerca(tmp_path) -> None:
     client = SearchClient(
         _page(autor="@Sagarra, Xavier", filtered=1237),

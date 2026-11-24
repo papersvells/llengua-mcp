@@ -3,20 +3,23 @@
 from __future__ import annotations
 
 import re
+from contextlib import suppress
 from urllib.parse import parse_qsl
 
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
+from selectolax.lexbor import LexborNode
 
 from llengua_mcp.models import CtilcPage, Occurrence
 from llengua_mcp.text import clean_text, normalize_key
 
 _PATTERN_RE = re.compile(
-    r"Patró seleccionat\s*:\s*(.*?)\s*(?:CTILC1\s*)?Freqüència total\s*:\s*([\d.]+)",
+    r"Patró seleccionat\s*:\s*(.*?)\s*(?:CTILC1\s*)?Freqüència total\s*:",
     re.DOTALL,
 )
 _PATTERN_FALLBACK_RE = re.compile(r"Patró seleccionat\s*:\s*(.*?)\s*CTILC1", re.DOTALL)
-_TOTAL_RE = re.compile(r"Freqüència total\s*:\s*([\d.]+)")
-_FILTERED_TOTAL_RE = re.compile(r"Quantitat filtrada\s*:\s*([\d.]+)")
+_TOTAL_LABEL = "Freqüència total"
+_FILTERED_TOTAL_LABEL = "Quantitat filtrada"
+_COUNTER_RE = re.compile(r"[0-9]+|[1-9][0-9]{0,2}(?:\.[0-9]{3})+")
 _FILTER_SUMMARY_RE = re.compile(r"<b>Filtre per ([^:<]+?)</b>\s*:\s*([^<]*)")
 _FILTER_FIELDS = (
     "autSelec",
@@ -57,11 +60,24 @@ _FITXA_RE = re.compile(
 )
 
 
-def _int_from_dots(value: str | None) -> int | None:
-    if not value:
-        return None
-    digits = re.sub(r"[^\d]", "", value)
-    return int(digits) if digits else None
+def _read_counters(labels: list[LexborNode]) -> dict[str, int | None]:
+    """Distingeix un comptador absent d'un de present però invàlid."""
+
+    counters: dict[str, int | None] = {}
+    for node in labels:
+        label = clean_text(node.text(separator=""))
+        if label not in (_TOTAL_LABEL, _FILTERED_TOTAL_LABEL):
+            continue
+        if label in counters:
+            counters[label] = None
+            continue
+        cell = clean_text(node.parent.text(separator=""))
+        value = cell.removeprefix(f"{label}:").strip()
+        counters[label] = None
+        if _COUNTER_RE.fullmatch(value):
+            with suppress(ValueError):
+                counters[label] = int(value.replace(".", ""))
+    return counters
 
 
 def parse_formdata(value: str) -> dict[str, str]:
@@ -105,27 +121,31 @@ def parse_ctilc_page(
     warnings: list[str] = []
 
     pattern_echo = ""
-    total: int | None = None
     whole_text = clean_text(doc.body.text(separator="") if doc.body else "")
     header_text = clean_text(header.text(separator="")) if header is not None else whole_text
     match = _PATTERN_RE.search(header_text)
     if match:
         pattern_echo = clean_text(match.group(1))
-        total = _int_from_dots(match.group(2))
     else:
         fallback = _PATTERN_FALLBACK_RE.search(header_text)
         if fallback:
             pattern_echo = clean_text(fallback.group(1))
-        total_match = _TOTAL_RE.search(header_text)
-        if total_match:
-            total = _int_from_dots(total_match.group(1))
 
-    total_unfiltered = total
-    filtered_total = None
-    filtered_match = _FILTERED_TOTAL_RE.search(header_text) or _FILTERED_TOTAL_RE.search(whole_text)
-    if filtered_match:
-        filtered_total = _int_from_dots(filtered_match.group(1))
+    if header is None:
+        counters = _read_counters(doc.css("table.tableFILTREStop td > b"))
+    else:
+        counters = _read_counters(header.css("td > b"))
+        if _FILTERED_TOTAL_LABEL not in counters:
+            fallback_counters = _read_counters(doc.css("table.tableFILTREStop td > b"))
+            if _FILTERED_TOTAL_LABEL in fallback_counters:
+                counters[_FILTERED_TOTAL_LABEL] = fallback_counters[_FILTERED_TOTAL_LABEL]
+    total_unfiltered = counters.get(_TOTAL_LABEL)
+    filtered_total = counters.get(_FILTERED_TOTAL_LABEL)
+    total = total_unfiltered
+    if _FILTERED_TOTAL_LABEL in counters and total_unfiltered is not None:
         total = filtered_total
+    if any(value is None for value in counters.values()):
+        warnings.append("counter_invalid")
 
     filters_echo: dict[str, str] = {}
     for name in _FILTER_FIELDS:
@@ -156,9 +176,6 @@ def parse_ctilc_page(
         pattern_echo = zero_message.split(":", 1)[-1].strip()
 
     zero_recognized = _ZERO_MESSAGE in normalize_key(whole_text)
-    explicit_zero = total == 0 and zero_recognized
-    if total == 0 and not zero_recognized:
-        warnings.append("zero_unverified")
 
     formdata_node = doc.css_first("input#formdata")
     server_fields: dict[str, str] = {}
@@ -180,12 +197,14 @@ def parse_ctilc_page(
                 pagination_fields[name] = inputs[0].attributes["value"]
 
     occurrences: list[Occurrence] = []
+    has_occurrence_rows = False
     container = doc.css_first("#cHTML2")
     if container is not None:
         for row in container.css("tr"):
             nucleus_node = row.css_first("a.pclau")
             if nucleus_node is None:
                 continue
+            has_occurrence_rows = True
             cells = row.css("td")
             if len(cells) < 3:
                 warnings.append("parse_partial")
@@ -211,6 +230,10 @@ def parse_ctilc_page(
                     seccio=seccio,
                 )
             )
+
+    explicit_zero = total == 0 and zero_recognized and not has_occurrence_rows
+    if total == 0 and not explicit_zero:
+        warnings.append("zero_unverified")
 
     echo_verified = False
     if expected is not None and server_fields:
@@ -244,6 +267,7 @@ def parse_ctilc_page(
         server_fields=server_fields,
         warnings=list(dict.fromkeys(warnings)),
         has_results_container=container is not None,
+        has_occurrence_rows=has_occurrence_rows,
     )
 
 

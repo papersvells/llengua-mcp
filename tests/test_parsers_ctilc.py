@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from llengua_mcp.parsers.ctilc import parse_ctilc_page
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -21,6 +23,28 @@ def test_parse_two_rows_and_echo() -> None:
     assert "parse_partial" in page.warnings
     assert page.server_fields["resultat"] == "179500525152020580"
     assert page.server_fields["Qlocali"] == "3"
+
+
+@pytest.mark.parametrize("counter", ["2136", "2.136", "1.234.567"])
+def test_comptador_accepta_enters_amb_i_sense_separadors(counter: str) -> None:
+    html = _html("ctilc_two_rows.html").replace(
+        "total</b>:&nbsp;&nbsp;3", f"total</b>:&nbsp;&nbsp;{counter}"
+    )
+    page = parse_ctilc_page(html)
+    assert page.total == int(counter.replace(".", ""))
+    assert "counter_invalid" not in page.warnings
+
+
+@pytest.mark.parametrize("counter", ["0,5", "0.000", "0.", "1.23", "0 5", "0 pendent", "-0"])
+def test_comptador_invalid_no_accepta_un_prefix_valid(counter: str) -> None:
+    html = _html("ctilc_zero.html").replace(
+        "total</b>:&nbsp;&nbsp;0", f"total</b>:&nbsp;&nbsp;{counter}"
+    )
+    page = parse_ctilc_page(html)
+    assert page.total is None
+    assert page.explicit_zero is False
+    assert "counter_invalid" in page.warnings
+    assert page.pattern_echo == "somriure (amb | de) mala fe"
 
 
 def test_nucleus_cleanup_and_ids() -> None:
@@ -86,6 +110,7 @@ def test_zero_page_without_chtml1_container() -> None:
     assert page.total == 0
     assert page.pattern_echo == "somriure de mala fe"
     assert page.echo_verified is True
+    assert page.explicit_zero is True
     assert page.zero_message
 
 
