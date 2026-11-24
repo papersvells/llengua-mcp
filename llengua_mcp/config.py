@@ -15,9 +15,7 @@ from llengua_mcp import __version__
 APP_NAME = "llengua-mcp"
 
 
-def _float_env(
-    names: tuple[str, ...], default: float, *, strictly_positive: bool = True
-) -> float:
+def _float_env(names: tuple[str, ...], default: float, *, strictly_positive: bool = True) -> float:
     for name in names:
         raw = os.getenv(name)
         if raw is not None and raw.strip():
@@ -40,9 +38,7 @@ def _int_env(names: tuple[str, ...], default: int) -> int:
             try:
                 value = int(raw.strip())
             except ValueError as exc:
-                raise ValueError(
-                    f"`{name}` ha de ser un enter entre 1 i {sys.maxsize}."
-                ) from exc
+                raise ValueError(f"`{name}` ha de ser un enter entre 1 i {sys.maxsize}.") from exc
             if not 1 <= value <= sys.maxsize:
                 raise ValueError(f"`{name}` ha de ser un enter entre 1 i {sys.maxsize}.")
             return value

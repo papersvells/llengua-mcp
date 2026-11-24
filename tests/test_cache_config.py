@@ -49,11 +49,17 @@ def test_rate_is_clamped_and_contact_added(monkeypatch) -> None:
 )
 def test_integer_settings_accept_values_in_range(monkeypatch, name, value, expected) -> None:
     monkeypatch.setenv(name, value)
-    assert getattr(Settings.from_env(), {
-        "LLENGUA_MAX_BYTES": "max_response_bytes",
-        "LLENGUA_MAX_OCCURRENCES": "max_occurrences",
-        "LLENGUA_CACHE_TTL": "cache_ttl_seconds",
-    }[name]) == expected
+    assert (
+        getattr(
+            Settings.from_env(),
+            {
+                "LLENGUA_MAX_BYTES": "max_response_bytes",
+                "LLENGUA_MAX_OCCURRENCES": "max_occurrences",
+                "LLENGUA_CACHE_TTL": "cache_ttl_seconds",
+            }[name],
+        )
+        == expected
+    )
 
 
 @pytest.mark.parametrize(

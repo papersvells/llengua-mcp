@@ -225,8 +225,7 @@ async def test_zero_no_verificat(tmp_path, page) -> None:
         (
             "lema",
             FORMESLEMA2_URL,
-            ZERO.replace("forma", "lema")
-            .replace("Coincident amb zzzz", "Coincident amb altre"),
+            ZERO.replace("forma", "lema").replace("Coincident amb zzzz", "Coincident amb altre"),
         ),
     ],
 )
