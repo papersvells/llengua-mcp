@@ -309,23 +309,17 @@ _GENERAL_COUNT_FIELD_RE = re.compile(
 )
 
 
-def _axis_groups(query_rows: dict[str, str], corpus_rows: dict[str, str]) -> dict[str, Any]:
+def _axis_groups(query_rows: dict[str, int], corpus_rows: dict[str, int]) -> dict[str, Any]:
     query_keyed = {normalize_key(label): (label, value) for label, value in query_rows.items()}
     corpus_keyed = {normalize_key(label): (label, value) for label, value in corpus_rows.items()}
     keys = list(corpus_keyed) + [key for key in query_keyed if key not in corpus_keyed]
 
     groups: list[dict[str, Any]] = []
     for key in keys:
-        query_label, query_value = query_keyed.get(key, (corpus_keyed.get(key, ("", "0"))[0], "0"))
-        corpus_label, corpus_value = corpus_keyed.get(key, (query_label, "0"))
-        query_hits = _parse_count(
-            query_value, field=f"{query_label or corpus_label}: ocurrències", source=GENERAL_URL
-        )
-        corpus_hits = _parse_count(
-            corpus_value,
-            field=f"{corpus_label or query_label}: paraules del corpus",
-            source=GENERAL_URL,
-        )
+        query_label, query_value = query_keyed.get(key, (corpus_keyed.get(key, ("", 0))[0], 0))
+        corpus_label, corpus_value = corpus_keyed.get(key, (query_label, 0))
+        query_hits = query_value
+        corpus_hits = corpus_value
         groups.append(
             {
                 "label": corpus_label or query_label,
@@ -373,7 +367,7 @@ def _axis_groups(query_rows: dict[str, str], corpus_rows: dict[str, str]) -> dic
 def parse_general(html: str) -> dict[str, Any]:
     """Dispersió general per any, varietat, traducció, tipus, gènere i tema."""
 
-    charts: dict[str, dict[str, dict[str, str]]] = {}
+    charts: dict[str, dict[str, dict[str, int]]] = {}
     for match in re.finditer(r"var chartData\s*=\s*\[", html):
         start = match.start()
         end = html.find("];", start)
@@ -384,7 +378,7 @@ def parse_general(html: str) -> dict[str, Any]:
         axis = _GENERAL_AXES.get(normalize_key(header.group(1)))
         if axis is None:
             continue
-        rows: dict[str, str] = {}
+        rows: dict[str, int] = {}
         series = header.group(2)
         for row in _GENERAL_ROW_RE.finditer(block):
             fields = row.group("fields")
@@ -397,11 +391,13 @@ def parse_general(html: str) -> dict[str, Any]:
                         hint="Revisa les dades numèriques del gràfic de dispersió general.",
                         source=GENERAL_URL,
                     )
-                rows[row.group("label")] = count_field.group("value").strip()
-            else:
-                value = re.match(r"\s*(?P<value>[^,]+)", fields)
-                if value is not None:
-                    rows[row.group("label")] = value.group("value").strip()
+                label = row.group("label")
+                count_kind = "ocurrències" if series == "Repartiment" else "paraules del corpus"
+                rows[label] = _parse_count(
+                    count_field.group("value"),
+                    field=f"{label}: {count_kind}",
+                    source=GENERAL_URL,
+                )
         charts.setdefault(axis, {})[series] = rows
 
     if not charts:

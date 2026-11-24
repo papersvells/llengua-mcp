@@ -273,6 +273,34 @@ def test_general_rebutja_comptadors_d_eix_mal_formatats(original: str, malformed
         parse_general(html.replace(original, malformed, 1))
 
 
+@pytest.mark.parametrize(
+    ("valid_row", "invalid_row"),
+    [
+        (
+            ", ['Central', 1237, 'x', llistacolorsVar['central']]",
+            ", ['Central', 1237x, 'x', llistacolorsVar['central']]",
+        ),
+        (
+            ", ['1832-1913', 13001158, 'x', llistacolorsAny['1832-1913']]",
+            ", ['1832-1913', 13001158x, 'x', llistacolorsAny['1832-1913']]",
+        ),
+        (
+            ", ['Central', 91587052, 'x', llistacolorsVar['central']]",
+            ", ['Central', 91587052x, 'x', llistacolorsVar['central']]",
+        ),
+    ],
+)
+@pytest.mark.parametrize("invalid_first", [True, False])
+def test_general_no_amaga_comptador_invalid_en_fila_duplicada(
+    valid_row: str, invalid_row: str, invalid_first: bool
+) -> None:
+    html = (FIXTURES / "dispersio_general.html").read_text(encoding="utf-8")
+    assert html.count(valid_row) == 1
+    rows = f"{invalid_row}\n{valid_row}" if invalid_first else f"{valid_row}\n{invalid_row}"
+    with pytest.raises(UnexpectedResponseError):
+        parse_general(html.replace(valid_row, rows, 1))
+
+
 def test_general_sense_grafic_es_error() -> None:
     with pytest.raises(UnexpectedResponseError):
         parse_general("<html><body>error intern</body></html>")
