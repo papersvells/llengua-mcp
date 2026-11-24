@@ -15,6 +15,14 @@
 | `LLENGUA_DATA_DIR` | dades d'usuari | Dades locals de sinònims, anglès-català i DIRELEX |
 | `LLENGUA_CACHE_DIR` | cache d'usuari | Reservat per a cache persistent |
 
+Les variables numèriques han de tenir valors vàlids: `LLENGUA_TIMEOUT` ha de
+ser un nombre finit superior a zero; `LLENGUA_MAX_BYTES`,
+`LLENGUA_MAX_OCCURRENCES` i `LLENGUA_CACHE_TTL` han de ser enters entre `1` i
+el màxim enter de la plataforma. Un valor invàlid provoca un error que indica
+la variable. `LLENGUA_RATE` ha de ser finit i després s'ajusta a l'interval
+`0.2–1.0`; les comes decimals també s'hi admeten. Si `LLENGUA_RATE` és present
+però invàlid, no s'utilitza el valor de reserva `CTILC_RATE`.
+
 ## Exemples d'ús
 
 La resposta dona primer la conclusió i després el detall que les fonts ja
