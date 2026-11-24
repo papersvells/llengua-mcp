@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime
 from typing import Any
-from urllib.parse import quote, quote_plus
+from urllib.parse import quote, quote_plus, urlencode
 
 from llengua_mcp.cache import TTLCache
 from llengua_mcp.compiler import (
@@ -458,7 +458,7 @@ class CtilcAdapter:
         query: dict[str, Any],
         limit: int = 10,
         start: int = 1,
-        cursor_token: str | None = None,
+        continuation: tuple[str, CursorPayload] | None = None,
         use_cache: bool = True,
         persist_cursor: bool = True,
         filters: dict[str, str] | None = None,
@@ -474,7 +474,13 @@ class CtilcAdapter:
         validated_authors, extra_warnings = author_validation
 
         compiled = compile_pattern(elements)
-        body = compiled.body(start=start, offset=offset, filters=filters)
+        if continuation:
+            _, previous = continuation
+            # Reprodueix el POST de fConc. El patró inicial es conserva a
+            # formdata i només canvien els camps de paginació de primer nivell.
+            body = urlencode({**previous.pagination_fields, "iStart": start, "iOffset": offset})
+        else:
+            body = compiled.body(start=start, offset=offset, filters=filters)
         result = await self.client.post_text(COOCUR_URL, body, use_cache=use_cache)
         expected_pattern = " ".join(compiled.expected.values())
         page = parse_ctilc_page(
@@ -553,6 +559,11 @@ class CtilcAdapter:
                     "Pot ser un resultat remot caducat o un canvi de format."
                 )
 
+        if continuation and status == "ok" and page.pagination_fields.get("iStart") != str(start):
+            status = "unexpected_response"
+            warnings.append("page_echo_unexpected")
+            error_note = "La pàgina retornada no confirma la posició demanada."
+
         returned = len(page.occurrences)
         # Avancem la mida de pàgina demanada, no les files parsejades: una fila
         # mal formada no ha de fer saltar la posició següent.
@@ -570,13 +581,18 @@ class CtilcAdapter:
                 resultat=page.server_fields.get("resultat"),
                 qlocali=page.server_fields.get("Qlocali"),
                 filters=filters or {},
+                pagination_fields=page.pagination_fields,
                 next_start=next_start,
                 page_size=offset,
                 created_at=datetime.now(UTC),
             )
-            if cursor_token:
-                self.cursors.update(cursor_token, payload)
-                search_cursor = cursor_token
+            if continuation:
+                cursor_token, previous = continuation
+                if total == previous.total and patterns_equivalent(
+                    page.pattern_echo, previous.pattern_echo
+                ):
+                    self.cursors.update(cursor_token, payload)
+                    search_cursor = cursor_token
             else:
                 # Un cursor estable per vincular-hi eines com la dispersió,
                 # encara que tots els resultats càpiguen en una pàgina.
@@ -1060,13 +1076,23 @@ class CtilcAdapter:
                 "citation": _citation(payload.pattern_echo),
             }
 
+        if not all(
+            payload.pagination_fields.get(key) for key in ("formdata", "resultat", "Qlocali")
+        ):
+            raise StaleSearchError(
+                "La pàgina original no conté el formulari de paginació del CTILC.",
+                hint="Torna a executar la cerca original per obtenir un cursor nou.",
+                source=COOCUR_URL,
+            )
+
         result = await self.search(
             elements=payload.elements,
             query=payload.query,
             limit=limit or payload.page_size,
             start=payload.next_start,
-            cursor_token=cursor,
+            continuation=(cursor, payload),
             filters=payload.filters or None,
+            use_cache=False,
         )
         if (
             result["status"] == "unexpected_response"
@@ -1094,16 +1120,11 @@ class CtilcAdapter:
         )
         if total_changed or pattern_changed:
             stale_reason = "corpus_updated" if total_changed else "pattern_echo_unexpected"
-        elif (
-            payload.pattern_echo
-            and result.get("pattern_echo")
-            and not patterns_equivalent(result["pattern_echo"], payload.pattern_echo)
-        ):
-            stale_reason = "pattern_echo_unexpected"
+        elif "page_echo_unexpected" in result["warnings"]:
+            stale_reason = "page_echo_unexpected"
         if stale_reason:
             # No barregem files d'una cerca que ja no podem confirmar amb les
             # de la cerca original.
-            self.cursors.update(cursor, payload)
             return {
                 "status": "stale_search",
                 "query": payload.query,
@@ -1117,10 +1138,16 @@ class CtilcAdapter:
                 "error": {
                     "code": "stale_search",
                     "message": (
-                        "La continuació no correspon a la cerca original: el total "
+                        "La pàgina retornada no confirma la posició demanada."
+                        if stale_reason == "page_echo_unexpected"
+                        else "La continuació no correspon a la cerca original: el total "
                         "o el patró han canviat."
                     ),
-                    "hint": "Torna a executar la cerca original per obtenir un resultat nou.",
+                    "hint": (
+                        "El cursor no ha avançat. Torna-ho a provar o repeteix la cerca original."
+                        if stale_reason == "page_echo_unexpected"
+                        else "Torna a executar la cerca original per obtenir un resultat nou."
+                    ),
                 },
                 "source": COOCUR_URL,
                 "retrieved_at": datetime.now(UTC)

@@ -54,6 +54,34 @@ async def test_live_filtres_ctilc() -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("varietat", [None, "central"])
+async def test_live_continuar_cerca_ctilc(varietat: str | None) -> None:
+    elements = [
+        PatternElement(type="lema", value="somriure"),
+        PatternElement(type="cg", category="adj"),
+    ]
+    filters = CtilcFilters(varietat=[varietat]) if varietat else None
+    app = App(Settings.from_env())
+    try:
+        first = await app.ctilc.search_pattern(elements, limit=3, filters=filters)
+        assert first["status"] == "ok"
+        assert first["next_cursor"]
+        second = await app.ctilc.continue_search(first["next_cursor"], limit=2)
+    finally:
+        await app.aclose()
+    assert second["status"] == "ok"
+    assert second["query"]["start"] == 4
+    assert second["total"] == first["total"]
+    assert first["returned"] == 3 and second["returned"] == 2
+    first_ids = {row["occurrence_id"] for row in first["occurrences"]}
+    second_ids = {row["occurrence_id"] for row in second["occurrences"]}
+    assert None not in first_ids | second_ids
+    assert first_ids.isdisjoint(second_ids)
+    if filters:
+        assert second["filters_verified"] is True
+
+
+@pytest.mark.asyncio
 async def test_live_consultes() -> None:
     app = App(Settings.from_env())
     try:

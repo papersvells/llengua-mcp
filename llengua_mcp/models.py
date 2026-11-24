@@ -111,6 +111,7 @@ class CtilcPage(BaseModel):
     occurrences: list[Occurrence] = Field(default_factory=list)
     zero_message: str | None = None
     echo_verified: bool = False
+    pagination_fields: dict[str, str] = Field(default_factory=dict)
     explicit_zero: bool = False
     server_fields: dict[str, str] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
@@ -129,6 +130,7 @@ class CursorPayload(BaseModel):
     resultat: str | None = None
     qlocali: str | None = None
     filters: dict[str, str] = Field(default_factory=dict)
+    pagination_fields: dict[str, str] = Field(default_factory=dict)
     next_start: int = 1
     page_size: int = 10
     created_at: datetime

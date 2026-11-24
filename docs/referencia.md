@@ -116,8 +116,9 @@ peticions només per afegir detall ni es confon la freqüència amb la correcci�
   sortit de la memòria cau HTTP; una eina que treballa amb dades locals no
   compta com a encert de cau. Serveix per veure on se'n va el temps d'una
   sessió, no per interpretar el resultat.
-- **`next_cursor`**: continua la mateixa cerca. És local i caduca; si el total o
-  el patró canvien, l'eina retorna `stale_search` i no barreja pàgines. Les
+- **`next_cursor`**: continua la mateixa cerca. És local i caduca; si el total
+  o el patró canvien, o no es confirma la posició de la pàgina, l'eina retorna
+  `stale_search` sense lliurar files ni avançar el cursor. Les
   continuacions del mateix cursor se serialitzen: dues crides concurrents no
   retornen la mateixa pàgina.
 - **`search_cursor`**: vincula la cerca amb eines com la dispersió. N'hi ha

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import re
 from pathlib import Path
+from urllib.parse import parse_qs
 
 import pytest
 
@@ -20,9 +21,11 @@ class FakeClient:
     def __init__(self, html: str) -> None:
         self.html = html
         self.bodies: list[str] = []
+        self.cache_flags: list[bool] = []
 
     async def post_text(self, url: str, body: str, **kwargs) -> HttpResult:
         self.bodies.append(body)
+        self.cache_flags.append(kwargs.get("use_cache", True))
         return HttpResult(text=self.html, status=200, url=url)
 
     async def get_text(self, url: str, **kwargs) -> HttpResult:
@@ -66,8 +69,8 @@ def _filtered_page(
         filter_table + '</div>\n<div id="cHTML2">',
     )
     html = html.replace(
-        "</body>",
-        f'<input type="hidden" name="varSelec" value="{echo_var}" /></body>',
+        "</form>",
+        f'<input type="hidden" name="varSelec" value="{echo_var}" /></form>',
     )
     if not with_rows:
         html = re.sub(r'<div id="cHTML2">.*?</div>', "", html, flags=re.DOTALL)
@@ -196,6 +199,11 @@ ELEMENTS = [
 ]
 
 
+def _continuation_page(html: str, start: int) -> str:
+    html = html.replace('name="iStart" value="1"', f'name="iStart" value="{start}"')
+    return re.sub(r"(?<=\?id=)\d+", lambda match: str(int(match[0]) + start * 100_000_000), html)
+
+
 class SlowClient(FakeClient):
     """Retarda la resposta perquè dues continuacions coincideixin."""
 
@@ -208,7 +216,9 @@ class SlowClient(FakeClient):
         await asyncio.sleep(0.02)
         if self.fail_at is not None and len(self.bodies) == self.fail_at:
             raise UpstreamError("Tall simulat.", source=url)
-        return HttpResult(text=self.html, status=200, url=url)
+        start = int(parse_qs(body)["iStart"][0])
+        text = self.html if start == 1 else _continuation_page(self.html, start)
+        return HttpResult(text=text, status=200, url=url)
 
 
 @pytest.mark.asyncio
@@ -227,6 +237,10 @@ async def test_continuacions_concurrents_no_repeteixen_la_pagina(tmp_path) -> No
     starts = sorted(re.search(r"iStart=(\d+)", body).group(1) for body in client.bodies[1:])
     assert starts == ["2", "3"]
     assert first["query"]["start"] != second["query"]["start"]
+    assert first["status"] == second["status"] == "ok"
+    first_ids = {row["occurrence_id"] for row in first["occurrences"]}
+    second_ids = {row["occurrence_id"] for row in second["occurrences"]}
+    assert first_ids and second_ids and first_ids.isdisjoint(second_ids)
 
 
 @pytest.mark.asyncio
@@ -242,6 +256,69 @@ async def test_continuacio_fallida_no_avanca_el_cursor(tmp_path) -> None:
 
     result = await adapter.continue_search(start["next_cursor"], limit=1)
     assert result["query"]["start"] == 2
+    assert result["status"] == "ok"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("echo", ["1", None, "4x", "duplicate"])
+async def test_continuacio_rebutja_posicio_no_verificada_i_permet_reintent(tmp_path, echo) -> None:
+    html = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    html = html.replace("Freqüència total</b>:&nbsp;&nbsp;3", "Freqüència total</b>:&nbsp;&nbsp;6")
+    client = FakeClient(html)
+    store = CursorStore()
+    adapter = CtilcAdapter(client, _settings(tmp_path), store)
+    first = await adapter.search_pattern(ELEMENTS, limit=3)
+    cursor = first["next_cursor"]
+    previous = store.get(cursor)
+    assert previous is not None
+    assert previous.next_start == 4
+
+    field = '<input type="hidden" id="iStart" name="iStart" value="1" />'
+    if echo == "duplicate":
+        client.html = html.replace(field, field + field.replace('value="1"', 'value="4"'))
+    elif echo is None:
+        client.html = html.replace(field, "")
+    else:
+        client.html = html.replace(field, field.replace('value="1"', f'value="{echo}"'))
+
+    rejected = await adapter.continue_search(cursor, limit=2)
+    assert rejected["status"] == "stale_search"
+    assert rejected["warnings"] == ["page_echo_unexpected"]
+    assert rejected["returned"] == 0 and rejected["occurrences"] == []
+    assert rejected["next_cursor"] is None
+    assert store.get(cursor) is previous
+    rejected_body = client.bodies[-1]
+
+    client.html = _continuation_page(html, 4)
+    valid = await adapter.continue_search(cursor, limit=2)
+    assert valid["status"] == "ok"
+    assert valid["query"]["start"] == 4
+    assert valid["occurrences"] != first["occurrences"]
+    assert store.get(cursor).next_start == 6
+    assert client.bodies[-1] == rejected_body
+    assert client.cache_flags == [True, False, False]
+    posted = parse_qs(rejected_body)
+    assert posted["iStart"] == ["4"]
+    assert posted["iOffset"] == ["2"]
+    assert posted["resultat"] == ["179500525152020580"]
+    assert parse_qs(posted["formdata"][0])["iStart"] == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_continuacio_sense_formulari_no_fa_cap_peticio(tmp_path) -> None:
+    html = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    html = html.replace('name="fConc"', 'name="altre"')
+    client = FakeClient(html)
+    store = CursorStore()
+    adapter = CtilcAdapter(client, _settings(tmp_path), store)
+    first = await adapter.search_pattern(ELEMENTS, limit=2)
+    cursor = first["next_cursor"]
+    previous = store.get(cursor)
+
+    with pytest.raises(StaleSearchError, match="formulari"):
+        await adapter.continue_search(cursor)
+    assert len(client.bodies) == 1
+    assert store.get(cursor) is previous
 
 
 class SequenceClient:
@@ -307,7 +384,7 @@ async def test_continuation_rejects_changed_total(tmp_path) -> None:
     first = first.replace(
         "Freqüència total</b>:&nbsp;&nbsp;3", "Freqüència total</b>:&nbsp;&nbsp;100"
     )
-    changed = first.replace(
+    changed = _continuation_page(first, 3).replace(
         "Freqüència total</b>:&nbsp;&nbsp;100", "Freqüència total</b>:&nbsp;&nbsp;99"
     )
     client = SequenceClient([first, changed])
@@ -912,7 +989,10 @@ async def test_cursor_guarda_i_reenvia_els_filtres(tmp_path) -> None:
     assert payload is not None
     assert payload.filters == {"varSelec": "@central"}
 
-    await adapter.continue_search(token, limit=2)
+    client.html = _continuation_page(client.html, 3)
+    continued = await adapter.continue_search(token, limit=2)
+    assert continued["status"] == "ok"
+    assert continued["filters_verified"] is True
     assert "varSelec=%40central" in client.bodies[-1]
 
 

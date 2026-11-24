@@ -29,6 +29,21 @@ _FILTER_FIELDS = (
     "tradSelec",
     "varSelec",
 )
+_PAGINATION_FIELDS = (
+    *_FILTER_FIELDS,
+    "filtres",
+    "seccio",
+    "aleatoriVal",
+    "aleatoriSel",
+    "resultat_orig",
+    "strquery",
+    "strqueryTXT",
+    "formdata",
+    "resultat",
+    "Qlocali",
+    "iStart",
+    "iOffset",
+)
 _ZERO_RE = re.compile(
     r"No s'han trobat ocurrències per al patró seleccionat\s*:\s*([^<]{0,300})",
     re.DOTALL,
@@ -154,6 +169,16 @@ def parse_ctilc_page(
         if node is not None:
             server_fields[field_id] = node.attributes.get("value", "")
 
+    # `formdata` conserva la consulta inicial (inclòs el seu iStart). Per
+    # paginar, el portal envia i retorna l'iStart propi del formulari fConc.
+    pagination_fields: dict[str, str] = {}
+    form = doc.css_first('form[name="fConc"]')
+    if form is not None:
+        for name in _PAGINATION_FIELDS:
+            inputs = form.css(f'input[name="{name}"][type="hidden" i]')
+            if len(inputs) == 1 and "value" in inputs[0].attributes:
+                pagination_fields[name] = inputs[0].attributes["value"]
+
     occurrences: list[Occurrence] = []
     container = doc.css_first("#cHTML2")
     if container is not None:
@@ -214,6 +239,7 @@ def parse_ctilc_page(
         occurrences=occurrences,
         zero_message=zero_message,
         echo_verified=echo_verified,
+        pagination_fields=pagination_fields,
         explicit_zero=explicit_zero,
         server_fields=server_fields,
         warnings=list(dict.fromkeys(warnings)),
