@@ -32,19 +32,30 @@ _ROW_RE = re.compile(
     r",\['(?P<label>\d{4}-\d{4})'\s*,\s*(?P<percent>[\d.,]+)\s*,\s*'(?P<tooltip>[^']*)'"
 )
 _TOOLTIP_RE = re.compile(
-    r"Total tram a la cerca:\s*(?P<hits>[\d.,]+)\\n"
-    r"Total tram al corpus:\s*(?P<units>[\d.,]+)"
+    r"Total tram a la cerca:\s*(?P<hits>[^\\\r\n]*)\\n"
+    r"Total tram al corpus:\s*(?P<units>[^\\\r\n]*)"
 )
 _HEADER_RE = re.compile(
     r"Coocurrències</b>\s*(?::|&nbsp;)*\s*(?P<pattern>.*?)</td>\s*"
-    r"<td><b>Freqüència total</b>\s*(?::|&nbsp;)*\s*(?P<total>[\d.,]+)</td>\s*"
+    r"<td><b>Freqüència total</b>\s*(?P<total>[^<]*)</td>\s*"
     r"<td><b>Índex de dispersió</b>",
     re.DOTALL,
 )
 
+_GROUPED_COUNT_RE = re.compile(r"(?:[0-9]+|[1-9][0-9]{0,2}(?:\.[0-9]{3})+)")
 
-def _int(value: str) -> int:
-    return int(re.sub(r"[^\d]", "", value))
+
+def _parse_count(value: str, *, field: str, source: str) -> int:
+    """Llegeix un enter complet, amb punts només com a separadors de milers."""
+
+    normalized = clean_text(value).removeprefix(":").strip()
+    if not _GROUPED_COUNT_RE.fullmatch(normalized):
+        raise UnexpectedResponseError(
+            f"El comptador «{field}» no té un format d'enter vàlid: {normalized!r}.",
+            hint="S'admeten dígits sense separador o grups de milers separats per punts.",
+            source=source,
+        )
+    return int(normalized.replace(".", ""))
 
 
 def parse_cronologia(html: str) -> dict[str, Any]:
@@ -69,8 +80,10 @@ def parse_cronologia(html: str) -> dict[str, Any]:
                 hint="El tooltip del gràfic pot haver canviat de format.",
                 source=CRON_URL,
             )
-        hits = _int(tip.group("hits"))
-        corpus_units = _int(tip.group("units"))
+        hits = _parse_count(tip.group("hits"), field=f"{label}: ocurrències", source=CRON_URL)
+        corpus_units = _parse_count(
+            tip.group("units"), field=f"{label}: paraules del corpus", source=CRON_URL
+        )
         if hits > 0 and corpus_units == 0:
             raise UnexpectedResponseError(
                 f"El tram {label} té ocurrències però el corpus té zero paraules.",
@@ -112,7 +125,9 @@ def parse_cronologia(html: str) -> dict[str, Any]:
     header = _HEADER_RE.search(html)
     if header:
         pattern_echo = strip_tags(header.group("pattern"))
-        search_total = _int(header.group("total"))
+        search_total = _parse_count(
+            header.group("total"), field="freqüència total", source=CRON_URL
+        )
 
     return {
         "periods": periods,
@@ -140,12 +155,12 @@ _DIAL_ROW_RE = re.compile(
     r",\s*\[\s*'(?P<label>[^']+)'\s*,\s*(?P<value>[\d.]+)\s*,\s*'(?P<tooltip>[^']*)'"
 )
 _DIAL_TOOLTIP_RE = re.compile(
-    r"Total varietat a la cerca:\s*(?P<query>[\d.,]+)\\n"
-    r"Total varietat al corpus:\s*(?P<corpus>[\d.,]+)"
+    r"Total varietat a la cerca:\s*(?P<query>[^\\\r\n]*)\\n"
+    r"Total varietat al corpus:\s*(?P<corpus>[^\\\r\n]*)"
 )
 _DIAL_HEADER_RE = re.compile(
     r"Coocurrències</b>\s*:\s*(?:&nbsp;|\s)*(?P<pattern>.*?)</td>\s*"
-    r"<td><b>Freqüència total</b>\s*:\s*(?:&nbsp;|\s)*(?P<total>[\d.,]+)</td>\s*"
+    r"<td><b>Freqüència total</b>\s*(?P<total>[^<]*)</td>\s*"
     r"<td><b>Índex de dispersió</b>\s*:\s*(?:&nbsp;|\s)*(?P<index>[\d.,]+)",
     re.DOTALL,
 )
@@ -186,8 +201,16 @@ def parse_dialectal(html: str) -> dict[str, Any]:
         varieties.append(
             {
                 "label": match.group("label"),
-                "query_hits": _int(tip.group("query")),
-                "corpus_hits": _int(tip.group("corpus")),
+                "query_hits": _parse_count(
+                    tip.group("query"),
+                    field=f"{match.group('label')}: ocurrències",
+                    source=DIAL_URL,
+                ),
+                "corpus_hits": _parse_count(
+                    tip.group("corpus"),
+                    field=f"{match.group('label')}: paraules del corpus",
+                    source=DIAL_URL,
+                ),
             }
         )
 
@@ -219,7 +242,9 @@ def parse_dialectal(html: str) -> dict[str, Any]:
     index: float | None = None
     if header:
         pattern_echo = strip_tags(header.group("pattern"))
-        search_total = _int(header.group("total"))
+        search_total = _parse_count(
+            header.group("total"), field="freqüència total", source=DIAL_URL
+        )
         index = float(header.group("index").replace(",", "."))
 
     by_hits = max(varieties, key=lambda item: item["query_hits"])
@@ -269,14 +294,19 @@ _GENERAL_INDEX_KEYS = {
     "classificacio tematica (no literari": "classificacio",
 }
 _GENERAL_HEADER_RE = re.compile(
-    r"Coocurrències\s*:\s*(?P<pattern>.*?)\s*Freqüència total\s*:\s*(?P<total>[\d.,]+)",
+    r"Coocurrències\s*:\s*(?P<pattern>.*?)\s*Freqüència total\s*:\s*"
+    r"(?P<total>.*?)\s*(?=Atributs\s*:|Any de publicació\s+Índex de dispersió\s*:)",
     re.DOTALL,
 )
 _GENERAL_INDEX_RE = re.compile(
     r"(Any de publicació|Varietat|Original/Traducció|Tipus|Gènere literari|"
     r"Classificació temàtica \(no literari\))\s*Índex de dispersió:\s*([\d.,]+)"
 )
-_GENERAL_ROW_RE = re.compile(r"\['(?P<label>[^']+)'\s*,\s*(?P<value>-?[\d.]+(?:[eE][+-]?\d+)?)")
+_GENERAL_ROW_RE = re.compile(r",\s*\[\s*'(?P<label>[^']+)'\s*,(?P<fields>[^\]]*)\]")
+_GENERAL_COUNT_FIELD_RE = re.compile(
+    r"\s*(?P<value>[^,]+)\s*,\s*'[^']*'(?:\s*,.*)?\s*",
+    re.DOTALL,
+)
 
 
 def _axis_groups(query_rows: dict[str, str], corpus_rows: dict[str, str]) -> dict[str, Any]:
@@ -288,8 +318,14 @@ def _axis_groups(query_rows: dict[str, str], corpus_rows: dict[str, str]) -> dic
     for key in keys:
         query_label, query_value = query_keyed.get(key, (corpus_keyed.get(key, ("", "0"))[0], "0"))
         corpus_label, corpus_value = corpus_keyed.get(key, (query_label, "0"))
-        query_hits = int(float(query_value))
-        corpus_hits = int(float(corpus_value))
+        query_hits = _parse_count(
+            query_value, field=f"{query_label or corpus_label}: ocurrències", source=GENERAL_URL
+        )
+        corpus_hits = _parse_count(
+            corpus_value,
+            field=f"{corpus_label or query_label}: paraules del corpus",
+            source=GENERAL_URL,
+        )
         groups.append(
             {
                 "label": corpus_label or query_label,
@@ -349,9 +385,24 @@ def parse_general(html: str) -> dict[str, Any]:
         if axis is None:
             continue
         rows: dict[str, str] = {}
+        series = header.group(2)
         for row in _GENERAL_ROW_RE.finditer(block):
-            rows[row.group("label")] = row.group("value")
-        charts.setdefault(axis, {})[header.group(2)] = rows
+            fields = row.group("fields")
+            if series in {"Repartiment", "Total", "Totals"}:
+                count_field = _GENERAL_COUNT_FIELD_RE.fullmatch(fields)
+                if count_field is None:
+                    raise UnexpectedResponseError(
+                        f"El comptador de l'eix «{axis}» per a «{row.group('label')}» "
+                        "no té l'estructura esperada.",
+                        hint="Revisa les dades numèriques del gràfic de dispersió general.",
+                        source=GENERAL_URL,
+                    )
+                rows[row.group("label")] = count_field.group("value").strip()
+            else:
+                value = re.match(r"\s*(?P<value>[^,]+)", fields)
+                if value is not None:
+                    rows[row.group("label")] = value.group("value").strip()
+        charts.setdefault(axis, {})[series] = rows
 
     if not charts:
         raise UnexpectedResponseError(
@@ -363,7 +414,11 @@ def parse_general(html: str) -> dict[str, Any]:
     text = strip_tags(html)
     header = _GENERAL_HEADER_RE.search(text)
     pattern_echo = clean_text(header.group("pattern")) if header else ""
-    search_total = _int(header.group("total")) if header else None
+    search_total = (
+        _parse_count(header.group("total"), field="freqüència total", source=GENERAL_URL)
+        if header
+        else None
+    )
 
     indices: dict[str, float | None] = {}
     for match in _GENERAL_INDEX_RE.finditer(text):

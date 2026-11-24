@@ -34,6 +34,42 @@ def test_parse_cronologia() -> None:
     assert data["peak_relative"]["per_million"] == 24.11
 
 
+@pytest.mark.parametrize("malformed", ["2,136", "2..136", "13.01.158", "2136x"])
+def test_cronologia_rebutja_total_capcalera_mal_formatat(malformed: str) -> None:
+    html = (FIXTURES / "dispersio_cron.html").read_text(encoding="utf-8")
+    html = html.replace(
+        "Freqüència total</b>:&nbsp;&nbsp;2136",
+        f"Freqüència total</b>:&nbsp;&nbsp;{malformed}",
+    )
+    with pytest.raises(UnexpectedResponseError, match="freqüència total"):
+        parse_cronologia(html)
+
+
+def test_cronologia_accepta_milers_agrupats_a_la_capcalera() -> None:
+    html = (FIXTURES / "dispersio_cron.html").read_text(encoding="utf-8")
+    data = parse_cronologia(
+        html.replace(
+            "Freqüència total</b>:&nbsp;&nbsp;2136",
+            "Freqüència total</b>:&nbsp;&nbsp;2.136",
+        )
+    )
+    assert data["search_total"] == 2136
+    assert data["totals_match_search"] is True
+
+
+@pytest.mark.parametrize(
+    ("original", "malformed"),
+    [
+        ("Total tram a la cerca: 45", "4,5"),
+        ("Total tram al corpus: 13.001.158", "13.001.158x"),
+    ],
+)
+def test_cronologia_rebutja_comptadors_de_tram_mal_formatats(original: str, malformed: str) -> None:
+    html = (FIXTURES / "dispersio_cron.html").read_text(encoding="utf-8")
+    with pytest.raises(UnexpectedResponseError):
+        parse_cronologia(html.replace(original, original.split(":")[0] + ": " + malformed, 1))
+
+
 def test_percentatge_del_graf_no_es_fa_servir() -> None:
     data = parse_cronologia((FIXTURES / "dispersio_cron.html").read_text(encoding="utf-8"))
     # La taxa es deriva dels enters, no del percentatge arrodonit del gràfic.
@@ -113,6 +149,44 @@ def test_parse_dialectal() -> None:
     assert data["peak_relative"]["label"] == "baleàric"
 
 
+@pytest.mark.parametrize("malformed", ["2,136", "2..136", "13.01.158", "2136x"])
+def test_dialectal_rebutja_total_capcalera_mal_formatat(malformed: str) -> None:
+    html = (FIXTURES / "dispersio_dialectal.html").read_text(encoding="utf-8")
+    html = html.replace(
+        "Freqüència total</b>:&nbsp;&nbsp;2136",
+        f"Freqüència total</b>:&nbsp;&nbsp;{malformed}",
+    )
+    with pytest.raises(UnexpectedResponseError, match="freqüència total"):
+        parse_dialectal(html)
+
+
+def test_dialectal_accepta_milers_agrupats_a_la_capcalera() -> None:
+    html = (FIXTURES / "dispersio_dialectal.html").read_text(encoding="utf-8")
+    data = parse_dialectal(
+        html.replace(
+            "Freqüència total</b>:&nbsp;&nbsp;2136",
+            "Freqüència total</b>:&nbsp;&nbsp;2.136",
+        )
+    )
+    assert data["search_total"] == 2136
+    assert data["totals_match_search"] is True
+
+
+@pytest.mark.parametrize(
+    ("original", "malformed"),
+    [
+        ("Total varietat a la cerca: 1.237", "1,237"),
+        ("Total varietat al corpus: 91.587.052", "91.587.052x"),
+    ],
+)
+def test_dialectal_rebutja_comptadors_de_varietat_mal_formatats(
+    original: str, malformed: str
+) -> None:
+    html = (FIXTURES / "dispersio_dialectal.html").read_text(encoding="utf-8")
+    with pytest.raises(UnexpectedResponseError):
+        parse_dialectal(html.replace(original, original.split(":")[0] + ": " + malformed, 1))
+
+
 def test_dialectal_sense_grafic_es_error() -> None:
     with pytest.raises(UnexpectedResponseError):
         parse_dialectal("<html><body>error intern</body></html>")
@@ -159,6 +233,44 @@ def test_parse_general() -> None:
     assert data["attributes"]["genere"]["totals"]["query_hits"] == 1932
     assert data["attributes"]["classificacio"]["totals"]["query_hits"] == 204
     assert data["attributes"]["classificacio"]["index"] == 0.726303
+
+
+@pytest.mark.parametrize("malformed", ["2,136", "2..136", "13.01.158", "2136x"])
+def test_general_rebutja_total_capcalera_mal_formatat(malformed: str) -> None:
+    html = (FIXTURES / "dispersio_general.html").read_text(encoding="utf-8")
+    html = html.replace(
+        "Freqüència total</b>:&nbsp;&nbsp;2136",
+        f"Freqüència total</b>:&nbsp;&nbsp;{malformed}",
+    )
+    with pytest.raises(UnexpectedResponseError, match="freqüència total"):
+        parse_general(html)
+
+
+def test_general_accepta_milers_agrupats_a_la_capcalera() -> None:
+    html = (FIXTURES / "dispersio_general.html").read_text(encoding="utf-8")
+    data = parse_general(
+        html.replace(
+            "Freqüència total</b>:&nbsp;&nbsp;2136",
+            "Freqüència total</b>:&nbsp;&nbsp;2.136",
+        )
+    )
+    assert data["search_total"] == 2136
+    assert data["totals_match_search"] is True
+
+
+@pytest.mark.parametrize(
+    ("original", "malformed"),
+    [
+        ("['Central', 1237, 'x'", "['Central', 1237.9, 'x'"),
+        ("['Central', 1237, 'x'", "['Central', 1,237, 'x'"),
+        ("['Central', 91587052, 'x'", "['Central', 91587052x, 'x'"),
+        ("['1832-1913', 13001158, 'x'", "['1832-1913', 13001158x, 'x'"),
+    ],
+)
+def test_general_rebutja_comptadors_d_eix_mal_formatats(original: str, malformed: str) -> None:
+    html = (FIXTURES / "dispersio_general.html").read_text(encoding="utf-8")
+    with pytest.raises(UnexpectedResponseError):
+        parse_general(html.replace(original, malformed, 1))
 
 
 def test_general_sense_grafic_es_error() -> None:
