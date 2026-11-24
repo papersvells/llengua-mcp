@@ -659,6 +659,62 @@ async def test_dispersio_cronologica_validada(tmp_path) -> None:
     assert result["peak_relative"]["label"] == "2021-2022"
 
 
+@pytest.mark.parametrize(
+    ("method", "dispersio_file", "replacement"),
+    [
+        (
+            "dispersio_dialectal",
+            "dispersio_dialectal.html",
+            ("Total varietat al corpus: 91.587.052", "Total varietat al corpus: 0"),
+        ),
+        (
+            "dispersio_general",
+            "dispersio_general.html",
+            (
+                ", ['Central', 91587052, 'x', llistacolorsVar['central']]",
+                ", ['Central', 0, 'x', llistacolorsVar['central']]",
+            ),
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_dispersio_denominador_zero_es_error_mcp(
+    tmp_path, method: str, dispersio_file: str, replacement: tuple[str, str]
+) -> None:
+    from llengua_mcp.server import _call
+
+    search_page = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    search_page = search_page.replace(
+        "Freqüència total</b>:&nbsp;&nbsp;3",
+        "Freqüència total</b>:&nbsp;&nbsp;2136",
+    )
+    dispersio_page = (FIXTURES / dispersio_file).read_text(encoding="utf-8")
+    original, malformed = replacement
+    assert original in dispersio_page
+    dispersio_page = dispersio_page.replace(original, malformed, 1)
+
+    class SwitchClient:
+        async def post_text(self, url: str, body: str, **kwargs) -> HttpResult:
+            return HttpResult(text=search_page, status=200, url=url)
+
+        async def get_text(self, url: str, **kwargs) -> HttpResult:
+            return HttpResult(text=dispersio_page, status=200, url=url)
+
+    adapter = CtilcAdapter(SwitchClient(), _settings(tmp_path), CursorStore())
+    search = await adapter.search_pattern(
+        [
+            PatternElement(type="lema", value="somriure"),
+            PatternElement(type="cg", category="adj"),
+        ]
+    )
+    result = await _call(
+        "https://ctilc.iec.cat/", getattr(adapter, method)(search["search_cursor"])
+    )
+    assert result["status"] == "unexpected_response"
+    assert result["error"]["code"] == "unexpected_response"
+    assert "data_valid" not in result
+
+
 DISPERSIO_UNA_PAGINA = (
     "<html><body><center><table>"
     "<tr><td><b>Coocurrències</b>:&nbsp;&nbsp;somriure "

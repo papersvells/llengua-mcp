@@ -187,6 +187,28 @@ def test_dialectal_rebutja_comptadors_de_varietat_mal_formatats(
         parse_dialectal(html.replace(original, original.split(":")[0] + ": " + malformed, 1))
 
 
+def test_dialectal_rebutja_ocurrències_sense_denominador() -> None:
+    html = (FIXTURES / "dispersio_dialectal.html").read_text(encoding="utf-8")
+    html = html.replace(
+        "Total varietat al corpus: 91.587.052",
+        "Total varietat al corpus: 0",
+    )
+    with pytest.raises(UnexpectedResponseError, match="té ocurrències"):
+        parse_dialectal(html)
+
+
+def test_dialectal_zero_sobre_zero_te_taxa_no_calculable() -> None:
+    html = (FIXTURES / "dispersio_dialectal.html").read_text(encoding="utf-8")
+    html = html.replace(
+        "Total varietat al corpus: 145.494",
+        "Total varietat al corpus: 0",
+    )
+    data = parse_dialectal(html)
+    algueres = next(item for item in data["varieties"] if item["label"] == "alguerès")
+    assert algueres["query_hits"] == algueres["corpus_hits"] == 0
+    assert algueres["per_million"] is None
+
+
 def test_dialectal_sense_grafic_es_error() -> None:
     with pytest.raises(UnexpectedResponseError):
         parse_dialectal("<html><body>error intern</body></html>")
@@ -271,6 +293,30 @@ def test_general_rebutja_comptadors_d_eix_mal_formatats(original: str, malformed
     html = (FIXTURES / "dispersio_general.html").read_text(encoding="utf-8")
     with pytest.raises(UnexpectedResponseError):
         parse_general(html.replace(original, malformed, 1))
+
+
+@pytest.mark.parametrize("denominator", ["0", "absent"])
+def test_general_rebutja_ocurrències_sense_denominador(denominator: str) -> None:
+    html = (FIXTURES / "dispersio_general.html").read_text(encoding="utf-8")
+    row = ", ['Central', 91587052, 'x', llistacolorsVar['central']]"
+    if denominator == "0":
+        html = html.replace(row, row.replace("91587052", "0"))
+    else:
+        html = html.replace(row, "")
+    with pytest.raises(UnexpectedResponseError, match="té ocurrències"):
+        parse_general(html)
+
+
+def test_general_zero_sobre_zero_te_taxa_no_calculable() -> None:
+    html = (FIXTURES / "dispersio_general.html").read_text(encoding="utf-8")
+    row = ", ['Alguerès', 145494, 'x', llistacolorsVar['alguerès']]"
+    html = html.replace(row, row.replace("145494", "0"))
+    data = parse_general(html)
+    algueres = next(
+        group for group in data["attributes"]["varietat"]["groups"] if group["label"] == "Alguerès"
+    )
+    assert algueres["query_hits"] == algueres["corpus_hits"] == 0
+    assert algueres["per_million"] is None
 
 
 @pytest.mark.parametrize(

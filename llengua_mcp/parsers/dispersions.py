@@ -198,21 +198,25 @@ def parse_dialectal(html: str) -> dict[str, Any]:
                 hint="El tooltip del gràfic pot haver canviat de format.",
                 source=DIAL_URL,
             )
-        varieties.append(
-            {
-                "label": match.group("label"),
-                "query_hits": _parse_count(
-                    tip.group("query"),
-                    field=f"{match.group('label')}: ocurrències",
-                    source=DIAL_URL,
-                ),
-                "corpus_hits": _parse_count(
-                    tip.group("corpus"),
-                    field=f"{match.group('label')}: paraules del corpus",
-                    source=DIAL_URL,
-                ),
-            }
+        label = match.group("label")
+        query_hits = _parse_count(
+            tip.group("query"),
+            field=f"{label}: ocurrències",
+            source=DIAL_URL,
         )
+        corpus_hits = _parse_count(
+            tip.group("corpus"),
+            field=f"{label}: paraules del corpus",
+            source=DIAL_URL,
+        )
+        if query_hits > 0 and corpus_hits == 0:
+            raise UnexpectedResponseError(
+                f"La varietat {label} té ocurrències però no té paraules de corpus "
+                "per calcular-ne la taxa.",
+                hint="La resposta de dispersió és inconsistent; no es pot validar.",
+                source=DIAL_URL,
+            )
+        varieties.append({"label": label, "query_hits": query_hits, "corpus_hits": corpus_hits})
 
     if not varieties:
         raise UnexpectedResponseError(
@@ -320,6 +324,18 @@ def _axis_groups(query_rows: dict[str, int], corpus_rows: dict[str, int]) -> dic
         corpus_label, corpus_value = corpus_keyed.get(key, (query_label, 0))
         query_hits = query_value
         corpus_hits = corpus_value
+        if query_hits > 0 and corpus_hits == 0:
+            denominator_status = (
+                "no té cap recompte de corpus"
+                if key not in corpus_keyed
+                else "té un recompte de corpus igual a zero"
+            )
+            raise UnexpectedResponseError(
+                f"El grup «{query_label or corpus_label}» té ocurrències però "
+                f"{denominator_status}.",
+                hint="La resposta de dispersió general és inconsistent; no es pot validar.",
+                source=GENERAL_URL,
+            )
         groups.append(
             {
                 "label": corpus_label or query_label,
