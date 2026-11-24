@@ -8,6 +8,7 @@ import json
 import random
 import ssl
 import time
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -206,6 +207,7 @@ class HttpClient:
         headers: dict[str, str] | None = None,
         cache_ttl: int | None = None,
         use_cache: bool = True,
+        cache_if: Callable[[HttpResult], bool] | None = None,
     ) -> HttpResult:
         merged = {"Content-Type": "application/x-www-form-urlencoded"}
         if headers:
@@ -217,6 +219,7 @@ class HttpClient:
             headers=merged,
             cache_ttl=cache_ttl,
             use_cache=use_cache,
+            cache_if=cache_if,
         )
 
     async def post_json(
@@ -277,8 +280,28 @@ class HttpClient:
         headers: dict[str, str] | None,
         cache_ttl: int | None,
         use_cache: bool,
+        cache_if: Callable[[HttpResult], bool] | None = None,
     ) -> HttpResult:
         key = self._cache_key(method, url, body, headers)
+        if use_cache and cache_if is not None:
+            cached = self._cached_result(key, url)
+            if cached is not None:
+                return cached
+            async with self._cache_lock(key):
+                cached = self._cached_result(key, url)
+                if cached is not None:
+                    return cached
+                result = await self._request_network(
+                    method, url, body=body, headers=headers, cache_ttl=cache_ttl, key=None
+                )
+                if result._cacheable and cache_if(result):
+                    result._cache_token = object()
+                    self.cache.set(
+                        key,
+                        (result.text, result.status, result._cache_token),
+                        ttl=cache_ttl,
+                    )
+                return result
         if use_cache:
             cached = self._cached_result(key, url)
             if cached is not None:

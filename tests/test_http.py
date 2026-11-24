@@ -107,6 +107,40 @@ async def test_cacheable_response_is_cached(tmp_path, monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("warnings", "response_headers", "accepted"),
+    [
+        ([], {}, False),
+        ([], {"cache-control": "no-store"}, True),
+        (["transport_eof"], {}, True),
+    ],
+)
+async def test_post_text_cache_predicate_rejects_unusable_responses(
+    tmp_path, monkeypatch, warnings, response_headers, accepted
+) -> None:
+    client = _client(tmp_path)
+    calls = 0
+
+    async def respond(method, url, *, body, headers):
+        nonlocal calls
+        calls += 1
+        return "maintenance", 200, warnings, 11, response_headers
+
+    monkeypatch.setattr(client, "_one_request", respond)
+    try:
+        for _ in range(2):
+            result = await client.post_text(
+                "https://example.test/search",
+                "q=1",
+                cache_if=lambda _result: accepted,
+            )
+            assert not result.from_cache
+    finally:
+        await client.aclose()
+    assert calls == 2
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("invalid_body", ["<html>Error transitori</html>", "[]"])
 async def test_post_json_caches_only_valid_objects(tmp_path, invalid_body) -> None:
     client = _client(tmp_path)

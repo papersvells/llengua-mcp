@@ -481,8 +481,50 @@ class CtilcAdapter:
             body = urlencode({**previous.pagination_fields, "iStart": start, "iOffset": offset})
         else:
             body = compiled.body(start=start, offset=offset, filters=filters)
-        result = await self.client.post_text(COOCUR_URL, body, use_cache=use_cache)
         expected_pattern = " ".join(compiled.expected.values())
+
+        def cacheable_search_response(result: HttpResult) -> bool:
+            """Només desa HTML de concordances que el parser pot verificar."""
+
+            if result.warnings:
+                return False
+            candidate = parse_ctilc_page(
+                result.text,
+                expected=compiled.expected,
+                expected_pattern=expected_pattern,
+            )
+            if (
+                not candidate.echo_verified
+                or candidate.total is None
+                or "parse_partial" in candidate.warnings
+                or "zero_unverified" in candidate.warnings
+                or "pattern_echo_unexpected" in candidate.warnings
+            ):
+                return False
+            if candidate.total == 0:
+                return candidate.explicit_zero and bool(candidate.zero_message)
+            if filters:
+                if candidate.filtered_total is None or not _filters_match(
+                    filters, candidate.filters_echo
+                ):
+                    return False
+                if candidate.filtered_total == 1 and not candidate.has_occurrence_rows:
+                    return bool(
+                        filter_query
+                        and filter_query.get("autor")
+                        and all(
+                            normalize_key(name) in validated_authors
+                            for name in filter_query["autor"]
+                        )
+                    )
+            return bool(candidate.occurrences)
+
+        result = await self.client.post_text(
+            COOCUR_URL,
+            body,
+            use_cache=use_cache,
+            cache_if=cacheable_search_response,
+        )
         page = parse_ctilc_page(
             result.text,
             expected=compiled.expected,

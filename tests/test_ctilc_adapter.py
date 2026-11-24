@@ -5,13 +5,14 @@ import re
 from pathlib import Path
 from urllib.parse import parse_qs
 
+import httpx
 import pytest
 
 from llengua_mcp.adapters.ctilc import CtilcAdapter
 from llengua_mcp.config import Settings
 from llengua_mcp.cursors import CursorStore
 from llengua_mcp.errors import InvalidQueryError, StaleSearchError, UpstreamError
-from llengua_mcp.http import HttpResult
+from llengua_mcp.http import HttpClient, HttpResult
 from llengua_mcp.models import CtilcFilters, PatternElement
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -123,6 +124,46 @@ async def test_search_creates_cursor_and_keeps_id_as_string(tmp_path) -> None:
     assert payload is not None
     assert payload.resultat == "179500525152020580"
     assert isinstance(payload.resultat, str)
+
+
+@pytest.mark.asyncio
+async def test_search_no_cacheja_resposta_rebutjada_i_reutilitza_la_valida(tmp_path) -> None:
+    settings = _settings(tmp_path)
+    client = HttpClient(settings)
+    await client.aclose()
+    fixture = (FIXTURES / "ctilc_two_rows.html").read_text(encoding="utf-8")
+    fixture = re.sub(r"\s*<tr><td><a class=\"pclau\".*?incompleta</a></td></tr>", "", fixture)
+    responses = iter(
+        [
+            "<html><body>Manteniment</body></html>",
+            fixture,
+        ]
+    )
+    requests = 0
+
+    def respond(_request: httpx.Request) -> httpx.Response:
+        nonlocal requests
+        requests += 1
+        return httpx.Response(200, text=next(responses))
+
+    client._client = httpx.AsyncClient(transport=httpx.MockTransport(respond))
+    client.limiter.interval = 0
+    adapter = CtilcAdapter(client, settings, CursorStore(ttl_seconds=60))
+    elements = [
+        PatternElement(type="lema", value="somriure"),
+        PatternElement(type="cg", category="adj"),
+    ]
+    try:
+        rejected = await adapter.search_pattern(elements)
+        recovered = await adapter.search_pattern(elements)
+        cached = await adapter.search_pattern(elements)
+    finally:
+        await client.aclose()
+
+    assert rejected["status"] == "unexpected_response"
+    assert recovered["status"] == cached["status"] == "ok"
+    assert cached["occurrences"] == recovered["occurrences"]
+    assert requests == 2
 
 
 @pytest.mark.asyncio
