@@ -179,7 +179,9 @@ peticions només per afegir detall ni es confon la freqüència amb la correcci�
   si `senses_truncated` és cert, apuja'l per veure les locucions finals.
 - **ésAdir**: és estil de la CCMA, no la norma de l'IEC. Una cerca sense resultats
   no demostra que una forma sigui incorrecta. Un `no_results` amb
-  `zero_results` és un zero verificat. Si apareix `no_entry_results`, la cerca
+  `zero_results` és un zero verificat. Si el portal anuncia resultats però no
+  se'n pot llegir cap fila, l'eina retorna `unexpected_response`, no un zero
+  ni un suggeriment de fitxa. Si apareix `no_entry_results`, la cerca
   no ha trobat cap fitxa d'entrada (pot retornar títols de filmoteca): obre
   `suggested_fitxa` amb `esadir_fitxa` abans de concloure res.
 - **BDLex**: agrupa diccionaris de períodes i abasts diferents. Cal citar el

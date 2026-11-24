@@ -31,10 +31,33 @@ class FakeClient:
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "html",
+    [
+        '<div id="resultats">5 elements</div>',
+        "<html><body>Servei temporalment indisponible</body></html>",
+    ],
+    ids=["positive_count_without_rows", "no_count_or_rows"],
+)
+async def test_sense_files_llegibles_no_es_una_cerca_valida(html: str) -> None:
+    result = await EsadirAdapter(FakeClient(html)).consulta("somriure")
+    assert result["status"] == "unexpected_response"
+    assert result["error"]["code"] == "unexpected_response"
+    assert result["result_count"] is None
+    assert result["returned"] == 0
+    assert result["results"] == []
+    assert result["has_more"] is False
+    assert result["warnings"] == ["parse_partial"]
+    assert "suggested_fitxa" not in result
+
+
+@pytest.mark.asyncio
 async def test_sense_entrada_sugereix_la_fitxa() -> None:
     client = FakeClient((FIXTURES / "esadir_search.html").read_text(encoding="utf-8"))
     result = await EsadirAdapter(client).consulta("a gust")
     assert result["status"] == "ok"
+    assert result["returned"] == 3
+    assert result["has_more"] is True
     assert "no_entry_results" in result["warnings"]
     assert result["suggested_fitxa"] == "a gust"
     assert "esadir_fitxa" in result["note"]
@@ -55,7 +78,9 @@ async def test_cap_resultat_es_un_zero_verificat() -> None:
     assert result["status"] == "no_results"
     assert result["result_count"] == 0
     assert result["results"] == []
+    assert result["has_more"] is False
     assert "zero_results" in result["warnings"]
+    assert "no_entry_results" in result["warnings"]
     assert "parse_partial" not in result["warnings"]
     assert result["suggested_fitxa"] == "hidrosisme"
     assert "error" not in result

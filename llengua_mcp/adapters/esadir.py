@@ -119,18 +119,26 @@ class EsadirAdapter:
         results = ordered[: max(1, limit)]
         count = parsed["count"]
 
-        warnings = list(dict.fromkeys(result.warnings + parsed["warnings"]))
-        if count and count > len(results):
-            warnings.append("truncated")
-        if count == 0:
-            warnings.append("zero_results")
-        if condition == "0" and not any(_is_entry_url(item["url"]) for item in ordered):
-            warnings.append("no_entry_results")
-        status = "ok"
         if count == 0:
             status = "no_results"
-        elif count is None and not results:
+        elif not ordered:
             status = "unexpected_response"
+            count = None
+        else:
+            status = "ok"
+
+        warnings = list(dict.fromkeys(result.warnings + parsed["warnings"]))
+        has_more = status == "ok" and count is not None and count > len(results)
+        if has_more:
+            warnings.append("truncated")
+        if status == "no_results":
+            warnings.append("zero_results")
+        if (
+            status != "unexpected_response"
+            and condition == "0"
+            and not any(_is_entry_url(item["url"]) for item in ordered)
+        ):
+            warnings.append("no_entry_results")
 
         payload: dict[str, Any] = {
             "status": status,
@@ -141,7 +149,7 @@ class EsadirAdapter:
             },
             "result_count": count,
             "returned": len(results),
-            "has_more": bool(count and count > len(results)),
+            "has_more": has_more,
             "results": results,
             "warnings": warnings,
             "note": (
