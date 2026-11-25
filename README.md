@@ -159,21 +159,17 @@ dades de l'usuari:
 uvx --from git+https://github.com/papersvells/llengua-mcp.git llengua-mcp-fetch-sinonims
 ```
 
-La baixada usa una revisió fixada de les dades de Softcatalà (llicència CC BY
-4.0). Es desen al directori de dades de l'usuari. Per personalitzar-lo, defineix
-`LLENGUA_DATA_DIR` tant al client MCP com a la comanda de baixada.
-
 ## Diccionari anglès-català de Softcatalà (opcional)
 
 Instal·la les dades locals per activar `engcat_cerca`:
 
 ```sh
-uvx --from git+https://github.com/papersvells/llengua-mcp.git@v0.4.0 llengua-mcp-fetch-engcat
+uvx --from git+https://github.com/papersvells/llengua-mcp.git llengua-mcp-fetch-engcat
 ```
 
 La comanda crea un índex local a partir de l'XML d'una revisió fixada. Si fas
 servir `LLENGUA_DATA_DIR`, configura el mateix directori al client MCP i a la
-comanda d'instal·lació. Les cerques no fan peticions de xarxa.
+comanda d'instal·lació.
 
 Per exemple, pregunta «Com en dic, de *bank*, si parlo de la vora d'un riu?».
 L'eina cerca el mot o la locució sencera; no tradueix frases ni documents.
@@ -183,14 +179,8 @@ L'eina cerca el mot o la locució sencera; no tradueix frases ni documents.
 Per consultar el Diccionari de recursos lexicals, instal·la les dades locals:
 
 ```sh
-uvx --from git+https://github.com/papersvells/llengua-mcp.git@v0.5.0 llengua-mcp-fetch-direlex
+uvx --from git+https://github.com/papersvells/llengua-mcp.git llengua-mcp-fetch-direlex
 ```
-
-Les dades són de Carles Castellanos i Llorenç i Agustí Mayor i Lloret,
-[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/deed.ca):
-**només per a ús no comercial**. Es descarreguen separadament del paquet MIT,
-en una revisió fixada. Configura el mateix `LLENGUA_DATA_DIR` a la comanda
-i al client MCP. La consulta `direlex_cerca` no fa xarxa ni cerca al glossari.
 
 ## Consells i límits
 
