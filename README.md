@@ -36,16 +36,7 @@ oficial de l'IEC. Revisa sempre les fonts i els matisos de la resposta.
 
 ## Instal·lació ràpida
 
-Necessites [uv](https://docs.astral.sh/uv/getting-started/installation/) i Git.
-La manera més simple és executar Llengua directament des de la branca `main`
-del repositori de GitHub amb [`uvx`](https://docs.astral.sh/uv/guides/tools/).
-No cal clonar manualment el repositori ni registrar-se a PyPI. El client ha de
-poder trobar `uvx` al seu `PATH`.
-
-Aquesta configuració segueix la branca `main`, de manera que pot rebre canvis.
-Quan hi hagi versions etiquetades, pots fixar-ne una canviant
-`git+https://github.com/papersvells/llengua-mcp.git` per
-`git+https://github.com/papersvells/llengua-mcp.git@vX.Y.Z`.
+Necessites tenir instal·lat [uv](https://docs.astral.sh/uv/getting-started/installation/) i Git.
 
 ### OpenCode
 
